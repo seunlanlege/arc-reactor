@@ -1,0 +1,13 @@
+[package]
+name = "async-server"
+version = "0.1.0"
+authors = ["seunlanlege <slanlege@c2gconsulting.com>"]
+
+[dependencies]
+rand = "*"
+tokio-io = "*"
+tokio-core = "*"
+tokio-proto = "*"
+tokio-service = "*"
+futures = "*"
+hyper = "0.11"
