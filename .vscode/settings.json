@@ -1,0 +1,17 @@
+{
+	"run": {
+		"defaultColor": "#ff0034", // Can also use string color names.
+		"commands": [
+			{
+				"name": "Run Cargo",
+				"color": "green",
+				"command": "cargo run", // This is executed in the terminal.
+			},
+			{
+				"name": "Build Cargo",
+				"color": "green",
+				"command": "cargo build",
+			}
+		]
+	}
+}
