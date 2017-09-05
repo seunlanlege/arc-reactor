@@ -5,12 +5,14 @@
 			{
 				"name": "Run Cargo",
 				"color": "green",
-				"command": "cargo run", // This is executed in the terminal.
+				"singleInstance": true,
+				"command": "cargo run"
+				// This is executed in the terminal.
 			},
 			{
 				"name": "Build Cargo",
 				"color": "green",
-				"command": "cargo build",
+				"command": "cargo build"
 			}
 		]
 	}

@@ -1,60 +1,21 @@
-// #![allow(unused_variables)]
 #![allow(non_snake_case)]
 #![feature(inclusive_range_syntax)]
 #![allow(dead_code)]
-// #![allow(unused_imports)]
 #![feature(conservative_impl_trait)]
 extern crate tokio_core;
-// extern crate tokio_io;
 extern crate futures;
 extern crate hyper;
 
-mod AsyncService;
-mod SetTimeout;
+mod AsyncServer;
 mod Reactors;
 
 use Reactors::*;
-// use SetTimeout::SetTimeout as setTimeout;
-use AsyncService::AsyncService as AsyncServer;
-// use futures::future::Future;
+use tokio_core::reactor::Core;
 use futures::task;
 use futures::Stream;
-use hyper::server::Http;
 use tokio_core::net::TcpListener;
-use tokio_core::reactor::Core;
 use std::io::{self, Stderr, Write, stderr};
 use std::thread;
-// use std::time::Duration;
-// use std::net::{SocketAddr};
-//use std::sync::{Arc, Mutex};
-
-fn SpawnReactors() -> Vec<ArcReactor> {
-  let mut reactors = Vec::new();
-
-  for _ in 1...5 {
-    let reactor = Reactor::new();
-    reactors.push(reactor.clone());
-
-    thread::spawn(move || {
-      let mut core = Core::new().unwrap();
-      let handle = core.handle();
-      let http = Http::new();
-
-      core.run(ReactorHandler {
-        handler: || {
-	        let mut reactor = reactor.lock().unwrap();
-	        for (socket, peerAddr) in reactor.peers.drain(..) {
-		        http.bind_connection(&handle, socket, peerAddr, AsyncServer);
-	        }
-	        reactor.taskHandle = Some(task::current());
-        },
-      }).unwrap();
-	
-    });
-  }
-
-  reactors
-}
 
 fn serve() -> io::Result<()> {
 	let reactors = SpawnReactors();
@@ -75,7 +36,8 @@ fn serve() -> io::Result<()> {
 		}
 	};
 
-	let mut counter = 0;
+	let mut counter: i8 = 0;
+	// TODO: Dispatch to threads with less connected clients.
 	core.run(listener.incoming().for_each(move |(socket, peerIp)| {
 		let mut reactor = reactors[counter].lock().unwrap();
 		reactor.peers.push((socket, peerIp));
