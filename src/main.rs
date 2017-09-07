@@ -1,6 +1,10 @@
-#![feature(proc_macro, conservative_impl_trait, generators, inclusive_range_syntax, conservative_impl_trait, catch_expr)]
+#![feature(proc_macro, conservative_impl_trait, generators, inclusive_range_syntax, conservative_impl_trait, catch_expr, associated_type_defaults)]
 #![allow(non_snake_case)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(deprecated)]
+
+extern crate impl_service;
 extern crate tokio_core;
 extern crate route_recognizer as recognizer;
 extern crate futures_await as futures;
@@ -8,7 +12,8 @@ extern crate hyper;
 
 mod AsyncServer;
 mod Reactors;
-mod routing;
+mod ArcRouting;
+mod ArcProto;
 
 use Reactors::*;
 use tokio_core::reactor::Core;

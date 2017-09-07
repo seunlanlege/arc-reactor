@@ -4,14 +4,12 @@ version = "0.1.0"
 authors = ["seunlanlege <slanlege@c2gconsulting.com>"]
 
 [dependencies]
-rand = "*"
+impl-service = { path = "impl-service" }
 tokio-io = "*"
 tokio-core = "*"
 tokio-proto = "*"
 tokio-service = "*"
 futures = "*"
 hyper = "0.11"
-syn = "0.10.5"
-quote = "0.3.10"
 route-recognizer = "0.1.12"
 futures-await = { git = 'https://github.com/alexcrichton/futures-await' }
