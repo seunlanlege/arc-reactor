@@ -1,21 +1,20 @@
+#![feature(proc_macro, conservative_impl_trait, generators, inclusive_range_syntax, conservative_impl_trait, catch_expr)]
 #![allow(non_snake_case)]
-#![feature(inclusive_range_syntax)]
 #![allow(dead_code)]
-#![feature(conservative_impl_trait)]
 extern crate tokio_core;
-extern crate futures;
+extern crate route_recognizer as recognizer;
+extern crate futures_await as futures;
 extern crate hyper;
 
 mod AsyncServer;
 mod Reactors;
+mod routing;
 
 use Reactors::*;
 use tokio_core::reactor::Core;
-use futures::task;
 use futures::Stream;
 use tokio_core::net::TcpListener;
 use std::io::{self, Stderr, Write, stderr};
-use std::thread;
 
 fn serve() -> io::Result<()> {
 	let reactors = SpawnReactors();
@@ -36,7 +35,7 @@ fn serve() -> io::Result<()> {
 		}
 	};
 
-	let mut counter: i8 = 0;
+	let mut counter = 0;
 	// TODO: Dispatch to threads with less connected clients.
 	core.run(listener.incoming().for_each(move |(socket, peerIp)| {
 		let mut reactor = reactors[counter].lock().unwrap();
@@ -58,5 +57,5 @@ fn serve() -> io::Result<()> {
 
 
 fn main() {
-    serve().unwrap();
+	serve().unwrap();
 }
