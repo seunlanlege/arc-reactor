@@ -1,7 +1,7 @@
 [package]
 name = "async-server"
 version = "0.1.0"
-authors = ["seunlanlege <slanlege@c2gconsulting.com>"]
+authors = ["seunlanlege <seunlanlege@gmail.com>"]
 
 [dependencies]
 impl-service = { path = "impl-service" }
@@ -11,5 +11,6 @@ tokio-proto = "*"
 tokio-service = "*"
 futures = "*"
 hyper = "0.11"
+net2 = "*"
 route-recognizer = "0.1.12"
 futures-await = { git = 'https://github.com/alexcrichton/futures-await' }
