@@ -5,14 +5,13 @@ use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
 use ArcProto::ArcService;
 use ArcRouting::{RouteGroup};
-use ArcProto::RouteInterface;
 
 #[derive(Clone)]
-pub struct ArcRouter<S: ArcService> {
-	routes: HashMap<Method, Recognizer<Box<S>>>,
+pub struct ArcRouter {
+	routes: HashMap<Method, Recognizer<Box<ArcService>>>,
 }
 
-impl<S: ArcService> Service for ArcRouter<S> {
+impl Service for ArcRouter {
 	type Response = Response;
 	type Request = Request;
 	type Error = hyper::Error;
@@ -32,12 +31,12 @@ impl<S: ArcService> Service for ArcRouter<S> {
 	}
 }
 
-impl <S: ArcService>ArcRouter<S> {
+impl ArcRouter {
 	pub fn new() -> Self {
 		Self { routes: HashMap::new() }
 	}
 
-	pub(crate) fn matchRoute<P>(&self, route: P, method: &Method) -> Option<Match<&Box<S>>>
+	pub(crate) fn matchRoute<P>(&self, route: P, method: &Method) -> Option<Match<&Box<ArcService>>>
 	where P: AsRef<str> {
 		if let Some(recognizer) = self.routes.get(method) {
 			return recognizer.recognize(route.as_ref()).ok();
@@ -46,11 +45,11 @@ impl <S: ArcService>ArcRouter<S> {
 		}
 	}
 
-	pub fn group(parent: &'static str) -> RouteGroup<S> {
+	pub fn group(parent: &'static str) -> RouteGroup {
 		RouteGroup::new(parent)
 	}
 
-	pub fn add(mut self, group: RouteGroup<S>) -> Self {
+	pub fn add(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 
 		for (path, (method, handler)) in routes.into_iter() {
@@ -62,12 +61,28 @@ impl <S: ArcService>ArcRouter<S> {
 
 		self
 	}
-}
-
-impl<S> RouteInterface<S> for ArcRouter<S>
-where S: ArcService {
-
-	fn route(mut self, method: Method, path: &'static str, handler: S) -> ArcRouter<S> {
+	
+	pub fn get<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Get, route, handler)
+	}
+	
+	pub fn post<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Post, route, handler)
+	}
+	
+	pub fn put<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Put, route, handler)
+	}
+	
+	pub fn patch<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Patch, route, handler)
+	}
+	
+	pub fn delete<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Delete, route, handler)
+	}
+	
+	fn route<S: ArcService + 'static + Send + Sync >(mut self, method: Method, path: &'static str, handler: S) -> Self {
 		self.routes
 			.entry(method)
 			.or_insert(Recognizer::new())
@@ -75,5 +90,4 @@ where S: ArcService {
 		
 		self
 	}
-	
 }

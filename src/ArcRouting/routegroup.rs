@@ -1,17 +1,15 @@
  use ArcProto::*;
-// use ArcRouting::Router;
-// use hyper::server::Service;
 
 use hyper::{Method};
 use std::collections::HashMap;
 
-pub struct RouteGroup<S: ArcService> {
+pub struct RouteGroup {
 	pub(crate) parent: &'static str,
-	pub(crate) routes: HashMap<String, (Method, Box<S>)>,
+	pub(crate) routes: HashMap<String, (Method, Box<ArcService>)>,
 }
 
 
-impl <S: ArcService> RouteGroup<S> {
+impl RouteGroup {
 	pub fn new(parent: &'static str) -> Self {
 		RouteGroup {
 			parent,
@@ -19,7 +17,7 @@ impl <S: ArcService> RouteGroup<S> {
 		}
 	}
 
-	pub fn add(mut self, group: RouteGroup<S>) -> Self {
+	pub fn add(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 
 		for (path, (method, handler)) in routes.into_iter() {
@@ -29,14 +27,31 @@ impl <S: ArcService> RouteGroup<S> {
 
 		self
 	}
-}
-
-impl<S> RouteInterface<S> for RouteGroup<S>
-where S: ArcService {
-	fn route(mut self, method: Method, path: &'static str, handler: S) -> Self {
+	
+	pub fn get<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Get, route, handler)
+	}
+	
+	pub fn post<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Post, route, handler)
+	}
+	
+	pub fn put<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Put, route, handler)
+	}
+	
+	pub fn patch<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Patch, route, handler)
+	}
+	
+	pub fn delete<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Delete, route, handler)
+	}
+	
+	fn route<S: ArcService + 'static + Send + Sync>(mut self, method: Method, path: &'static str, handler: S) -> Self {
 		self.routes
-			.insert(format!("/{}{}", &self.parent, path), (method, Box::new(handler)));
-
+		.insert(format!("/{}{}", &self.parent, path), (method, Box::new(handler)));
+	
 		self
 	}
 }

@@ -25,21 +25,24 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	};
 	
 	let block = block.stmts.iter();
-	let funcName = ident.as_ref();
 	
 	let output = quote! {
 		#[derive(Clone)]
 		struct #ident;
 		
 		impl ArcService for #ident {
-			fn call(&self, req: Request) -> Box<Future<Item = hyper::Response, Error = hyper::Error>> {
-				#(
-					#block
-				)*
+			fn call(&self, req: Request) -> Box<Future<Item = Response, Error =Error>> {
+				Box::new(
+					async_block!{
+						#(
+							#block
+						)*
+					}
+				)
 			}
-	
-			fn mock(&self) -> String {
-			 	#funcName.to_string()
+
+			fn boxedClone(&self) -> Box<ArcService> {
+				Box::new(self.clone())
 			}
 		}
 	};
