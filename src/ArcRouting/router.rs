@@ -1,5 +1,5 @@
 use hyper::{Response, Request, Method, self, StatusCode};
-use futures::{Future, future};	  
+use futures::{Future, future};
 use hyper::server::Service;
 use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
@@ -7,10 +7,10 @@ use ArcProto::ArcService;
 use ArcRouting::{RouteGroup};
 use ArcProto::RouteInterface;
 
+#[derive(Clone)]
 pub struct ArcRouter<S: ArcService> {
 	routes: HashMap<Method, Recognizer<Box<S>>>,
 }
-
 
 impl<S: ArcService> Service for ArcRouter<S> {
 	type Response = Response;
@@ -20,7 +20,6 @@ impl<S: ArcService> Service for ArcRouter<S> {
 	
 	fn call(&self, req: Request) -> Self::Future {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
-			println!("{:?}", routeMatch.params["name"]);
 
 			return routeMatch.handler.call(req)
 		}

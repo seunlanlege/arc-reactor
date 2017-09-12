@@ -10,8 +10,6 @@ use std::marker::{Send, Sync};
 use futures::task::{Task, self};
 use std::net::SocketAddr;
 use std::thread;
-// use ArcRouting::{RouteGroup};
-// use ArcProto::ArcService;
 
 pub type ReactorAlias = Arc<Mutex<Reactor>>;
 
@@ -33,9 +31,9 @@ impl Reactor {
 	}
 }
 
-pub struct ArcReactor<S> 
+pub struct ArcReactor<S>
 where
-    S: 'static + Service<Request = hyper::Request, Response = hyper::Response, Error = hyper::Error> + Send + Sync,
+	S: 'static + Clone + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
 {
 	port: i16,
 	RouteService: Option<S>
@@ -43,7 +41,7 @@ where
 
 impl<S> ArcReactor<S>
 where
-    S: 'static + Service<Request = hyper::Request, Response = hyper::Response, Error = hyper::Error> + Send + Sync,
+	S: 'static + Clone + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
 {
 	pub fn new() -> ArcReactor<S> {
 		ArcReactor {
@@ -107,16 +105,17 @@ where
 
 }
 
-fn spawn<S>(RouteService: S) -> Vec<ReactorAlias> 
-where S: 'static + Service<Request = hyper::Request, Response = hyper::Response, Error = hyper::Error> + Send + Sync,
+fn spawn<S>(RouteService: S) -> Vec<ReactorAlias>
+	where
+		S: 'static + Clone + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
 {
-		let mut reactors = Vec::new();
+	let mut reactors = Vec::new();
 		
 		// TODO: replace with call to num_cpus::get() * 2
-		// for _ in 1..5 {
+	for _ in 1..5 {
 			let reactor = Reactor::new();
 			reactors.push(reactor.clone());
-			let routeService = Arc::new(RouteService);
+		let routeService = RouteService.clone();
 
 			thread::spawn(move || {
 				let mut core = Core::new().unwrap();
@@ -133,7 +132,7 @@ where S: 'static + Service<Request = hyper::Request, Response = hyper::Response,
 					},
 				}).unwrap();
 			});
-		// }
+	}
 
 		reactors
 	}
