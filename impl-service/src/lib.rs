@@ -33,9 +33,15 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 		
 		impl ArcService for #ident {
 			fn call(&self, req: Request) -> Box<Future<Item = hyper::Response, Error = hyper::Error>> {
-				#(
-					#block
-				)*
+				Box::new(
+					futures::future::ok(
+						{
+							#(
+								#block
+							)*
+						}
+					)
+				)
 			}
 	
 			fn mock(&self) -> String {

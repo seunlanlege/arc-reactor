@@ -5,13 +5,15 @@
 use hyper::{Method};
 use std::collections::HashMap;
 
-pub struct RouteGroup<S: ArcService> {
+pub struct RouteGroup<S>
+	where S: ArcService {
 	pub(crate) parent: &'static str,
-	pub(crate) routes: HashMap<String, (Method, Box<S>)>,
+	pub(crate) routes: HashMap<String, (Method, Box<Box<ArcService>>)>,
 }
 
 
-impl <S: ArcService> RouteGroup<S> {
+impl<S> RouteGroup<S>
+	where S: ArcService {
 	pub fn new(parent: &'static str) -> Self {
 		RouteGroup {
 			parent,
@@ -29,14 +31,31 @@ impl <S: ArcService> RouteGroup<S> {
 
 		self
 	}
-}
-
-impl<S> RouteInterface<S> for RouteGroup<S>
-where S: ArcService {
+	
+	pub fn get(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Get, route, handler)
+	}
+	
+	pub fn post(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Post, route, handler)
+	}
+	
+	pub fn put(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Put, route, handler)
+	}
+	
+	pub fn patch(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Patch, route, handler)
+	}
+	
+	pub fn delete(self, route: &'static str, handler: S) -> Self {
+		self.route(Method::Delete, route, handler)
+	}
+	
 	fn route(mut self, method: Method, path: &'static str, handler: S) -> Self {
 		self.routes
-			.insert(format!("/{}{}", &self.parent, path), (method, Box::new(handler)));
-
+		.insert(format!("/{}{}", &self.parent, path), (method, Box::new(handler)));
+	
 		self
 	}
 }

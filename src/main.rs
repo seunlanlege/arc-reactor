@@ -33,7 +33,7 @@ use ArcProto::*;
 fn main() {
 	let routes = ArcRouter::new()
 		.get("/", RequestHandler);
-		// .post("/", PostRequestHandler);
+//		 .post("/", PostRequestHandler);
 
 	ArcReactor::new()
 		.port(3000)
@@ -43,23 +43,18 @@ fn main() {
 }
 
 #[service]
-pub fn RequestHandler(req: hyper::Request) {
-	Box::new(
-		futures::future::ok(
-			hyper::Response::new()
-				.with_status(hyper::StatusCode::Ok)
-				.with_body("Hello World".as_bytes())
-		)
-	)
+pub fn RequestHandler(_req: hyper::Request) {
+		hyper::Response::new()
+			.with_body("Hello World".as_bytes())
 }
 
-#[service]
-pub fn PostRequestHandler(req: hyper::Request) {
-	Box::new(
-		futures::future::ok(
-			hyper::Response::new()
-				.with_status(hyper::StatusCode::Ok)
-				.with_body("Hello World".as_bytes())
-		)
-	)
-}
+// #[service]
+// pub fn PostRequestHandler(req: hyper::Request) {
+// 	Box::new(
+// 		futures::future::ok(
+// 			hyper::Response::new()
+// 				.with_status(hyper::StatusCode::Ok)
+// 				.with_body("Hello World".as_bytes())
+// 		)
+// 	)
+// }
