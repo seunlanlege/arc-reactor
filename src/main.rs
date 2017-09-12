@@ -32,7 +32,7 @@ use ArcProto::*;
 
 fn main() {
 	let routes = ArcRouter::new()
-		.get("/hello/:name", RequestHandler);
+		.get("/", RequestHandler);
 		// .post("/", PostRequestHandler);
 
 	ArcReactor::new()

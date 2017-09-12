@@ -28,6 +28,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let funcName = ident.as_ref();
 	
 	let output = quote! {
+		#[derive(Clone)]
 		struct #ident;
 		
 		impl ArcService for #ident {

@@ -1,7 +1,7 @@
 use hyper;
 use futures::Future;
 
-pub trait ArcService {
+pub trait ArcService: Clone {
 	fn call (&self, req: hyper::Request) -> Box<Future<Item = hyper::Response, Error = hyper::Error>>;
 	fn mock(&self) -> String;
 }
