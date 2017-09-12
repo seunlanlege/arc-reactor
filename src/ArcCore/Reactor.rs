@@ -34,7 +34,7 @@ impl Reactor {
 
 pub struct ArcReactor<S>
 where
-	S: 'static + Clone + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
+	S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
 {
 	port: i16,
 	RouteService: Option<S>
@@ -42,7 +42,7 @@ where
 
 impl<S> ArcReactor<S>
 where
-	S: 'static + Clone + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
+	S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
 {
 	pub fn new() -> ArcReactor<S> {
 		ArcReactor {
@@ -106,14 +106,16 @@ where
 
 fn spawn<S>(RouteService: S) -> Vec<ReactorAlias>
 	where
-		S: 'static + Clone + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
+		S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
 {
 	let mut reactors = Vec::new();
+	let routeService = Arc::new(RouteService);
 		
 	for _ in 1..num_cpus::get() * 2{
 		let reactor = Reactor::new();
 		reactors.push(reactor.clone());
-		let routeService = RouteService.clone();
+
+		let routeService = routeService.clone();
 
 		thread::spawn(move || {
 			let mut core = Core::new().unwrap();

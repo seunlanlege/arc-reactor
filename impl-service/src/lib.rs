@@ -40,10 +40,6 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 					}
 				)
 			}
-
-			fn boxedClone(&self) -> Box<ArcService> {
-				Box::new(self.clone())
-			}
 		}
 	};
 
