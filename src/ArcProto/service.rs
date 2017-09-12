@@ -1,17 +1,13 @@
 use hyper;
 use futures::Future;
 
-pub trait ArcService: Clone {
+pub trait ArcService: Send + Sync {
 	fn call (&self, req: hyper::Request) -> Box<Future<Item = hyper::Response, Error = hyper::Error>>;
-	fn mock(&self) -> String;
+	fn boxedClone(&self) -> Box<ArcService>;
 }
 
-impl <S: ArcService>ArcService for Box<S> {
-	fn call (&self, req: hyper::Request) -> Box<Future<Item = hyper::Response, Error = hyper::Error>>{
-		(**self).call(req)
-	}
-	
-	fn mock(&self) -> String {
-		"Boxed".to_string()
+impl Clone for Box<ArcService> {
+	fn clone (&self) -> Self {
+		self.boxedClone()
 	}
 }

@@ -11,6 +11,7 @@ tokio-proto = "*"
 tokio-service = "*"
 futures = "*"
 hyper = "0.11"
+num_cpus = "1.6.2"
 net2 = "*"
 route-recognizer = "0.1.12"
 futures-await = { git = 'https://github.com/alexcrichton/futures-await' }

@@ -10,6 +10,7 @@ use std::marker::{Send, Sync};
 use futures::task::{Task, self};
 use std::net::SocketAddr;
 use std::thread;
+use num_cpus;
 
 pub type ReactorAlias = Arc<Mutex<Reactor>>;
 
@@ -82,8 +83,6 @@ where
 		
 		let mut counter = 0;
 		
-		// TODO: Dispatch to threads with less connected clients?.
-
 		core.run(listener.incoming().for_each(move |(socket, peerIp)| {
 			let mut reactor = reactors[counter].lock().unwrap();
 			reactor.peers.push((socket, peerIp));
@@ -111,28 +110,27 @@ fn spawn<S>(RouteService: S) -> Vec<ReactorAlias>
 {
 	let mut reactors = Vec::new();
 		
-		// TODO: replace with call to num_cpus::get() * 2
-	for _ in 1..5 {
-			let reactor = Reactor::new();
-			reactors.push(reactor.clone());
+	for _ in 1..num_cpus::get() * 2{
+		let reactor = Reactor::new();
+		reactors.push(reactor.clone());
 		let routeService = RouteService.clone();
 
-			thread::spawn(move || {
-				let mut core = Core::new().unwrap();
-				let handle = core.handle();
-				let http = Http::new();
+		thread::spawn(move || {
+			let mut core = Core::new().unwrap();
+			let handle = core.handle();
+			let http = Http::new();
 
-				core.run(ReactorHandler {
-					handler: || {
-						let mut reactor = reactor.lock().unwrap();
-						for (socket, peerAddr) in reactor.peers.drain(..) {
-							http.bind_connection(&handle, socket, peerAddr, routeService.clone());
-						}
-						reactor.taskHandle = Some(task::current());
-					},
-				}).unwrap();
-			});
+			core.run(ReactorHandler {
+				handler: || {
+					let mut reactor = reactor.lock().unwrap();
+					for (socket, peerAddr) in reactor.peers.drain(..) {
+						http.bind_connection(&handle, socket, peerAddr, routeService.clone());
+					}
+					reactor.taskHandle = Some(task::current());
+				},
+			}).unwrap();
+		});
 	}
 
-		reactors
-	}
+	reactors
+}

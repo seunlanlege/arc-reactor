@@ -1,19 +1,15 @@
  use ArcProto::*;
-// use ArcRouting::Router;
-// use hyper::server::Service;
 
 use hyper::{Method};
 use std::collections::HashMap;
 
-pub struct RouteGroup<S>
-	where S: ArcService {
+pub struct RouteGroup {
 	pub(crate) parent: &'static str,
-	pub(crate) routes: HashMap<String, (Method, Box<Box<ArcService>>)>,
+	pub(crate) routes: HashMap<String, (Method, Box<ArcService>)>,
 }
 
 
-impl<S> RouteGroup<S>
-	where S: ArcService {
+impl RouteGroup {
 	pub fn new(parent: &'static str) -> Self {
 		RouteGroup {
 			parent,
@@ -21,7 +17,7 @@ impl<S> RouteGroup<S>
 		}
 	}
 
-	pub fn add(mut self, group: RouteGroup<S>) -> Self {
+	pub fn add(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 
 		for (path, (method, handler)) in routes.into_iter() {
@@ -32,27 +28,27 @@ impl<S> RouteGroup<S>
 		self
 	}
 	
-	pub fn get(self, route: &'static str, handler: S) -> Self {
+	pub fn get<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
 		self.route(Method::Get, route, handler)
 	}
 	
-	pub fn post(self, route: &'static str, handler: S) -> Self {
+	pub fn post<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
 		self.route(Method::Post, route, handler)
 	}
 	
-	pub fn put(self, route: &'static str, handler: S) -> Self {
+	pub fn put<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
 		self.route(Method::Put, route, handler)
 	}
 	
-	pub fn patch(self, route: &'static str, handler: S) -> Self {
+	pub fn patch<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
 		self.route(Method::Patch, route, handler)
 	}
 	
-	pub fn delete(self, route: &'static str, handler: S) -> Self {
+	pub fn delete<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
 		self.route(Method::Delete, route, handler)
 	}
 	
-	fn route(mut self, method: Method, path: &'static str, handler: S) -> Self {
+	fn route<S: ArcService + 'static + Send + Sync>(mut self, method: Method, path: &'static str, handler: S) -> Self {
 		self.routes
 		.insert(format!("/{}{}", &self.parent, path), (method, Box::new(handler)));
 	

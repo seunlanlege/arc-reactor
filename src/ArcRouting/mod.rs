@@ -1,7 +1,7 @@
 mod router;
-//mod routegroup;
+mod routegroup;
 
-//pub use self::routegroup::*;
+pub use self::routegroup::*;
 pub use self::router::*;
 
 #[cfg(test)]
