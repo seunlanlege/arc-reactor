@@ -6,7 +6,6 @@ use recognizer::{Match, Router as Recognizer};
 use ArcProto::ArcService;
 use ArcRouting::{RouteGroup};
 
-#[derive(Clone)]
 pub struct ArcRouter {
 	routes: HashMap<Method, Recognizer<Box<ArcService>>>,
 }
