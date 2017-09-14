@@ -18,6 +18,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let ItemFn {
 		ident,
 		block,
+		decl,
 		..
 	} = match node {
 		ItemKind::Fn(item) => item,
@@ -25,13 +26,13 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	};
 	
 	let block = block.stmts.iter();
+	let inputs = decl.inputs.iter();
 	
 	let output = quote! {
-		#[derive(Clone)]
 		struct #ident;
 		
 		impl ArcService for #ident {
-			fn call(&self, req: Request) -> Box<Future<Item = Response, Error =Error>> {
+			fn call(&self, #(#inputs)*) -> Box<Future<Item = Response, Error = Error>> {
 				Box::new(
 					async_block!{
 						#(

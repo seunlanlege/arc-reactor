@@ -2,11 +2,17 @@ use futures::future::{Future};
 use futures::{Async, Poll};
 
 
-pub struct ReactorHandler<F: Fn()> {
+pub struct ReactorHandler<F>
+where 
+	F : Fn()
+{
 	pub handler: F,
 }
 
-impl<F: Fn()> Future for ReactorHandler<F> {
+impl<F> Future for ReactorHandler<F>
+where 
+	F : Fn()
+{
 	type Item = ();
 	type Error = ();
 

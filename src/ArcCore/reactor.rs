@@ -34,19 +34,22 @@ impl Reactor {
 
 pub struct ArcReactor<S>
 where
-	S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
+		S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
 {
 	port: i16,
+	timeout: i8,
+//	context: Context,
 	RouteService: Option<S>
 }
 
 impl<S> ArcReactor<S>
 where
-	S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
+		S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
 {
 	pub fn new() -> ArcReactor<S> {
 		ArcReactor {
 			port: 8080,
+			timeout: 10,
 			RouteService: None
 		}
 	}
@@ -64,7 +67,7 @@ where
 	}
 	
 	pub fn initiate (self) -> io::Result<()> {
-		let reactors = spawn(self.RouteService.expect("This thing needs routes to work!"));
+		let reactors = spawn(self.RouteService.expect("This thing needs routes to work!"))?;
 		
 		let mut core = Core::new()?;
 		let handle = core.handle();
@@ -104,15 +107,16 @@ where
 
 }
 
-fn spawn<S>(RouteService: S) -> Vec<ReactorAlias>
-	where
+fn spawn<S>(RouteService: S) -> io::Result<Vec<ReactorAlias>>
+where
 		S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
 {
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
-		
-	for _ in 1..num_cpus::get() * 2{
+	
+	for _ in 1..num_cpus::get() * 2 {
 		let reactor = Reactor::new();
+
 		reactors.push(reactor.clone());
 
 		let routeService = routeService.clone();
@@ -134,5 +138,5 @@ fn spawn<S>(RouteService: S) -> Vec<ReactorAlias>
 		});
 	}
 
-	reactors
+	Ok(reactors)
 }
