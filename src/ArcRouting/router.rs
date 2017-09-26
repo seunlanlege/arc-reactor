@@ -18,6 +18,7 @@ impl Service for ArcRouter {
 	
 	fn call(&self, req: Request) -> Self::Future {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
+		// let (method, uri, version, headers, body) = req.deconstruct();		
 
 			return routeMatch.handler.call(req)
 		}
