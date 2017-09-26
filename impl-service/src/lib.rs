@@ -7,6 +7,7 @@ extern crate proc_macro2;
 extern crate syn;
 #[macro_use]
 extern crate quote;
+use quote::ToTokens;
 
 use proc_macro::TokenStream;
 use syn::*;
@@ -18,6 +19,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let ItemFn {
 		ident,
 		block,
+		decl,
 		..
 	} = match node {
 		ItemKind::Fn(item) => item,
@@ -25,13 +27,13 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	};
 	
 	let block = block.stmts.iter();
+	let inputs = decl.inputs.into_tokens();
 	
 	let output = quote! {
-		#[derive(Clone)]
 		struct #ident;
 		
 		impl ArcService for #ident {
-			fn call(&self, req: Request) -> Box<Future<Item = Response, Error =Error>> {
+			fn call(&self, #inputs) -> Box<Future<Item = Response, Error = Error>> {
 				Box::new(
 					async_block!{
 						#(
@@ -43,5 +45,5 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 		}
 	};
 
-	output.to_string().parse().unwrap()
+	output.into()
 }

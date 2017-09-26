@@ -1,5 +1,5 @@
-mod Handler;
-mod Reactor;
+mod handler;
+mod reactor;
 
-pub use self::Reactor::*;
-pub use self::Handler::*;
+pub use self::reactor::*;
+pub use self::handler::*;
