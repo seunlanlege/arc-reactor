@@ -14,23 +14,26 @@ extern crate tokio_core;
 extern crate route_recognizer as recognizer;
 extern crate futures_await as futures;
 extern crate hyper;
-use futures::Stream;
 
 mod ArcRouting;
 mod ArcCore;
 mod ArcProto;
 
-use impl_service::service;
+use impl_service::{service, middleware};
 use ArcCore::ArcReactor;
 use ArcRouting::*;
 use hyper::{Request, Response, Error, StatusCode};
 use futures::future::Future;
-use futures::prelude::{async_block, await};
+use futures::prelude::{async_block};
 use ArcProto::*;
 
 fn getMainRoutes() -> ArcRouter {
+	// let mut middlewares = Vec::new();
+	// middlewares.push(middleware1);
+	// middlewares.push(middleware2);
+
 	ArcRouter::new()
-		.post("/", PostRequestHandler)
+		.post("/", (middleware, RequestHandler))
 }
 
 fn main() {
@@ -42,13 +45,22 @@ fn main() {
 }
 
 #[service]
-fn PostRequestHandler(request: Request) {
-	let body = await!(request.body().concat2()).unwrap();
-	println!("{:?}", String::from_utf8_lossy(&body));
-	
+fn RequestHandler(_request: Request) {
+	println!("Post Request!");
 	let res =	Response::new()
 		.with_status(StatusCode::Ok)
-		.with_body(body.to_vec());
+		.with_body("Hello World");
 
 	Ok(res)
 }
+
+#[middleware]
+fn middleware(req: Request) -> ArcResult {
+	println!("middleware 1: {}", req.path());
+	if req.path() != "/" {
+		return Err("Failed to get the data!".into())
+	}
+
+	return Ok(req)
+}
+
