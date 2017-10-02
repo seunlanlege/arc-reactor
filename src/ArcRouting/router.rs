@@ -18,8 +18,6 @@ impl Service for ArcRouter {
 	
 	fn call(&self, req: Request) -> Self::Future {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
-		// let (method, uri, version, headers, body) = req.deconstruct();		
-
 			return routeMatch.handler.call(req)
 		}
 
@@ -62,27 +60,45 @@ impl ArcRouter {
 		self
 	}
 	
-	pub fn get<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+	pub fn get<S>(self, route: &'static str, handler: S) -> Self 
+	where
+			S: ArcService + 'static + Send + Sync
+	{
 		self.route(Method::Get, route, handler)
 	}
 	
-	pub fn post<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+	pub fn post<S>(self, route: &'static str, handler: S) -> Self 
+	where
+			S: ArcService + 'static + Send + Sync
+	{
 		self.route(Method::Post, route, handler)
 	}
 	
-	pub fn put<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+	pub fn put<S>(self, route: &'static str, handler: S) -> Self 
+	where
+			S: ArcService + 'static + Send + Sync
+	{
 		self.route(Method::Put, route, handler)
 	}
 	
-	pub fn patch<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+	pub fn patch<S>(self, route: &'static str, handler: S) -> Self 
+	where
+			S: ArcService + 'static + Send + Sync
+	{
 		self.route(Method::Patch, route, handler)
 	}
 	
-	pub fn delete<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+	pub fn delete<S>(self, route: &'static str, handler: S) -> Self 
+	where
+			S: ArcService + 'static + Send + Sync
+	{
 		self.route(Method::Delete, route, handler)
 	}
 	
-	fn route<S: ArcService + 'static + Send + Sync >(mut self, method: Method, path: &'static str, handler: S) -> Self {
+	fn route<S>(mut self, method: Method, path: &'static str, handler: S) -> Self 
+	where
+			S: ArcService + 'static + Send + Sync
+	{
 		self.routes
 			.entry(method)
 			.or_insert(Recognizer::new())

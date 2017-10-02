@@ -122,7 +122,7 @@ where
 		let routeService = routeService.clone();
 
 		thread::spawn(move || {
-			let mut core = Core::new().unwrap();
+			let mut core = Core::new().expect("Could not start event loop");
 			let handle = core.handle();
 			let http = Http::new();
 
@@ -134,7 +134,7 @@ where
 					}
 					reactor.taskHandle = Some(task::current());
 				},
-			}).unwrap();
+			}).expect("Could not spawn threads!");
 		});
 	}
 
