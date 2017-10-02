@@ -1,24 +1,34 @@
-use hyper::{Request};
-use ArcProto::{ArcResult};
+use hyper::{Request, Response};
+use ArcProto::{ArcResult, ArcError, arc};
 
-
-pub trait MiddleWare {
-		fn call (&self, request: Request) -> ArcResult;
+pub trait MiddleWare: Sync + Send
+{
+	type R: Into<Response>;
+	type E: Into<ArcError>;
+	fn call(&self, request: Request) -> ArcResult<Self::R, Self::E>;
 }
 
-impl<T> MiddleWare for Vec<T>
-where T: MiddleWare
+impl MiddleWare for Vec<Box<MiddleWare<R = Response, E = ArcError>>>
 {
-	fn call	(&self, request: Request) -> ArcResult {
+	type R = Response;
+	type E = ArcError;
+	fn call(&self, request: Request) -> ArcResult<Self::R, Self::E> {
 		self
-			.into_iter()
+			.iter()
 			.fold(
-				Ok(request),
+				arc::Ok(request),
 				|request, middleware| {
 					request.and_then(|req| middleware.call(req))
 				}
 			)
-			
 	}
+}
+
+#[macro_export]
+macro_rules! mw {
+    ($($middlewares:expr), +) => {{
+			let middleWares: Vec<Box<MiddleWare<R = Response, E = ArcError>>> = vec![$(Box::new($middlewares)), +];
+      middleWares
+		}};
 }
 

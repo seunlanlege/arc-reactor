@@ -19,6 +19,6 @@ where
 	fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
 		(self.handler)();
 		
-		Result::Ok(Async::NotReady)
+		Ok(Async::NotReady)
 	}
 }

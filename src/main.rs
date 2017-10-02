@@ -1,10 +1,13 @@
 #![feature(
 	proc_macro,
+	box_syntax,
+	type_ascription,
 	conservative_impl_trait,
 	generators,
 	inclusive_range_syntax,
 )]
 
+#![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
@@ -17,6 +20,7 @@ extern crate hyper;
 
 mod ArcRouting;
 mod ArcCore;
+#[macro_use]
 mod ArcProto;
 
 use impl_service::{service, middleware};
@@ -28,12 +32,9 @@ use futures::prelude::{async_block};
 use ArcProto::*;
 
 fn getMainRoutes() -> ArcRouter {
-	// let mut middlewares = Vec::new();
-	// middlewares.push(middleware1);
-	// middlewares.push(middleware2);
-
 	ArcRouter::new()
-		.post("/", (middleware, RequestHandler))
+		.get("/", GetRequest)
+		.post("/", (mw![middleware, middleware2], RequestHandler))
 }
 
 fn main() {
@@ -55,12 +56,33 @@ fn RequestHandler(_request: Request) {
 }
 
 #[middleware]
-fn middleware(req: Request) -> ArcResult {
-	println!("middleware 1: {}", req.path());
+fn middleware(req: Request){
+	println!("middleware 1: {}, {}", req.path(), req.method());
 	if req.path() != "/" {
-		return Err("Failed to get the data!".into())
+		return arc::Err("Failed to get the data!".into())
 	}
 
-	return Ok(req)
+	return arc::Ok(req)
 }
 
+#[middleware]
+fn middleware2(req: Request) {
+	println!("middleware 2: {}, {}", req.path(), req.method());
+	if req.path() != "/" {
+		return arc::Err("Failed to get the data!".into())
+	}
+	
+	if true {
+		return arc::Res((401, "failed to acquire type info!").convert())
+	}
+
+	return arc::Ok(req)
+}
+
+#[service]
+fn GetRequest(_req: Request) {
+	return
+	Ok(Response::new()
+		.with_body("hello world".as_bytes())
+	)
+}

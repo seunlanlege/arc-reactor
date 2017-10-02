@@ -1,6 +1,6 @@
 use hyper::{Response, Request, Error, StatusCode};
-use futures::{future, Future};
-use ArcProto::{MiddleWare};
+use futures::{future, Future, IntoFuture};
+use ArcProto::{MiddleWare, arc, ArcError};
 
 pub trait ArcService: Send + Sync {
 	fn call (&self, req: Request) -> ResponseFuture;
@@ -8,47 +8,40 @@ pub trait ArcService: Send + Sync {
 
 type ResponseFuture = Box<Future<Item = Response, Error = Error>>;
 
-impl<Before, Handler, After> ArcService for (Before, Handler, After)
-where 
-		Before: MiddleWare  + Sync + Send,
-		Handler: ArcService + Sync + Send,
-		After: Fn(ResponseFuture) -> ResponseFuture + Sync + Send,
+impl<B, H, A> ArcService for (B, H, A)
+where
+		B: MiddleWare<R = Response, E = ArcError>  + Sync + Send,
+		H: ArcService + Sync + Send,
+		A: Fn(ResponseFuture) -> ResponseFuture + Sync + Send,
 {
 	fn call(&self, req: Request) -> ResponseFuture {
 		let request = match self.0.call(req) {
-			Ok(request) => request,
-			Err(e) => {
-				return Box::new(
-					future::ok(
-						Response::new()
-							.with_status(StatusCode::BadRequest)
-							.with_body(e.0)
-					)
-				)
+			arc::Ok(request) => request,
+			arc::Res(res) => {
+				return box Ok(res.into()).into_future()
+			}
+			arc::Err(e) => {
+				return box Ok(e.into()).into_future()
 			}
 		};
 		let response = (self.1).call(request);
 		(self.2)(response)
 	}
-
 }
 
-impl<Before, Handler> ArcService for (Before, Handler)
-where 
-		Before: MiddleWare + Sync + Send,
-		Handler: ArcService + Sync + Send,
+impl<B, H> ArcService for (B, H)
+where
+		B: MiddleWare<R = Response, E = ArcError> + Sync + Send,
+		H: ArcService + Sync + Send,
 {
 	fn call(&self, req: Request) -> ResponseFuture {
 		let request = match self.0.call(req) {
-			Ok(request) => request,
-			Err(e) => {
-				return Box::new(
-					future::ok(
-						Response::new()
-							.with_status(StatusCode::BadRequest)
-							.with_body(e.0)
-					)
-				)
+			arc::Ok(request) => request,
+			arc::Res(res) => {
+				return box Ok(res.into()).into_future()
+			}
+			arc::Err(e) => {
+				return box Ok(e.into()).into_future()
 			}
 		};
 		(self.1).call(request)
