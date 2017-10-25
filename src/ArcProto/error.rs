@@ -1,28 +1,11 @@
-use hyper::{Response, Request, StatusCode};
+use hyper::{StatusCode};
+use ArcCore::{Request, Response};
 
 pub struct ArcError(pub StatusCode, pub String);
 
-impl Into<ArcError> for &'static str {
-	fn into(self) -> ArcError {
-		ArcError(Default::default(), self.to_owned())
-	}
-}
-
-fn convertToStatusCode(number: u16) -> StatusCode {
-	match StatusCode::try_from(number) {
-		Ok(status) => {
-			status
-		},
-		Err(_) => {
-			StatusCode::BadRequest
-		},
-	}
-}
-
-impl Into<ArcError> for (u16, &'static str) {
-	fn into(self) -> ArcError {
-		let status = convertToStatusCode(self.0);
-		ArcError(status, self.1.to_owned())
+impl From<&'static str> for ArcError {
+	fn from(string: &str) -> ArcError {
+		ArcError(Default::default(), string.to_owned())
 	}
 }
 
@@ -32,25 +15,17 @@ impl Default for ArcError {
 	}
 }
 
-pub enum ArcResult<R, E>
-where
-		R: Into<Response>,
-		E: Into<ArcError>,
-{
+pub enum ArcResult {
 	Ok(Request),
-	Err(E),
-	Res(R)
+	Err(ArcError),
+	Res(Response)
 }
 
-impl<R, E> ArcResult<R, E>
-	where
-		R: Into<Response>,
-		E: Into<ArcError>,
-{
+impl ArcResult {
 	#[inline]
-	pub fn and_then<F> (self, predicate: F) -> ArcResult<R, E>
+	pub fn and_then<F> (self, predicate: F) -> ArcResult
 	where
-			F: FnOnce(Request) -> ArcResult<R, E>
+			F: FnOnce(Request) -> ArcResult
 	{
 		use ArcResult::*;
 		match self {
@@ -61,22 +36,12 @@ impl<R, E> ArcResult<R, E>
 	}
 }
 
-impl Into<Response> for ArcError {
-	fn into(self) -> Response {
-		Response::new()
-			.with_status(self.0)
-			.with_body(self.1)
-	}
-}
 
-pub trait Convert<T> {
-	fn convert(self) -> T;
-}
+ impl From<ArcError> for Response {
+ 	fn from(arcError: ArcError) -> Response {
+ 		Response::new()
+ 			.with_status(arcError.0)
+ 			.with_body(arcError.1)
+ 	}
+ }
 
-impl Convert<Response> for (u16, &'static str) {
-	fn convert(self) -> Response {
-		Response::new()
-			.with_status(convertToStatusCode(self.0))
-			.with_body(self.1)
-	}
-}

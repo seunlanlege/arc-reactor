@@ -1,10 +1,11 @@
 use hyper::{Response, Request, Method, self, StatusCode};
-use futures::{Future, future};
+use futures::{Future, IntoFuture};
 use hyper::server::Service;
 use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
 use ArcProto::ArcService;
 use ArcRouting::{RouteGroup};
+use ArcCore::{Request as ArcRequest};
 
 pub struct ArcRouter {
 	routes: HashMap<Method, Recognizer<Box<ArcService>>>,
@@ -18,14 +19,18 @@ impl Service for ArcRouter {
 	
 	fn call(&self, req: Request) -> Self::Future {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
-			return routeMatch.handler.call(req)
+			let response = Response::new();
+			let remote = req.remote_addr();
+			let (method, uri, version, headers, body) = req.deconstruct();
+			let request = ArcRequest::new(method, uri, version, headers, body, remote);
+			// TODO: add anymap!
+			// request.put(routeMatch.params);
+			return routeMatch.handler.call(request, response)
 		}
 
-		return Box::new(
-			future::ok(
-				Response::new().with_status(StatusCode::NotFound)
-			)
-		)
+		return box Ok(
+			Response::new().with_status(StatusCode::NotFound)
+		).into_future()
 	}
 }
 
@@ -60,49 +65,49 @@ impl ArcRouter {
 		self
 	}
 	
-	pub fn get<S>(self, route: &'static str, handler: S) -> Self 
+	pub fn get<S>(self, route: &'static str, handler: S) -> Self
 	where
 			S: ArcService + 'static + Send + Sync
 	{
 		self.route(Method::Get, route, handler)
 	}
 	
-	pub fn post<S>(self, route: &'static str, handler: S) -> Self 
+	pub fn post<S>(self, route: &'static str, handler: S) -> Self
 	where
 			S: ArcService + 'static + Send + Sync
 	{
 		self.route(Method::Post, route, handler)
 	}
 	
-	pub fn put<S>(self, route: &'static str, handler: S) -> Self 
+	pub fn put<S>(self, route: &'static str, handler: S) -> Self
 	where
 			S: ArcService + 'static + Send + Sync
 	{
 		self.route(Method::Put, route, handler)
 	}
 	
-	pub fn patch<S>(self, route: &'static str, handler: S) -> Self 
+	pub fn patch<S>(self, route: &'static str, handler: S) -> Self
 	where
 			S: ArcService + 'static + Send + Sync
 	{
 		self.route(Method::Patch, route, handler)
 	}
 	
-	pub fn delete<S>(self, route: &'static str, handler: S) -> Self 
+	pub fn delete<S>(self, route: &'static str, handler: S) -> Self
 	where
 			S: ArcService + 'static + Send + Sync
 	{
 		self.route(Method::Delete, route, handler)
 	}
 	
-	fn route<S>(mut self, method: Method, path: &'static str, handler: S) -> Self 
+	fn route<S>(mut self, method: Method, path: &'static str, handler: S) -> Self
 	where
 			S: ArcService + 'static + Send + Sync
 	{
 		self.routes
 			.entry(method)
 			.or_insert(Recognizer::new())
-			.add(path.as_ref(), Box::new(handler));
+			.add(path.as_ref(), box handler);
 		
 		self
 	}

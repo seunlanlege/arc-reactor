@@ -26,7 +26,8 @@ mod ArcProto;
 use impl_service::{service, middleware};
 use ArcCore::ArcReactor;
 use ArcRouting::*;
-use hyper::{Request, Response, Error, StatusCode};
+use hyper::{Response, Error, StatusCode};
+use ArcCore::{Request};
 use futures::future::Future;
 use futures::prelude::{async_block};
 use ArcProto::*;
@@ -46,9 +47,9 @@ fn main() {
 }
 
 #[service]
-fn RequestHandler(_request: Request) {
+fn RequestHandler(_request: Request, res: Response) {
 	println!("Post Request!");
-	let res =	Response::new()
+	let res =	res
 		.with_status(StatusCode::Ok)
 		.with_body("Hello World");
 
@@ -57,7 +58,7 @@ fn RequestHandler(_request: Request) {
 
 #[middleware]
 fn middleware(req: Request){
-	println!("middleware 1: {}, {}", req.path(), req.method());
+	println!("middleware 1: {:?}", &req);
 	if req.path() != "/" {
 		return arc::Err("Failed to get the data!".into())
 	}
@@ -69,20 +70,20 @@ fn middleware(req: Request){
 fn middleware2(req: Request) {
 	println!("middleware 2: {}, {}", req.path(), req.method());
 	if req.path() != "/" {
-		return arc::Err("Failed to get the data!".into())
+		return arc::Err((401, "failed to acquire type info!").into())
 	}
 	
-	if true {
-		return arc::Res((401, "failed to acquire type info!").convert())
+	if false {
+		return arc::Res((401, "failed to acquire type info!").into())
 	}
 
 	return arc::Ok(req)
 }
 
 #[service]
-fn GetRequest(_req: Request) {
-	return
-	Ok(Response::new()
+fn GetRequest(_req: Request, res: Response) {
+	return Ok(
+		res
 		.with_body("hello world".as_bytes())
 	)
 }
