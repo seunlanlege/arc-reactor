@@ -68,11 +68,8 @@ pub fn middleware(_attribute: TokenStream, function: TokenStream) -> TokenStream
 	let output = quote! {
 		struct #ident;
 		
-		impl MiddleWare for #ident
-		{
-			type R = Response;
-			type E = ArcError;
-			fn call(&self, #inputs) -> ArcResult<Self::R, Self::E> {
+		impl MiddleWare for #ident {
+			fn call(&self, #inputs) -> ArcResult {
 				#(
 					#block
 				)*
