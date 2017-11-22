@@ -1,10 +1,7 @@
 #![feature(
 	proc_macro,
 	box_syntax,
-	type_ascription,
-	conservative_impl_trait,
 	generators,
-	inclusive_range_syntax,
 )]
 
 #![allow(non_camel_case_types)]
@@ -36,7 +33,7 @@ use ArcProto::*;
 
 fn getMainRoutes() -> ArcRouter {
 	ArcRouter::new()
-		.get("/", GetRequest)
+		.post("/", (mw![middleware, middleware2], RequestHandler))
 		.post("/:username", (mw![middleware, middleware2], RequestHandler))
 }
 
@@ -50,44 +47,21 @@ fn main() {
 
 #[service]
 fn RequestHandler(request: Request, res: Response) {
-	if let Some(url) = request.map.get::<Params>() {
-		println!("Post Request! with uri {:?}", url.find("username"));
-	}
+	let url = request.map.get::<Params>().unwrap();
+	let body = format!("Hello {}", url["username"]);
 	let res =	res
 		.with_status(StatusCode::Ok)
-		.with_body(request.body);
+		.with_body(body);
 
 	Ok(res)
 }
 
 #[middleware]
 fn middleware(req: Request){
-	println!("middleware 1: {:?}", &req);
-//	if req.path() != "/" {
-//		return arc::Err("Failed to get the data!".into())
-//	}
-
-	return arc::Ok(req)
+	arc::Ok(req)
 }
 
 #[middleware]
 fn middleware2(req: Request) {
-	println!("middleware 2: {}, {}", req.path(), req.method());
-//	if req.path() != "/" {
-//		return arc::Err((401, "failed to acquire type info!").into())
-//	}
-
-	if false {
-		return arc::Res((401, "failed to acquire type info!").into())
-	}
-
-	return arc::Ok(req)
-}
-
-#[service]
-fn GetRequest(_req: Request, res: Response) {
-	return Ok(
-		res
-		.with_body("hello world".as_bytes())
-	)
+	arc::Ok(req)
 }

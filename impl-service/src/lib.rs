@@ -15,7 +15,7 @@ use syn::*;
 #[proc_macro_attribute]
 pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let Item { node, .. } = syn::parse(function)
-		.expect("failed to parse tokens");
+		.expect("Well, that didn't work. Must be a syntax error.");
 	let ItemFn {
 		ident,
 		block,
@@ -51,7 +51,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn middleware(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let Item { node, .. } = syn::parse(function)
-		.expect("failed to parse tokens");
+		.expect("Well, that didn't work. Must be a syntax error");
 	let ItemFn {
 		ident,
 		block,

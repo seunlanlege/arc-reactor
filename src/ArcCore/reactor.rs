@@ -103,7 +103,6 @@ where
 		
 		Ok(())
 	}
-
 }
 
 fn spawn<S>(RouteService: S) -> io::Result<Vec<ReactorAlias>>
@@ -113,11 +112,9 @@ where
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
 	
-	for _ in 1..num_cpus::get() * 2 {
+	for _ in 0..num_cpus::get() * 2 {
 		let reactor = Reactor::new();
-
 		reactors.push(reactor.clone());
-
 		let routeService = routeService.clone();
 
 		thread::spawn(move || {
