@@ -15,8 +15,8 @@ use num_cpus;
 pub type ReactorAlias = Arc<Mutex<Reactor>>;
 
 pub struct Reactor {
-	pub peers: Vec<(TcpStream, SocketAddr)>,
-	pub taskHandle: Option<Task>,
+	pub(crate) peers: Vec<(TcpStream, SocketAddr)>,
+	pub(crate) taskHandle: Option<Task>,
 }
 
 impl Reactor {
@@ -38,7 +38,6 @@ where
 {
 	port: i16,
 	timeout: i8,
-//	context: Context,
 	RouteService: Option<S>
 }
 

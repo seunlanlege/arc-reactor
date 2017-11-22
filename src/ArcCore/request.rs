@@ -1,13 +1,15 @@
 use hyper::{Uri, Body, HttpVersion, Headers, Method};
 use std::{fmt, net};
+use anymap::AnyMap;
 
 pub struct Request {
 	uri: Uri,
-	body: Body,
+	pub body: Body,
 	version: HttpVersion,
 	headers: Headers,
 	remote: Option<net::SocketAddr>,
 	method: Method,
+	pub map: AnyMap
 }
 
 impl Request {
@@ -25,7 +27,8 @@ impl Request {
 			version,
 			headers,
 			body,
-			remote
+			remote,
+			map: AnyMap::new()
 		}
 	}
 	

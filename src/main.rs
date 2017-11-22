@@ -11,6 +11,7 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
+extern crate anymap;
 extern crate impl_service;
 extern crate num_cpus;
 extern crate tokio_core;
@@ -23,6 +24,7 @@ mod ArcCore;
 #[macro_use]
 mod ArcProto;
 
+use recognizer::Params;
 use impl_service::{service, middleware};
 use ArcCore::ArcReactor;
 use ArcRouting::*;
@@ -35,7 +37,7 @@ use ArcProto::*;
 fn getMainRoutes() -> ArcRouter {
 	ArcRouter::new()
 		.get("/", GetRequest)
-		.post("/", (mw![middleware, middleware2], RequestHandler))
+		.post("/:username", (mw![middleware, middleware2], RequestHandler))
 }
 
 fn main() {
@@ -47,11 +49,13 @@ fn main() {
 }
 
 #[service]
-fn RequestHandler(_request: Request, res: Response) {
-	println!("Post Request!");
+fn RequestHandler(request: Request, res: Response) {
+	if let Some(url) = request.map.get::<Params>() {
+		println!("Post Request! with uri {:?}", url.find("username"));
+	}
 	let res =	res
 		.with_status(StatusCode::Ok)
-		.with_body("Hello World");
+		.with_body(request.body);
 
 	Ok(res)
 }
@@ -59,9 +63,9 @@ fn RequestHandler(_request: Request, res: Response) {
 #[middleware]
 fn middleware(req: Request){
 	println!("middleware 1: {:?}", &req);
-	if req.path() != "/" {
-		return arc::Err("Failed to get the data!".into())
-	}
+//	if req.path() != "/" {
+//		return arc::Err("Failed to get the data!".into())
+//	}
 
 	return arc::Ok(req)
 }
@@ -69,10 +73,10 @@ fn middleware(req: Request){
 #[middleware]
 fn middleware2(req: Request) {
 	println!("middleware 2: {}, {}", req.path(), req.method());
-	if req.path() != "/" {
-		return arc::Err((401, "failed to acquire type info!").into())
-	}
-	
+//	if req.path() != "/" {
+//		return arc::Err((401, "failed to acquire type info!").into())
+//	}
+
 	if false {
 		return arc::Res((401, "failed to acquire type info!").into())
 	}

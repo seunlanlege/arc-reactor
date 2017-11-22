@@ -15,3 +15,6 @@ num_cpus = "1.6.2"
 net2 = "*"
 route-recognizer = "0.1.12"
 futures-await = { git = 'https://github.com/alexcrichton/futures-await' }
+anymap = "0.12.1"
+queryst-prime = "2.0.0"
+tokio-file-unix = "0.3.0"

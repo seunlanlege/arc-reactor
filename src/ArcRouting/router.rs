@@ -22,9 +22,8 @@ impl Service for ArcRouter {
 			let response = Response::new();
 			let remote = req.remote_addr();
 			let (method, uri, version, headers, body) = req.deconstruct();
-			let request = ArcRequest::new(method, uri, version, headers, body, remote);
-			// TODO: add anymap!
-			// request.put(routeMatch.params);
+			let mut request = ArcRequest::new(method, uri, version, headers, body, remote);
+			request.map.insert(routeMatch.params);
 			return routeMatch.handler.call(request, response)
 		}
 
