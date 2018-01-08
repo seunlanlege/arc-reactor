@@ -1,0 +1,45 @@
+[[package]]
+name = "impl-service"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 0.3.15 (git+https://github.com/dtolnay/quote)",
+ "syn 0.11.11 (git+https://github.com/dtolnay/syn)",
+]
+
+[[package]]
+name = "proc-macro2"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "unicode-xid 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "quote"
+version = "0.3.15"
+source = "git+https://github.com/dtolnay/quote#92b47f21c3e7ff8845fbe56a55faec66a0b4cff8"
+dependencies = [
+ "proc-macro2 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "syn"
+version = "0.11.11"
+source = "git+https://github.com/dtolnay/syn#36454bbe226630ee622397767a70bf1bad05c8c7"
+dependencies = [
+ "proc-macro2 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 0.3.15 (git+https://github.com/dtolnay/quote)",
+ "unicode-xid 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "unicode-xid"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum proc-macro2 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "557facecbf90ff79faea80a08230d10c812016aa19198ed07d06de61f965b5cc"
+"checksum quote 0.3.15 (git+https://github.com/dtolnay/quote)" = "<none>"
+"checksum syn 0.11.11 (git+https://github.com/dtolnay/syn)" = "<none>"
+"checksum unicode-xid 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fc72304796d0818e357ead4e000d19c9c174ab23dc11093ac919054d20a6a7fc"

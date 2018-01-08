@@ -4,11 +4,13 @@ use hyper::server::Service;
 use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
 use ArcProto::ArcService;
+use ArcProto::{MiddleWare, ArcResult};
 use ArcRouting::{RouteGroup};
-use ArcCore::{Request as ArcRequest};
+use ArcCore::{Request as ArcRequest, Response as ArcResponse};
 
 pub struct ArcRouter {
 	routes: HashMap<Method, Recognizer<Box<ArcService>>>,
+	middleware: Option<Box<MiddleWare>>,
 }
 
 impl Service for ArcRouter {
@@ -19,14 +21,25 @@ impl Service for ArcRouter {
 	
 	fn call(&self, req: Request) -> Self::Future {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
-			let response = Response::new();
-			let remote = req.remote_addr();
-			let (method, uri, version, headers, body) = req.deconstruct();
-			let mut request = ArcRequest::new(method, uri, version, headers, body, remote);
-			request.map.insert(routeMatch.params);
-			return routeMatch.handler.call(request, response)
+			let mut request: ArcRequest = req.into();
+			request.paramsMap.insert(routeMatch.params);
+
+			let modifiedRequest = match self.middleware {
+				Some(ref middleware) => match middleware.call(request) {
+					ArcResult::Ok(req) => req,
+					ArcResult::response(response) => return box Ok(response.into()).into_future(),
+					// TODO: well, obviously its a hack, still haven't figured errors out.
+					ArcResult::error(_) => return box Err(hyper::Error::Timeout).into_future()
+				},
+				None => request
+			};
+
+			let responseFuture =  routeMatch.handler.call(modifiedRequest, ArcResponse::new());
+
+			return box responseFuture.map(|res| res.into());
 		}
 
+		// TODO: this should be handled by a user defined 404 handler
 		return box Ok(
 			Response::new().with_status(StatusCode::NotFound)
 		).into_future()
@@ -34,8 +47,8 @@ impl Service for ArcRouter {
 }
 
 impl ArcRouter {
-	pub fn new() -> Self {
-		Self { routes: HashMap::new() }
+	pub(crate) fn new() -> Self {
+		Self { routes: HashMap::new(), middleware: None }
 	}
 
 	pub(crate) fn matchRoute<P>(&self, route: P, method: &Method) -> Option<Match<&Box<ArcService>>>
@@ -47,11 +60,13 @@ impl ArcRouter {
 		}
 	}
 
-	pub fn group(parent: &'static str) -> RouteGroup {
-		RouteGroup::new(parent)
+	pub fn middleware(mut self, middleware: Box<MiddleWare>) -> Self {
+		self.middleware = Some(middleware);
+
+		self
 	}
 
-	pub fn add(mut self, group: RouteGroup) -> Self {
+	pub fn routes(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 
 		for (path, (method, handler)) in routes.into_iter() {

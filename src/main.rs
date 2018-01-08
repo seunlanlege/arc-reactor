@@ -1,12 +1,13 @@
 #![feature(
-	proc_macro,
-	box_syntax,
-	generators,
+proc_macro,
+box_syntax,
+generators,
 )]
 
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
 
 extern crate anymap;
 extern crate impl_service;
@@ -21,20 +22,22 @@ mod ArcCore;
 #[macro_use]
 mod ArcProto;
 
-use recognizer::Params;
 use impl_service::{service, middleware};
-use ArcCore::ArcReactor;
-use ArcRouting::*;
-use hyper::{Response, Error, StatusCode};
-use ArcCore::{Request};
+use hyper::{Error, StatusCode};
 use futures::future::Future;
 use futures::prelude::{async_block};
-use ArcProto::*;
+
+use ArcCore::*;
+use ArcRouting::*;
+use ArcProto::{MiddleWare, ArcService};
 
 fn getMainRoutes() -> ArcRouter {
-	ArcRouter::new()
-		.post("/", (mw![middleware, middleware2], RequestHandler))
-		.post("/:username", (mw![middleware, middleware2], RequestHandler))
+	let router: ArcRouter = ArcRouter::new()
+		.get("/:username", RequestHandler);
+//		.post("/", (mw![middleware, middleware2], RequestHandler))
+//		.post("/:username", (mw![middleware, middleware2], RequestHandler))
+
+	return router
 }
 
 fn main() {
@@ -45,23 +48,39 @@ fn main() {
 		.unwrap()
 }
 
-#[service]
-fn RequestHandler(request: Request, res: Response) {
-	let url = request.map.get::<Params>().unwrap();
-	let body = format!("Hello {}", url["username"]);
-	let res =	res
-		.with_status(StatusCode::Ok)
-		.with_body(body);
-
-	Ok(res)
+struct RequestHandler;
+impl ArcService for RequestHandler {
+	fn call (&self , request: Request , res: Response ) -> Box<Future<Item=Response , Error=Error>> {
+		Box::new(
+			async_block!{
+        let params = request.params().unwrap();
+        let body = format!("Hello {}" , params["username"]);
+        let res = res
+          .with_status(StatusCode::Ok)
+          .with_body(body);
+        Ok(res)
+      }
+		)
+	}
 }
+//#[service]
+//fn RequestHandler(request: Request, res: Response) {
+//	let url = request.params();
+//	let body = format!("Hello {}", url["username"]);
+//	let res =	res
+//		.with_status(StatusCode::Ok)
+//		.with_body(body);
+//
+//	Ok(res)
+//}
 
-#[middleware]
-fn middleware(req: Request){
-	arc::Ok(req)
-}
 
-#[middleware]
-fn middleware2(req: Request) {
-	arc::Ok(req)
-}
+//#[middleware]
+//fn middleware(req: Request){
+//	arc::Ok(req)
+//}
+
+//#[middleware]
+//fn middleware2(req: Request) {
+//	arc::Ok(req)
+//}

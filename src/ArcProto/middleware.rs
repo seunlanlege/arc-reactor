@@ -1,5 +1,5 @@
 use ArcCore::{Request};
-use ArcProto::{ArcResult, arc};
+use ArcProto::{ArcResult, result};
 
 pub trait MiddleWare: Sync + Send {
 	fn call(&self, request: Request) -> ArcResult;
@@ -10,7 +10,7 @@ impl MiddleWare for Vec<Box<MiddleWare>> {
 		self
 			.iter()
 			.fold(
-				arc::Ok(request),
+				result::Ok(request),
 				|request, middleware| {
 					request.and_then(|req| middleware.call(req))
 				}
