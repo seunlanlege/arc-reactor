@@ -10,7 +10,7 @@ use ArcCore::{Request as ArcRequest, Response as ArcResponse};
 
 pub struct ArcRouter {
 	routes: HashMap<Method, Recognizer<Box<ArcService>>>,
-	middleware: Option<Box<MiddleWare>>,
+	middleware: Option<Box<MiddleWare<ArcRequest>>>,
 }
 
 impl Service for ArcRouter {
@@ -27,7 +27,6 @@ impl Service for ArcRouter {
 			let modifiedRequest = match self.middleware {
 				Some(ref middleware) => match middleware.call(request) {
 					ArcResult::Ok(req) => req,
-					ArcResult::response(response) => return box Ok(response.into()).into_future(),
 					// TODO: well, obviously its a hack, still haven't figured errors out.
 					ArcResult::error(_) => return box Err(hyper::Error::Timeout).into_future()
 				},
@@ -60,7 +59,7 @@ impl ArcRouter {
 		}
 	}
 
-	pub fn middleware(mut self, middleware: Box<MiddleWare>) -> Self {
+	pub fn middleware(mut self, middleware: Box<MiddleWare<ArcRequest>>) -> Self {
 		self.middleware = Some(middleware);
 
 		self

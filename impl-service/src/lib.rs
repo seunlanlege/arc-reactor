@@ -51,7 +51,9 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn middleware(_attribute: TokenStream, function: TokenStream) -> TokenStream {
+pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream {
+	let attribute = attribute.to_string();
+	let attribute = Ident::new(attribute.trim_matches(&[' ', '(', ')', '"'][..]), Span::call_site());
 	let item = syn::parse(function)
 		.expect("Well, that didn't work. Must be a syntax error");
 	let ItemFn {
@@ -71,8 +73,8 @@ pub fn middleware(_attribute: TokenStream, function: TokenStream) -> TokenStream
 	let output = quote_spanned! {span=>
 		struct #ident;
 
-		impl MiddleWare for #ident {
-			fn call(&self, #inputs) -> ArcResult {
+		impl MiddleWare<#attribute> for #ident {
+			fn call(&self, #inputs) -> ArcResult<#attribute> {
 				#(
 					#block
 				)*

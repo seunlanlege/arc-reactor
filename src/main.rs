@@ -60,12 +60,12 @@ fn RequestHandler(request: Request, res: Response) {
 }
 
 
-#[middleware]
+#[middleware(Request)]
 fn middleware(req: Request){
 	result::Ok(req)
 }
 
-#[middleware]
+#[middleware(Request)]
 fn middleware2(req: Request) {
 	result::Ok(req)
 }

@@ -15,21 +15,32 @@ impl Default for ArcError {
 	}
 }
 
-pub enum ArcResult {
-	Ok(Request),
+pub enum ArcResult<T> {
+	Ok(T),
 	error(ArcError),
-	response(Response)
 }
 
-impl ArcResult {
+impl ArcResult<Request> {
 	#[inline]
-	pub fn and_then<F> (self, predicate: F) -> ArcResult
+	pub fn and_then<F> (self, predicate: F) -> ArcResult<Request>
 	where
-			F: FnOnce(Request) -> ArcResult
+			F: FnOnce(Request) -> ArcResult<Request>
 	{
 		match self {
 			ArcResult::Ok(t) => predicate(t),
-			ArcResult::response(r) => ArcResult::response(r),
+			ArcResult::error(e) => ArcResult::error(e),
+		}
+	}
+}
+
+impl ArcResult<Response> {
+	#[inline]
+	pub fn and_then<F> (self, predicate: F) -> ArcResult<Response>
+		where
+			F: FnOnce(Response) -> ArcResult<Response>
+	{
+		match self {
+			ArcResult::Ok(t) => predicate(t),
 			ArcResult::error(e) => ArcResult::error(e),
 		}
 	}
