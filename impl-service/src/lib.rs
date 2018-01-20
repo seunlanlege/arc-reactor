@@ -7,8 +7,8 @@ extern crate proc_macro2;
 extern crate syn;
 #[macro_use]
 extern crate quote;
-use quote::ToTokens;
-
+use quote::{ToTokens, quote_spanned};
+use proc_macro2::Span;
 use proc_macro::TokenStream;
 use syn::*;
 //use syn::Stmt::{Item};
@@ -29,8 +29,9 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	
 	let block = block.stmts.iter();
 	let inputs = decl.inputs.into_tokens();
+	let span = Span::call_site();
 	
-	let output = quote! {
+	let output = quote_spanned! {span=>
 		struct #ident;
 		
 		impl ArcService for #ident {
@@ -45,8 +46,6 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 			}
 		}
 	};
-
-//	println!("{}", &output);
 
 	output.into()
 }
@@ -67,8 +66,9 @@ pub fn middleware(_attribute: TokenStream, function: TokenStream) -> TokenStream
 
 	let block = block.stmts.iter();
 	let inputs = decl.inputs.into_tokens();
+	let span = Span::call_site();
 
-	let output = quote! {
+	let output = quote_spanned! {span=>
 		struct #ident;
 
 		impl MiddleWare for #ident {

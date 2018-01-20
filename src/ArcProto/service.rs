@@ -26,7 +26,7 @@ where
 			}
 		};
 		let response = (self.1).call(request, res);
-		return box response.map(&self.2)
+		return box response
 	}
 }
 

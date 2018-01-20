@@ -29,7 +29,7 @@ use futures::prelude::{async_block};
 
 use ArcCore::*;
 use ArcRouting::*;
-use ArcProto::{MiddleWare, ArcService};
+use ArcProto::*;
 
 fn getMainRoutes() -> ArcRouter {
 	let router: ArcRouter = ArcRouter::new()
@@ -48,39 +48,24 @@ fn main() {
 		.unwrap()
 }
 
-struct RequestHandler;
-impl ArcService for RequestHandler {
-	fn call (&self , request: Request , res: Response ) -> Box<Future<Item=Response , Error=Error>> {
-		Box::new(
-			async_block!{
-        let params = request.params().unwrap();
-        let body = format!("Hello {}" , params["username"]);
-        let res = res
-          .with_status(StatusCode::Ok)
-          .with_body(body);
-        Ok(res)
-      }
-		)
-	}
+#[service]
+fn RequestHandler(request: Request, res: Response) {
+	let url = request.params().unwrap();
+	let body = format!("Hello {}", url["username"]);
+	let res =	res
+		.with_status(StatusCode::Ok)
+		.with_body(body);
+
+	Ok(res)
 }
-//#[service]
-//fn RequestHandler(request: Request, res: Response) {
-//	let url = request.params();
-//	let body = format!("Hello {}", url["username"]);
-//	let res =	res
-//		.with_status(StatusCode::Ok)
-//		.with_body(body);
-//
-//	Ok(res)
-//}
 
 
-//#[middleware]
-//fn middleware(req: Request){
-//	arc::Ok(req)
-//}
+#[middleware]
+fn middleware(req: Request){
+	result::Ok(req)
+}
 
-//#[middleware]
-//fn middleware2(req: Request) {
-//	arc::Ok(req)
-//}
+#[middleware]
+fn middleware2(req: Request) {
+	result::Ok(req)
+}
