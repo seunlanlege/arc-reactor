@@ -1,13 +1,16 @@
 use hyper::{Uri, Body, HttpVersion, Headers, Method};
 use std::{fmt, net};
+use recognizer::Params;
+use anymap::AnyMap;
 
 pub struct Request {
 	uri: Uri,
-	body: Body,
+	pub body: Body,
 	version: HttpVersion,
 	headers: Headers,
 	remote: Option<net::SocketAddr>,
 	method: Method,
+	pub(crate) paramsMap: AnyMap
 }
 
 impl Request {
@@ -25,7 +28,8 @@ impl Request {
 			version,
 			headers,
 			body,
-			remote
+			remote,
+			paramsMap: AnyMap::new()
 		}
 	}
 	
@@ -54,8 +58,13 @@ impl Request {
 		self.uri.path()
 	}
 
+	#[inline]
 	pub fn query(&self) -> Option<&str> {
 		self.uri.query()
+	}
+
+	pub fn params(&self) -> Option<&Params> {
+		self.paramsMap.get::<Params>()
 	}
 }
 

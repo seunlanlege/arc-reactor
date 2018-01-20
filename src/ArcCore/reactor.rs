@@ -5,6 +5,7 @@ use hyper::server::{Http, Service};
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpStream, TcpListener};
 use ArcCore::{ReactorHandler};
+use ArcRouting::{ArcRouter, RouteGroup};
 use std::sync::{Arc, Mutex};
 use std::marker::{Send, Sync};
 use futures::task::{Task, self};
@@ -15,8 +16,8 @@ use num_cpus;
 pub type ReactorAlias = Arc<Mutex<Reactor>>;
 
 pub struct Reactor {
-	pub peers: Vec<(TcpStream, SocketAddr)>,
-	pub taskHandle: Option<Task>,
+	pub(crate) peers: Vec<(TcpStream, SocketAddr)>,
+	pub(crate) taskHandle: Option<Task>,
 }
 
 impl Reactor {
@@ -38,7 +39,6 @@ where
 {
 	port: i16,
 	timeout: i8,
-//	context: Context,
 	RouteService: Option<S>
 }
 
@@ -53,6 +53,14 @@ where
 			RouteService: None
 		}
 	}
+
+	pub fn router() -> ArcRouter {
+		ArcRouter::new()
+	}
+
+	pub fn routeGroup(parent: &'static str) -> RouteGroup {
+			RouteGroup::new(parent)
+		}
 
 	pub fn port (mut self, port: i16) -> Self {
 		self.port = port;
@@ -104,7 +112,6 @@ where
 		
 		Ok(())
 	}
-
 }
 
 fn spawn<S>(RouteService: S) -> io::Result<Vec<ReactorAlias>>
@@ -114,11 +121,9 @@ where
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
 	
-	for _ in 1..num_cpus::get() * 2 {
+	for _ in 0..num_cpus::get() * 2 {
 		let reactor = Reactor::new();
-
 		reactors.push(reactor.clone());
-
 		let routeService = routeService.clone();
 
 		thread::spawn(move || {

@@ -1,16 +1,15 @@
 #![feature(
-	proc_macro,
-	box_syntax,
-	type_ascription,
-	conservative_impl_trait,
-	generators,
-	inclusive_range_syntax,
+proc_macro,
+box_syntax,
+generators,
 )]
 
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
 
+extern crate anymap;
 extern crate impl_service;
 extern crate num_cpus;
 extern crate tokio_core;
@@ -24,18 +23,21 @@ mod ArcCore;
 mod ArcProto;
 
 use impl_service::{service, middleware};
-use ArcCore::ArcReactor;
-use ArcRouting::*;
-use hyper::{Response, Error, StatusCode};
-use ArcCore::{Request};
+use hyper::{Error, StatusCode};
 use futures::future::Future;
 use futures::prelude::{async_block};
+
+use ArcCore::*;
+use ArcRouting::*;
 use ArcProto::*;
 
 fn getMainRoutes() -> ArcRouter {
-	ArcRouter::new()
-		.get("/", GetRequest)
-		.post("/", (mw![middleware, middleware2], RequestHandler))
+	let router: ArcRouter = ArcRouter::new()
+		.get("/:username", RequestHandler);
+//		.post("/", (mw![middleware, middleware2], RequestHandler))
+//		.post("/:username", (mw![middleware, middleware2], RequestHandler))
+
+	return router
 }
 
 fn main() {
@@ -47,43 +49,23 @@ fn main() {
 }
 
 #[service]
-fn RequestHandler(_request: Request, res: Response) {
-	println!("Post Request!");
+fn RequestHandler(request: Request, res: Response) {
+	let url = request.params().unwrap();
+	let body = format!("Hello {}", url["username"]);
 	let res =	res
 		.with_status(StatusCode::Ok)
-		.with_body("Hello World");
+		.with_body(body);
 
 	Ok(res)
 }
 
+
 #[middleware]
 fn middleware(req: Request){
-	println!("middleware 1: {:?}", &req);
-	if req.path() != "/" {
-		return arc::Err("Failed to get the data!".into())
-	}
-
-	return arc::Ok(req)
+	result::Ok(req)
 }
 
 #[middleware]
 fn middleware2(req: Request) {
-	println!("middleware 2: {}, {}", req.path(), req.method());
-	if req.path() != "/" {
-		return arc::Err((401, "failed to acquire type info!").into())
-	}
-	
-	if false {
-		return arc::Res((401, "failed to acquire type info!").into())
-	}
-
-	return arc::Ok(req)
-}
-
-#[service]
-fn GetRequest(_req: Request, res: Response) {
-	return Ok(
-		res
-		.with_body("hello world".as_bytes())
-	)
+	result::Ok(req)
 }

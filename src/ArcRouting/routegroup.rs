@@ -10,14 +10,14 @@ pub struct RouteGroup {
 
 
 impl RouteGroup {
-	pub fn new(parent: &'static str) -> Self {
+	pub(crate) fn new(parent: &'static str) -> Self {
 		RouteGroup {
 			parent,
 			routes: HashMap::new(),
 		}
 	}
 
-	pub fn add(mut self, group: RouteGroup) -> Self {
+	pub fn routes(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 
 		for (path, (method, handler)) in routes.into_iter() {

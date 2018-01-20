@@ -17,8 +17,8 @@ impl Default for ArcError {
 
 pub enum ArcResult {
 	Ok(Request),
-	Err(ArcError),
-	Res(Response)
+	error(ArcError),
+	response(Response)
 }
 
 impl ArcResult {
@@ -27,11 +27,10 @@ impl ArcResult {
 	where
 			F: FnOnce(Request) -> ArcResult
 	{
-		use ArcResult::*;
 		match self {
-			Ok(t) => predicate(t),
-			Res(r) => Res(r),
-			Err(e) => Err(e),
+			ArcResult::Ok(t) => predicate(t),
+			ArcResult::response(r) => ArcResult::response(r),
+			ArcResult::error(e) => ArcResult::error(e),
 		}
 	}
 }
