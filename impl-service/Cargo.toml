@@ -5,7 +5,7 @@ authors = ["seunlanlege <slanlege@c2gconsulting.com>"]
 
 [dependencies]
 quote = { git = 'https://github.com/dtolnay/quote' }
-proc-macro2 = { version = "*", features = ["unstable"] }
+proc-macro2 = { version = "*" }
 
 
 [lib]

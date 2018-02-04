@@ -11,7 +11,6 @@ use quote::{ToTokens, quote_spanned};
 use proc_macro2::Span;
 use proc_macro::TokenStream;
 use syn::*;
-//use syn::Stmt::{Item};
 
 #[proc_macro_attribute]
 pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {

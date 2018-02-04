@@ -15,38 +15,6 @@ impl Default for ArcError {
 	}
 }
 
-pub enum ArcResult<T> {
-	Ok(T),
-	error(ArcError),
-}
-
-impl ArcResult<Request> {
-	#[inline]
-	pub fn and_then<F> (self, predicate: F) -> ArcResult<Request>
-	where
-			F: FnOnce(Request) -> ArcResult<Request>
-	{
-		match self {
-			ArcResult::Ok(t) => predicate(t),
-			ArcResult::error(e) => ArcResult::error(e),
-		}
-	}
-}
-
-impl ArcResult<Response> {
-	#[inline]
-	pub fn and_then<F> (self, predicate: F) -> ArcResult<Response>
-		where
-			F: FnOnce(Response) -> ArcResult<Response>
-	{
-		match self {
-			ArcResult::Ok(t) => predicate(t),
-			ArcResult::error(e) => ArcResult::error(e),
-		}
-	}
-}
-
-
  impl From<ArcError> for Response {
  	fn from(arcError: ArcError) -> Response {
  		Response::new()

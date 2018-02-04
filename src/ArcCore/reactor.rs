@@ -7,7 +7,6 @@ use tokio_core::net::{TcpStream, TcpListener};
 use ArcCore::{ReactorHandler};
 use ArcRouting::{ArcRouter, RouteGroup};
 use std::sync::{Arc, Mutex};
-use std::marker::{Send, Sync};
 use futures::task::{Task, self};
 use std::net::SocketAddr;
 use std::thread;
