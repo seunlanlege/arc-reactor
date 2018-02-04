@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 
 pub trait ArcService: Send + Sync {
-	fn call (&self, req: Request, res: Response) -> FutureResponse;
+	fn call (&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Error> + 'static>;
 }
 
 pub type FutureResponse = Box<Future<Item = Response, Error = Error>>;
@@ -24,13 +24,9 @@ pub type FutureResponse = Box<Future<Item = Response, Error = Error>>;
 //	}
 //}
 
-impl<B> ArcService for (B, Arc<ArcService>)
-where
-		B: MiddleWare<Request> +  Sync + Send,
-{
-	fn call(&self, req: Request, res: Response) -> FutureResponse {
-		let handler = self.1.clone();
-		box self.0.call(req)
-			.and_then(move |req| handler.call(req, res))
-	}
-}
+//impl ArcService for (Box<MiddleWare<Request>>, Box<ArcService>)
+//{
+//	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Error>> {
+//		box	self.0.call(req).and_then(move |req| self.1.call(req, res))
+//	}
+//}

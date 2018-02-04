@@ -4,14 +4,14 @@ version = "0.1.0"
 authors = ["seunlanlege <slanlege@c2gconsulting.com>"]
 
 [dependencies]
-quote = { git = 'https://github.com/dtolnay/quote' }
-proc-macro2 = { version = "*" }
+quote = { version = '0.4' }
+proc-macro2 = { version = "0.2", feautures=["nightly"] }
 
 
 [lib]
 proc-macro = true
 
 [dependencies.syn]
-git = 'https://github.com/dtolnay/syn'
+version = '0.12'
 features = ["full", "fold", "parsing", "printing", "extra-traits"]
 default-features = false

@@ -1,12 +1,14 @@
 use futures::Stream;
 use std::io;
 use hyper;
+use hyper::Chunk;
 use hyper::server::{Http, Service};
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpStream, TcpListener};
 use ArcCore::{ReactorHandler};
 use ArcRouting::{ArcRouter, RouteGroup};
 use std::sync::{Arc, Mutex};
+use futures::Future;
 use futures::task::{Task, self};
 use std::net::SocketAddr;
 use std::thread;
@@ -128,13 +130,16 @@ where
 		thread::spawn(move || {
 			let mut core = Core::new().expect("Could not start event loop");
 			let handle = core.handle();
-			let http = Http::new();
+			let http: Http<Chunk> = Http::new();
 
 			core.run(ReactorHandler {
 				handler: || {
 					let mut reactor = reactor.lock().unwrap();
-					for (socket, peerAddr) in reactor.peers.drain(..) {
-						http.bind_connection(&handle, socket, peerAddr, routeService.clone());
+					for (socket, _peerAddr) in reactor.peers.drain(..) {
+						let future = http.serve_connection(socket, routeService.clone())
+							.map(|_| ())
+							.map_err(|_| ());
+						handle.spawn(future);
 					}
 					reactor.taskHandle = Some(task::current());
 				},

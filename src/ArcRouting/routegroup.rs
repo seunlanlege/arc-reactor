@@ -2,6 +2,7 @@
 
 use hyper::{Method};
 use std::collections::HashMap;
+ use std::sync::Arc;
 
 pub struct RouteGroup {
 	pub(crate) parent: &'static str,
@@ -50,7 +51,7 @@ impl RouteGroup {
 	
 	fn route<S: ArcService + 'static + Send + Sync>(mut self, method: Method, path: &'static str, handler: S) -> Self {
 		self.routes
-		.insert(format!("/{}{}", &self.parent, path), (method, Box::new(handler)));
+		.insert(format!("/{}{}", &self.parent, path), (method, box handler));
 	
 		self
 	}

@@ -24,11 +24,14 @@ impl Service for ArcRouter {
 	type Error = hyper::Error;
 	type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
 
-	fn call<'a>(&self, req: Request) -> Box<Future<Item=Self::Response, Error=Self::Error>+ 'a> {
-			if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
+	fn call(&self, req: Request) -> Box<Future<Item=Self::Response, Error=Self::Error>> {
+		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
 			let mut request: ArcRequest = req.into();
 			request.paramsMap.insert(routeMatch.params);
-				return box routeMatch.handler.call(request, ArcResponse::new()).map(|res| res.into());
+			let response =  routeMatch.handler
+				.call(request, ArcResponse::new())
+				.map(|res| res.into());
+			return box response;
 
 //			let modifiedRequest: Result<Response, hyper::Error> = match self.middleware {
 //				Some(ref middleware) => {
@@ -48,7 +51,7 @@ impl Service for ArcRouter {
 }
 
 impl ArcRouter {
-	pub(crate) fn new() -> Self {
+	pub fn new() -> Self {
 		Self { routes: HashMap::new(), middleware: None }
 	}
 

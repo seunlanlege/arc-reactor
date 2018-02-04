@@ -3,7 +3,7 @@ use ArcCore::{Request, Response};
 use std::sync::Arc;
 use futures::future::{IntoFuture, Future};
 
-type MiddleWareFuture<'a, I> = Box<Future<Item=I, Error=Error> + 'a>;
+type MiddleWareFuture<I> = Box<Future<Item=I, Error=Error>>;
 
 pub trait MiddleWare<T>: Sync + Send {
 	fn call(&'static self, param: T) -> MiddleWareFuture<T>;
@@ -22,8 +22,8 @@ pub trait MiddleWare<T>: Sync + Send {
 //	}
 //}
 
-impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
-	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
+impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
+	fn call(&'static self, response: Response) -> MiddleWareFuture<Response> {
 		self
 			.iter()
 			.fold(
