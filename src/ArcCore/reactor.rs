@@ -6,7 +6,7 @@ use hyper::server::{Http, Service};
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpStream, TcpListener};
 use ArcCore::{ReactorHandler};
-use ArcRouting::{ArcRouter, RouteGroup};
+use ArcRouting::{ArcRouter, RouteGroup, Router};
 use std::sync::{Arc, Mutex};
 use futures::Future;
 use futures::task::{Task, self};
@@ -34,20 +34,14 @@ impl Reactor {
 	}
 }
 
-pub struct ArcReactor<S>
-where
-		S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
-{
+pub struct ArcReactor {
 	port: i16,
 	timeout: i8,
-	RouteService: Option<S>
+	RouteService: Option<ArcRouter>
 }
 
-impl<S> ArcReactor<S>
-where
-		S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
-{
-	pub fn new() -> ArcReactor<S> {
+impl ArcReactor {
+	pub fn new() -> ArcReactor {
 		ArcReactor {
 			port: 8080,
 			timeout: 10,
@@ -69,7 +63,8 @@ where
 		self
 	}
 
-	pub fn routes(mut self, routes: S) -> Self {
+	pub fn routes(mut self, routes: Router) -> Self {
+		let routes = ArcRouter { routes: Arc::new(routes.routes) };
 		self.RouteService = Some(routes);
 
 		self

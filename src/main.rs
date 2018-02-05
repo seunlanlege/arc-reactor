@@ -27,14 +27,16 @@ use hyper::{Error, StatusCode};
 use futures::future::Future;
 use futures::prelude::{async_block};
 use futures::IntoFuture;
+use std::sync::Arc;
 
 use ArcCore::*;
 use ArcRouting::*;
 use ArcProto::*;
 
-fn getMainRoutes() -> ArcRouter {
-	let router: ArcRouter = ArcRouter::new()
-		.get("/:username", RequestHandler);
+fn getMainRoutes() -> Router {
+	let middleware = mw![middleware1, middleware2];
+	let router: Router = Router::new()
+		.get("/:username", (Arc::new(box middleware), Arc::new(RequestHandler)));
 //		.post("/", (mw![middleware, middleware2], RequestHandler))
 //		.post("/:username", (mw![middleware, middleware2], RequestHandler))
 
@@ -66,7 +68,7 @@ fn middleware1(req: Request){
 	box Ok(req).into_future()
 }
 
-//#[middleware]
-//fn middleware2(req: Request) {
-//	result::Ok(req)
-//}
+#[middleware(Request)]
+fn middleware2(req: Request) {
+	box Ok(req).into_future()
+}
