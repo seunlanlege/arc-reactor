@@ -6,30 +6,32 @@ use futures::future::{IntoFuture, Future};
 type MiddleWareFuture<I> = Box<Future<Item=I, Error=Error>>;
 
 pub trait MiddleWare<T>: Sync + Send {
-	fn call(&'static self, param: T) -> MiddleWareFuture<T>;
+	fn call(&self, param: T) -> MiddleWareFuture<T>;
 }
 
-//impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
-//	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
-//		self
-//			.iter()
-//			.fold(
-//				box Ok(request).into_future(),
-//				|request, middleware| {
-//					box request.and_then(|req| middleware.call(req))
-//				}
-//			)
-//	}
-//}
+impl MiddleWare<Request> for Vec<Arc<Box<MiddleWare<Request>>>> {
+	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
+		self
+			.iter()
+			.fold(
+				box Ok(request).into_future(),
+				|request, middleware| {
+					let clone = middleware.clone();
+					box request.and_then(move |req| clone.call(req))
+				}
+			)
+	}
+}
 
-impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
-	fn call(&'static self, response: Response) -> MiddleWareFuture<Response> {
+impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
+	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
 		self
 			.iter()
 			.fold(
 				box Ok(response).into_future(),
 				|response, middleware| {
-					box response.and_then(move |res| middleware.call(res))
+					let clone = middleware.clone();
+					box response.and_then(move |res| clone.call(res))
 				}
 			)
 	}
@@ -38,7 +40,9 @@ impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 #[macro_export]
 macro_rules! mw {
 	($($middlewares:expr), +) => {{
-		let middleWares: Vec<Box<MiddleWare>> = vec![$(Box::new($middlewares)), +];
+		let middleWares: Vec<Box<MiddleWare>> = vec![$(Arc::new(Box::new($middlewares))), +];
      middleWares
 	}};
 }
+
+
