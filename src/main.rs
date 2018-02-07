@@ -63,10 +63,10 @@ fn RequestHandler(request: Request, res: Response) {
 #[middleware(Request)]
 fn middleware1(req: Request){
 	println!("params {:?}", req.params());
-	box Ok(req).into_future()
+	Ok(req)
 }
 
 #[middleware(Request)]
 fn middleware2(req: Request) {
-	box Ok(req).into_future()
+	Ok(req)
 }

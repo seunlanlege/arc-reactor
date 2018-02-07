@@ -29,14 +29,14 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let block = block.stmts.iter();
 	let inputs = decl.inputs.into_tokens();
 	let span = Span::call_site();
-	
+
 	let output = quote_spanned! {span=>
 		struct #ident;
 		
 		impl ArcService for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item = Response, Error = Error>> {
 				Box::new(
-					async_block!{
+					async_block! {
 						#(
 							#block
 						)*
@@ -79,9 +79,11 @@ pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream 
 
 		impl MiddleWare<#attribute> for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item=#attribute, Error=Error>> {
-				#(
-					#block
-				)*
+				Box::new(
+					async_block!(
+						#(#block)*
+					)
+				)
 			}
 		}
 	};
