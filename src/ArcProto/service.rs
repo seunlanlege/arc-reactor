@@ -51,7 +51,7 @@ impl ArcService for ArcHandler {
 				.and_then(move |res| after.call(res))
 		}
 
-		return box Ok(Response::new().with_status(StatusCode::NotFound)).into_future()
+		return box self.handler.call(req, res)
 	}
 }
 
