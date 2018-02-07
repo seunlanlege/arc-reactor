@@ -11,7 +11,6 @@ use quote::{ToTokens, quote_spanned};
 use proc_macro2::Span;
 use proc_macro::TokenStream;
 use syn::*;
-//use syn::Stmt::{Item};
 
 #[proc_macro_attribute]
 pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
@@ -51,7 +50,13 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn middleware(_attribute: TokenStream, function: TokenStream) -> TokenStream {
+pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream {
+	let attribute = attribute.to_string();
+	let attribute = attribute.trim_matches(&[' ', '(', ')', '"'][..]);
+	if attribute != "Request" && attribute != "Response" {
+		panic!("#[Middleware] attribute must be one of 'Request' or 'Response'")
+	}
+	let attribute = Ident::new(attribute, Span::call_site());
 	let item = syn::parse(function)
 		.expect("Well, that didn't work. Must be a syntax error");
 	let ItemFn {
@@ -64,6 +69,7 @@ pub fn middleware(_attribute: TokenStream, function: TokenStream) -> TokenStream
 		_ => panic!("#[middleware]: Whoops!, try again. This time, with a function."),
 	};
 
+
 	let block = block.stmts.iter();
 	let inputs = decl.inputs.into_tokens();
 	let span = Span::call_site();
@@ -71,8 +77,8 @@ pub fn middleware(_attribute: TokenStream, function: TokenStream) -> TokenStream
 	let output = quote_spanned! {span=>
 		struct #ident;
 
-		impl MiddleWare for #ident {
-			fn call(&self, #inputs) -> ArcResult {
+		impl MiddleWare<#attribute> for #ident {
+			fn call(&self, #inputs) -> Box<Future<Item=#attribute, Error=Error>> {
 				#(
 					#block
 				)*

@@ -1,18 +1,37 @@
-use ArcCore::{Request};
-use ArcProto::{ArcResult, result};
+use hyper::Error;
+use ArcCore::{Request, Response};
+use std::sync::Arc;
+use futures::future::{IntoFuture, Future};
 
-pub trait MiddleWare: Sync + Send {
-	fn call(&self, request: Request) -> ArcResult;
+type MiddleWareFuture<I> = Box<Future<Item=I, Error=Error>>;
+
+pub trait MiddleWare<T>: Sync + Send {
+	fn call(&self, param: T) -> MiddleWareFuture<T>;
 }
 
-impl MiddleWare for Vec<Box<MiddleWare>> {
-	fn call(&self, request: Request) -> ArcResult {
+impl MiddleWare<Request> for Vec<Arc<Box<MiddleWare<Request>>>> {
+	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
 		self
 			.iter()
 			.fold(
-				result::Ok(request),
+				box Ok(request).into_future(),
 				|request, middleware| {
-					request.and_then(|req| middleware.call(req))
+					let clone = middleware.clone();
+					box request.and_then(move |req| clone.call(req))
+				}
+			)
+	}
+}
+
+impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
+	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
+		self
+			.iter()
+			.fold(
+				box Ok(response).into_future(),
+				|response, middleware| {
+					let clone = middleware.clone();
+					box response.and_then(move |res| clone.call(res))
 				}
 			)
 	}
@@ -21,7 +40,9 @@ impl MiddleWare for Vec<Box<MiddleWare>> {
 #[macro_export]
 macro_rules! mw {
 	($($middlewares:expr), +) => {{
-		let middleWares: Vec<Box<MiddleWare>> = vec![$(Box::new($middlewares)), +];
-     middleWares
+		let middleWares: Vec<Arc<Box<MiddleWare<_>>>> = vec![$(Arc::new(Box::new($middlewares))), +];
+     box middleWares as Box<MiddleWare<_>>
 	}};
 }
+
+

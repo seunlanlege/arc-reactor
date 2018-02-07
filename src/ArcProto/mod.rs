@@ -1,3 +1,4 @@
+#[macro_use]
 mod service;
 mod error;
 mod convert;
@@ -8,7 +9,3 @@ pub use self::middleware::*;
 pub use self::service::*;
 pub use self::error::*;
 pub use self::convert::*;
-
-pub mod result {
-	pub use super::error::ArcResult::*;
-}

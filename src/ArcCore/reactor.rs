@@ -1,13 +1,14 @@
 use futures::Stream;
 use std::io;
 use hyper;
+use hyper::Chunk;
 use hyper::server::{Http, Service};
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpStream, TcpListener};
 use ArcCore::{ReactorHandler};
-use ArcRouting::{ArcRouter, RouteGroup};
+use ArcRouting::{ArcRouter, RouteGroup, Router};
 use std::sync::{Arc, Mutex};
-use std::marker::{Send, Sync};
+use futures::Future;
 use futures::task::{Task, self};
 use std::net::SocketAddr;
 use std::thread;
@@ -33,20 +34,14 @@ impl Reactor {
 	}
 }
 
-pub struct ArcReactor<S>
-where
-		S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
-{
+pub struct ArcReactor {
 	port: i16,
 	timeout: i8,
-	RouteService: Option<S>
+	RouteService: Option<ArcRouter>
 }
 
-impl<S> ArcReactor<S>
-where
-		S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
-{
-	pub fn new() -> ArcReactor<S> {
+impl ArcReactor {
+	pub fn new() -> ArcReactor {
 		ArcReactor {
 			port: 8080,
 			timeout: 10,
@@ -68,7 +63,8 @@ where
 		self
 	}
 
-	pub fn routes(mut self, routes: S) -> Self {
+	pub fn routes(mut self, routes: Router) -> Self {
+		let routes = ArcRouter { routes: Arc::new(routes.routes) };
 		self.RouteService = Some(routes);
 
 		self
@@ -129,13 +125,16 @@ where
 		thread::spawn(move || {
 			let mut core = Core::new().expect("Could not start event loop");
 			let handle = core.handle();
-			let http = Http::new();
+			let http: Http<Chunk> = Http::new();
 
 			core.run(ReactorHandler {
 				handler: || {
 					let mut reactor = reactor.lock().unwrap();
-					for (socket, peerAddr) in reactor.peers.drain(..) {
-						http.bind_connection(&handle, socket, peerAddr, routeService.clone());
+					for (socket, _peerAddr) in reactor.peers.drain(..) {
+						let future = http.serve_connection(socket, routeService.clone())
+							.map(|_| ())
+							.map_err(|_| ());
+						handle.spawn(future);
 					}
 					reactor.taskHandle = Some(task::current());
 				},
