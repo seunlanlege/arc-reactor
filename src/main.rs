@@ -34,11 +34,8 @@ use ArcRouting::*;
 use ArcProto::*;
 
 fn getMainRoutes() -> Router {
-	let middleware = mw![middleware1, middleware2];
 	let router: Router = Router::new()
-		.get("/:username", (Arc::new(box middleware), Arc::new(RequestHandler)));
-//		.post("/", (mw![middleware, middleware2], RequestHandler))
-//		.post("/:username", (mw![middleware, middleware2], RequestHandler))
+		.get("/:username", arc!(mw![middleware1, middleware2], RequestHandler));
 
 	return router
 }
@@ -65,6 +62,7 @@ fn RequestHandler(request: Request, res: Response) {
 
 #[middleware(Request)]
 fn middleware1(req: Request){
+	println!("params {:?}", req.params());
 	box Ok(req).into_future()
 }
 

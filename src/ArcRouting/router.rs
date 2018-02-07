@@ -21,14 +21,6 @@ impl Router {
 	pub fn new() -> Self {
 		Self { routes: HashMap::new() }
 	}
-//	pub(crate) fn matchRoute<P>(&self, route: P, method: &Method) -> Option<Match<&Box<ArcService>>>
-//		where P: AsRef<str> {
-//		if let Some(recognizer) = self.routes.get(method) {
-//			return recognizer.recognize(route.as_ref()).ok();
-//		} else {
-//			None
-//		}
-//	}
 
 //	pub fn middleware(self, middleware: Box<MiddleWare<ArcRequest>>) -> Self {
 //		self.middleware = Some(middleware);
@@ -104,6 +96,15 @@ impl ArcRouter {
 	pub fn new() -> Self {
 		Self { routes: Arc::new(HashMap::new()) }
 	}
+
+	pub(crate) fn matchRoute<P>(&self, route: P, method: &Method) -> Option<Match<&Box<ArcService>>>
+		where P: AsRef<str> {
+		if let Some(recognizer) = self.routes.get(method) {
+			return recognizer.recognize(route.as_ref()).ok();
+		} else {
+			None
+		}
+	}
 }
 
 
@@ -118,18 +119,13 @@ impl Service for ArcRouter {
 	type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
 
 	fn call(&self, req: Request) -> Box<Future<Item=Self::Response, Error=Self::Error>> {
-		let routes = self.routes.clone();
-		if let Some(recognizer) = routes.get(req.method()) {
-			if let Some(routeMatch) = recognizer.recognize(req.path()).ok() {
+			if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
 				let mut request: ArcRequest = req.into();
 				request.paramsMap.insert(routeMatch.params);
 				let response = routeMatch.handler
 					.call(request, ArcResponse::new())
 					.map(|res| res.into());
 				return box response;
-			} else {
-				return box Ok(Response::new().with_status(StatusCode::NotFound)).into_future()
-			}
 		} else {
 			return box Ok(Response::new().with_status(StatusCode::NotFound)).into_future()
 		}

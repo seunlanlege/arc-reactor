@@ -1,3 +1,4 @@
+#[macro_use]
 mod service;
 mod error;
 mod convert;
