@@ -120,10 +120,7 @@ impl ArcReactor {
 	}
 }
 
-fn spawn<S>(RouteService: S) -> io::Result<Vec<ReactorAlias>>
-where
-		S: 'static + Send + Sync + Service<Request=hyper::Request, Response=hyper::Response, Error=hyper::Error>,
-{
+fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
 	
@@ -136,22 +133,13 @@ where
 			let mut core = Core::new().expect("Could not start event loop");
 			let handle = core.handle();
 			let http: Http<Chunk> = Http::new();
+			let http = Arc::new(http);
 
 			core.run(ReactorHandler {
 				handler: || {
 					let mut reactor = reactor.lock().unwrap();
 					for (socket, _peerAddr) in reactor.peers.drain(..) {
-						let future = async_block! {
-							let resolved_Socket = await!(socket);
-							await!(http.serve_connection(resolved_Socket.unwrap(), routeService.clone()))
-						};
-//						let future = socket.map(
-//							|resolved_Socket| {
-//								http.serve_connection(resolved_Socket, routeService.clone())
-//							}
-//						)
-						let future = future.map(|_| ())
-						.map_err(|_| ());
+						let future = futureFactory(socket, http.clone(), routeService.clone());
 						handle.spawn(future);
 					}
 					reactor.taskHandle = Some(task::current());
@@ -161,4 +149,15 @@ where
 	}
 
 	Ok(reactors)
+}
+
+fn futureFactory(io: AcceptAsync<TcpStream>, http: Arc<Http<Chunk>>, s: Arc<ArcRouter>) -> impl Future<Item=(), Error=()>
+{
+	io.map(move |socket| {
+		http.serve_connection(socket, s.clone())
+	})
+		.map(|_| ())
+		.map_err(|err| {
+			println!("{:?}", err)
+		})
 }
