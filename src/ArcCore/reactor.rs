@@ -9,15 +9,18 @@ use ArcCore::{ReactorHandler};
 use ArcRouting::{ArcRouter, RouteGroup, Router};
 use std::sync::{Arc, Mutex};
 use futures::Future;
+use futures::prelude::{async_block, await};
 use futures::task::{Task, self};
 use std::net::SocketAddr;
 use std::thread;
+use native_tls::{TlsAcceptor, Pkcs12};
+use tokio_tls::{TlsAcceptorExt, AcceptAsync};
 use num_cpus;
 
 pub type ReactorAlias = Arc<Mutex<Reactor>>;
 
 pub struct Reactor {
-	pub(crate) peers: Vec<(TcpStream, SocketAddr)>,
+	pub(crate) peers: Vec<(AcceptAsync<TcpStream>, SocketAddr)>,
 	pub(crate) taskHandle: Option<Task>,
 }
 
@@ -89,9 +92,16 @@ impl ArcReactor {
 		};
 		
 		let mut counter = 0;
-		
+
+		// for TLS support
+		let der = include_bytes!("identity.p12");
+		let cert = Pkcs12::from_der(der, "mypass").unwrap();
+		let acceptor = TlsAcceptor::builder(cert).unwrap().build().unwrap();
+		let acceptor = Arc::new(acceptor);
+
 		core.run(listener.incoming().for_each(move |(socket, peerIp)| {
 			let mut reactor = reactors[counter].lock().unwrap();
+			let socket = acceptor.accept_async(socket);
 			reactor.peers.push((socket, peerIp));
 			
 			if let Some(ref task) = reactor.taskHandle {
@@ -131,9 +141,17 @@ where
 				handler: || {
 					let mut reactor = reactor.lock().unwrap();
 					for (socket, _peerAddr) in reactor.peers.drain(..) {
-						let future = http.serve_connection(socket, routeService.clone())
-							.map(|_| ())
-							.map_err(|_| ());
+						let future = async_block! {
+							let resolved_Socket = await!(socket);
+							await!(http.serve_connection(resolved_Socket.unwrap(), routeService.clone()))
+						};
+//						let future = socket.map(
+//							|resolved_Socket| {
+//								http.serve_connection(resolved_Socket, routeService.clone())
+//							}
+//						)
+						let future = future.map(|_| ())
+						.map_err(|_| ());
 						handle.spawn(future);
 					}
 					reactor.taskHandle = Some(task::current());

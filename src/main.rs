@@ -10,6 +10,8 @@ generators,
 #![allow(unused_imports)]
 
 extern crate anymap;
+extern crate native_tls;
+extern crate tokio_tls;
 extern crate impl_service;
 extern crate num_cpus;
 extern crate tokio_core;
