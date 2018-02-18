@@ -1,34 +1,28 @@
-#![feature(
-proc_macro,
-box_syntax,
-generators,
-)]
-
+#![feature(proc_macro, box_syntax, generators, conservative_impl_trait)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 #![allow(unused_imports)]
-#![feature(conservative_impl_trait)]
 
 extern crate anymap;
-extern crate native_tls;
-extern crate tokio_tls;
-extern crate impl_service;
-extern crate num_cpus;
-extern crate tokio_core;
-extern crate route_recognizer as recognizer;
 extern crate futures_await as futures;
 extern crate hyper;
+extern crate impl_service;
+extern crate native_tls;
+extern crate num_cpus;
+extern crate route_recognizer as recognizer;
+extern crate tokio_core;
+extern crate tokio_tls;
 
 mod ArcRouting;
 mod ArcCore;
 #[macro_use]
 mod ArcProto;
 
-use impl_service::{service, middleware};
+use impl_service::{middleware, service};
 use hyper::{Error, StatusCode};
 use futures::future::Future;
-use futures::prelude::{async_block};
+use futures::prelude::async_block;
 use futures::IntoFuture;
 use std::sync::Arc;
 
@@ -37,10 +31,12 @@ use ArcRouting::*;
 use ArcProto::*;
 
 fn getMainRoutes() -> Router {
-	let router: Router = Router::new()
-		.get("/:username", arc!(mw![middleware1, middleware2], RequestHandler));
+	let router: Router = Router::new().get(
+		"/:username",
+		arc!(mw![middleware1, middleware2], RequestHandler),
+	);
 
-	return router
+	return router;
 }
 
 fn main() {
@@ -55,16 +51,13 @@ fn main() {
 fn RequestHandler(request: Request, res: Response) {
 	let url = request.params().unwrap();
 	let body = format!("Hello {}", url["username"]);
-	let res =	res
-		.with_status(StatusCode::Ok)
-		.with_body(body);
+	let res = res.with_status(StatusCode::Ok).with_body(body);
 
 	Ok(res)
 }
 
-
 #[middleware(Request)]
-fn middleware1(req: Request){
+fn middleware1(req: Request) {
 	println!("params {:?}", req.params());
 	Ok(req)
 }

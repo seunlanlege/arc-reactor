@@ -4,17 +4,17 @@ use hyper;
 use hyper::Chunk;
 use hyper::server::{Http, Service};
 use tokio_core::reactor::Core;
-use tokio_core::net::{TcpStream, TcpListener};
-use ArcCore::{ReactorHandler};
+use tokio_core::net::{TcpListener, TcpStream};
+use ArcCore::ReactorHandler;
 use ArcRouting::{ArcRouter, RouteGroup, Router};
 use std::sync::{Arc, Mutex};
 use futures::Future;
 use futures::prelude::{async_block, await};
-use futures::task::{Task, self};
+use futures::task::{self, Task};
 use std::net::SocketAddr;
 use std::thread;
-use native_tls::{TlsAcceptor, Pkcs12};
-use tokio_tls::{TlsAcceptorExt, AcceptAsync};
+use native_tls::{Pkcs12, TlsAcceptor};
+use tokio_tls::{AcceptAsync, TlsAcceptorExt};
 use num_cpus;
 
 pub type ReactorAlias = Arc<Mutex<Reactor>>;
@@ -26,21 +26,17 @@ pub struct Reactor {
 
 impl Reactor {
 	pub fn new() -> ReactorAlias {
-		Arc::new(
-			Mutex::new(
-				Reactor {
-					peers: Vec::new(),
-					taskHandle: None,
-				}
-			)
-		)
+		Arc::new(Mutex::new(Reactor {
+			peers: Vec::new(),
+			taskHandle: None,
+		}))
 	}
 }
 
 pub struct ArcReactor {
 	port: i16,
 	timeout: i8,
-	RouteService: Option<ArcRouter>
+	RouteService: Option<ArcRouter>,
 }
 
 impl ArcReactor {
@@ -48,7 +44,7 @@ impl ArcReactor {
 		ArcReactor {
 			port: 8080,
 			timeout: 10,
-			RouteService: None
+			RouteService: None,
 		}
 	}
 
@@ -57,40 +53,43 @@ impl ArcReactor {
 	}
 
 	pub fn routeGroup(parent: &'static str) -> RouteGroup {
-			RouteGroup::new(parent)
-		}
+		RouteGroup::new(parent)
+	}
 
-	pub fn port (mut self, port: i16) -> Self {
+	pub fn port(mut self, port: i16) -> Self {
 		self.port = port;
 
 		self
 	}
 
 	pub fn routes(mut self, routes: Router) -> Self {
-		let routes = ArcRouter { routes: Arc::new(routes.routes) };
+		let routes = ArcRouter {
+			routes: Arc::new(routes.routes),
+		};
 		self.RouteService = Some(routes);
 
 		self
 	}
-	
-	pub fn initiate (self) -> io::Result<()> {
+
+	pub fn initiate(self) -> io::Result<()> {
 		let reactors = spawn(self.RouteService.expect("This thing needs routes to work!"))?;
-		
+
 		let mut core = Core::new()?;
 		let handle = core.handle();
-		
+
 		let addr = format!("0.0.0.0:{}", &self.port).parse().unwrap();
-		
+
 		let listener = match TcpListener::bind(&addr, &handle) {
-			Ok(listener) => {
-				listener
-			}
+			Ok(listener) => listener,
 			Err(e) => {
-				eprintln!("Whoops! something else is running on port {}, {}", &self.port, e);
+				eprintln!(
+					"Whoops! something else is running on port {}, {}",
+					&self.port, e
+				);
 				return Err(e);
 			}
 		};
-		
+
 		let mut counter = 0;
 
 		// for TLS support
@@ -103,19 +102,18 @@ impl ArcReactor {
 			let mut reactor = reactors[counter].lock().unwrap();
 			let socket = acceptor.accept_async(socket);
 			reactor.peers.push((socket, peerIp));
-			
+
 			if let Some(ref task) = reactor.taskHandle {
 				task.notify();
 			}
-			
+
 			counter += 1;
 			if counter == reactors.len() {
 				counter = 0
 			}
 			Ok(())
-
 		}))?;
-		
+
 		Ok(())
 	}
 }
@@ -123,7 +121,7 @@ impl ArcReactor {
 fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
-	
+
 	for _ in 0..num_cpus::get() * 2 {
 		let reactor = Reactor::new();
 		reactors.push(reactor.clone());
@@ -135,29 +133,30 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
 			let http: Http<Chunk> = Http::new();
 			let http = Arc::new(http);
 
-			core.run(ReactorHandler {
-				handler: || {
-					let mut reactor = reactor.lock().unwrap();
-					for (socket, _peerAddr) in reactor.peers.drain(..) {
-						let future = futureFactory(socket, http.clone(), routeService.clone());
-						handle.spawn(future);
-					}
-					reactor.taskHandle = Some(task::current());
-				},
-			}).expect("Could not spawn threads!");
+			core
+				.run(ReactorHandler {
+					handler: || {
+						let mut reactor = reactor.lock().unwrap();
+						for (socket, _peerAddr) in reactor.peers.drain(..) {
+							let future = futureFactory(socket, http.clone(), routeService.clone());
+							handle.spawn(future);
+						}
+						reactor.taskHandle = Some(task::current());
+					},
+				})
+				.expect("Could not spawn threads!");
 		});
 	}
 
 	Ok(reactors)
 }
 
-fn futureFactory(io: AcceptAsync<TcpStream>, http: Arc<Http<Chunk>>, s: Arc<ArcRouter>) -> impl Future<Item=(), Error=()>
-{
-	io.map(move |socket| {
-		http.serve_connection(socket, s.clone())
-	})
+fn futureFactory(
+	io: AcceptAsync<TcpStream>,
+	http: Arc<Http<Chunk>>,
+	s: Arc<ArcRouter>,
+) -> impl Future<Item = (), Error = ()> {
+	io.map(move |socket| http.serve_connection(socket, s.clone()))
 		.map(|_| ())
-		.map_err(|err| {
-			println!("{:?}", err)
-		})
+		.map_err(|err| println!("{:?}", err))
 }
