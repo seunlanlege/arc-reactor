@@ -72,18 +72,22 @@ impl ArcReactor {
 	}
 
 	pub fn initiate(self) -> io::Result<()> {
+		println!("[arc-reactor]: Spawning threads!");
 		let reactors = spawn(self.RouteService.expect("This thing needs routes to work!"))?;
-
+		println!("[arc-reactor]: spawned {} threads!", reactors.len());
+		println!("[arc-reactor]: Starting main event loop!");
 		let mut core = Core::new()?;
+
+		println!("[arc-reactor]: Started Main event loop!");
 		let handle = core.handle();
 
-		let addr = format!("0.0.0.0:{}", &self.port).parse().unwrap();
-
+		let addr = format!("0.0.0.0:{}", self.port).parse().unwrap();
+		println!("[arc-reactor]: Binding to port {}", self.port);
 		let listener = match TcpListener::bind(&addr, &handle) {
 			Ok(listener) => listener,
 			Err(e) => {
 				eprintln!(
-					"Whoops! something else is running on port {}, {}",
+					"[arc-reactor]: Whoops! something else is running on port {}, {}",
 					&self.port, e
 				);
 				return Err(e);
@@ -96,8 +100,8 @@ impl ArcReactor {
 		let der = include_bytes!("identity.p12");
 		let cert = Pkcs12::from_der(der, "mypass").unwrap();
 		let acceptor = TlsAcceptor::builder(cert).unwrap().build().unwrap();
-		let acceptor = Arc::new(acceptor);
-
+		// let acceptor = Arc::new(acceptor);
+		println!("[arc-reactor]: Running Main Event loop");
 		core.run(listener.incoming().for_each(move |(socket, peerIp)| {
 			let mut reactor = reactors[counter].lock().unwrap();
 			let socket = acceptor.accept_async(socket);
@@ -139,6 +143,10 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
 						let mut reactor = reactor.lock().unwrap();
 						for (socket, _peerAddr) in reactor.peers.drain(..) {
 							let future = futureFactory(socket, http.clone(), routeService.clone());
+							// let future = http.serve_connection(socket, routeService.clone());
+							let future = future
+								.map(|_stuff| ())
+								.map_err(|err| println!("[arc-reactor][error]: {:?}", err));
 							handle.spawn(future);
 						}
 						reactor.taskHandle = Some(task::current());
@@ -156,7 +164,17 @@ fn futureFactory(
 	http: Arc<Http<Chunk>>,
 	s: Arc<ArcRouter>,
 ) -> impl Future<Item = (), Error = ()> {
-	io.map(move |socket| http.serve_connection(socket, s.clone()))
+	io.then(move |socket| {
+		match socket {
+			Ok(socket) => {
+				println!("Serving Connection!");
+				http.serve_connection(socket, s.clone())
+			},
+			Err(err) => {
+				panic!("Failed to handshake with client aborting! {}", err)
+			}
+		}
+	})
 		.map(|_| ())
-		.map_err(|err| println!("{:?}", err))
+		.map_err(|err| println!("[arc-reactor][error]: {:?}", err))
 }

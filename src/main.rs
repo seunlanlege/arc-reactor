@@ -21,6 +21,7 @@ mod ArcProto;
 
 use impl_service::{middleware, service};
 use hyper::{Error, StatusCode};
+use hyper::header::Accept;
 use futures::future::Future;
 use futures::prelude::async_block;
 use futures::IntoFuture;
@@ -58,11 +59,15 @@ fn RequestHandler(request: Request, res: Response) {
 
 #[middleware(Request)]
 fn middleware1(req: Request) {
-	println!("params {:?}", req.params());
 	Ok(req)
 }
 
 #[middleware(Request)]
 fn middleware2(req: Request) {
+	// let accept = req.headers().get::<Accept>().and_then(|accept| Some(accept.clone()));
+	// println!("params {:?}", req.params());	
+	// println!("real accept {:?}", &accept);
+	// println!("fake accept {:?}", Accept::image());
+	// println!("has image: {}", accept == Some(Accept::image()));
 	Ok(req)
 }
