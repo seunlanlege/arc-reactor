@@ -6,23 +6,78 @@ pub use self::router::*;
 
 #[cfg(test)]
 mod tests {
+	use std::sync::Arc;
+	use std::collections::HashMap;
+	use recognizer::{Router as Recognizer};
 	use impl_service::*;
-	use hyper::*;
+	use hyper::{Method, StatusCode, Error};
 	use futures::Future;
+	use futures::prelude::{async_block};
 	use ArcProto::ArcService;
+	use ArcCore::{Response, Request};
 	use futures::future;
 
 	use super::*;
 
 	#[service]
-	fn AsyncService() {
-		Response::new()
+	fn AsyncService(_req: Request, res: Response) {
+		let res = res
 			.with_status(StatusCode::Ok)
-			.with_body("Hello World".as_bytes())
+			.with_body("Hello World".as_bytes());
+		Result::Ok(res)
 	}
 
 	#[test]
 	fn it_matches_the_correct_routes() {
-		// 		let router =
+		let router = Router::new()
+			.get("/hello", AsyncService);
+		let router = ArcRouter {
+			routes: Arc::new(router.routes)
+		};
+
+		let shouldExist = router.matchRoute("/hello", &Method::Get);
+		let shouldNotExist = router.matchRoute("/world", &Method::Get);
+
+		assert!(shouldExist.is_some());
+		assert!(shouldNotExist.is_none());
+	}
+
+	#[test]
+	fn it_matches_nested_routes() {
+		let routegroup = RouteGroup::new("admin")
+			.get("/roles", AsyncService);
+		let router = Router::new()
+			.routes(routegroup);
+		let router = ArcRouter {
+			routes: Arc::new(router.routes)
+		};
+
+		let shouldExist = router.matchRoute("/admin/roles", &Method::Get);
+		let shouldNotExist1 = router.matchRoute("/admin", &Method::Get);
+		let shouldNotExist2 = router.matchRoute("/admin/role", &Method::Get);
+		let shouldNotExist3 = router.matchRoute("/admin/roless", &Method::Get);
+		let shouldNotExist4 = router.matchRoute("/hello/world", &Method::Get);
+
+		assert!(shouldExist.is_some());
+		assert!(shouldNotExist1.is_none());
+		assert!(shouldNotExist2.is_none());
+		assert!(shouldNotExist3.is_none());
+		assert!(shouldNotExist4.is_none());
+	}
+
+	#[test]
+	fn it_matches_routes_with_params() {
+		let router = Router::new()
+			.get("/hello/:name", AsyncService);
+		let router = ArcRouter {
+			routes: Arc::new(router.routes)
+		};
+
+		let shouldExist = router.matchRoute("/hello/seun", &Method::Get);
+		let shouldNotExist = router.matchRoute("/world/seun/lanlege", &Method::Get);
+
+		assert!(shouldExist.is_some());
+		assert_eq!(shouldExist.unwrap().params["name"], "seun");
+		assert!(shouldNotExist.is_none());
 	}
 }
