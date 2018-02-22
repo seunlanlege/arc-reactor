@@ -34,7 +34,7 @@ impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
 #[macro_export]
 macro_rules! mw {
 	($($middlewares:expr), +) => {{
-		let middleWares: Vec<Arc<Box<MiddleWare<_>>>> = vec![$(Arc::new(Box::new($middlewares))), +];
+		let middleWares: Vec<Arc<Box<MiddleWare<_>>>> = vec![$(Arc::new(box $middlewares)), +];
      box middleWares as Box<MiddleWare<_>>
 	}};
 }

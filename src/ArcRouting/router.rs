@@ -1,6 +1,4 @@
-#![feature(generic_associated_types)]
-
-use hyper::{self, Method, Request, Response, StatusCode};
+use hyper::{self, Method, StatusCode};
 use futures::{Future, IntoFuture};
 use hyper::server::Service;
 use std::collections::HashMap;
@@ -8,10 +6,8 @@ use recognizer::{Match, Router as Recognizer};
 use ArcProto::ArcService;
 use ArcProto::MiddleWare;
 use ArcRouting::RouteGroup;
-use ArcCore::{Request as ArcRequest, Response as ArcResponse};
+use ArcCore::{Request, Response};
 use std::sync::{Arc, Mutex};
-use futures::prelude::{async_block, await};
-use futures::future;
 
 pub struct Router {
 	pub(crate) routes: HashMap<Method, Recognizer<Box<ArcService>>>,
@@ -120,22 +116,24 @@ pub struct ArcRouter {
 }
 
 impl Service for ArcRouter {
-	type Response = Response;
-	type Request = Request;
+	type Request = hyper::Request;
+	type Response = hyper::Response;
 	type Error = hyper::Error;
 	type Future = Box<Future<Item = Self::Response, Error = Self::Error>>;
 
-	fn call(&self, req: Request) -> Box<Future<Item = Self::Response, Error = Self::Error>> {
+	fn call(&self, req: Self::Request) -> Self::Future {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
-			let mut request: ArcRequest = req.into();
+			let mut request: Request = req.into();
 			request.paramsMap.insert(routeMatch.params);
+
 			let response = routeMatch
 				.handler
-				.call(request, ArcResponse::new())
+				.call(request, Response::new())
 				.map(|res| res.into());
+
 			return box response;
 		} else {
-			return box Ok(Response::new().with_status(StatusCode::NotFound)).into_future();
+			return box Ok(hyper::Response::new().with_status(StatusCode::NotFound)).into_future();
 		}
 	}
 }

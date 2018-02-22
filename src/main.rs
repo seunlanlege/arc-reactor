@@ -42,7 +42,7 @@ fn getMainRoutes() -> Router {
 
 fn main() {
 	ArcReactor::new()
-		.port(8443)
+		.port(3000)
 		.routes(getMainRoutes())
 		.initiate()
 		.unwrap()

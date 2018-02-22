@@ -1,12 +1,13 @@
-#![feature(proc_macro)]
+#![feature(proc_macro, box_syntax)]
 #![allow(unused_extern_crates)]
 #![allow(non_snake_case)]
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
 extern crate proc_macro;
 extern crate proc_macro2;
 extern crate syn;
 #[macro_use]
 extern crate quote;
+
 use quote::{ToTokens, quote_spanned};
 use proc_macro2::Span;
 use proc_macro::TokenStream;
@@ -25,7 +26,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 		Item::Fn(item) => item,
 		_ => panic!("#[service]: Whoops!, try again. This time, with a function."),
 	};
-	
+
 	let block = block.stmts.iter();
 	let inputs = decl.inputs.into_tokens();
 	let span = Span::call_site();
@@ -35,13 +36,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 		
 		impl ArcService for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item = Response, Error = Error>> {
-				Box::new(
-					async_block! {
-						#(
-							#block
-						)*
-					}
-				)
+				box async_block! (#(#block)*)
 			}
 		}
 	};
@@ -79,11 +74,7 @@ pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream 
 
 		impl MiddleWare<#attribute> for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item=#attribute, Error=Error>> {
-				Box::new(
-					async_block!(
-						#(#block)*
-					)
-				)
+				box async_block!(#(#block)*)
 			}
 		}
 	};
