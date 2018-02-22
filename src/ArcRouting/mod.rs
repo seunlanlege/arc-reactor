@@ -11,11 +11,11 @@ mod tests {
 	use futures::Future;
 	use ArcProto::ArcService;
 	use futures::future;
-	
+
 	use super::*;
-	
+
 	#[service]
-	fn AsyncService()  {
+	fn AsyncService() {
 		Response::new()
 			.with_status(StatusCode::Ok)
 			.with_body("Hello World".as_bytes())
@@ -23,6 +23,6 @@ mod tests {
 
 	#[test]
 	fn it_matches_the_correct_routes() {
-//		let router =
+		//		let router =
 	}
 }

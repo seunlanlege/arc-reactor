@@ -1,11 +1,11 @@
 use hyper::{Error, StatusCode};
-use ArcCore::{Request, self, Response};
+use ArcCore::{self, Request, Response};
 use futures::{Future, IntoFuture};
-use ArcProto::{MiddleWare};
+use ArcProto::MiddleWare;
 use std::sync::Arc;
 
 pub trait ArcService: Send + Sync {
-	fn call (&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Error>>;
+	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Error>>;
 }
 
 pub type FutureResponse = Box<Future<Item = Response, Error = Error>>;
@@ -31,27 +31,26 @@ impl ArcService for ArcHandler {
 		if self.before.is_some() && self.after.is_none() {
 			let before = self.before.clone().unwrap();
 			let handler = self.handler.clone();
-			return box before.call(req)
-				.and_then(move |req| handler.call(req, res))
+			return box before.call(req).and_then(move |req| handler.call(req, res));
 		}
 
 		if self.before.is_none() && self.after.is_some() {
 			let after = self.after.clone().unwrap();
 			let handler = self.handler.clone();
-			return box handler.call(req, res)
-				.and_then(move |res| after.call(res))
+			return box handler.call(req, res).and_then(move |res| after.call(res));
 		}
 
 		if self.before.is_some() && self.after.is_some() {
 			let before = self.before.clone().unwrap();
 			let handler = self.handler.clone();
 			let after = self.after.clone().unwrap();
-			return box before.call(req)
+			return box before
+				.call(req)
 				.and_then(move |req| handler.call(req, res))
-				.and_then(move |res| after.call(res))
+				.and_then(move |res| after.call(res));
 		}
 
-		return box self.handler.call(req, res)
+		return box self.handler.call(req, res);
 	}
 }
 

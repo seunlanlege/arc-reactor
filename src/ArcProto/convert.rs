@@ -1,15 +1,11 @@
-use hyper::{StatusCode, self};
-use ArcProto::{ArcError};
-use ArcCore::{Response, Request};
+use hyper::{self, StatusCode};
+use ArcProto::ArcError;
+use ArcCore::{Request, Response};
 
 fn convertToStatusCode(number: u16) -> StatusCode {
 	match StatusCode::try_from(number) {
-		Ok(status) => {
-			status
-		},
-		Err(_) => {
-			StatusCode::BadRequest
-		},
+		Ok(status) => status,
+		Err(_) => StatusCode::BadRequest,
 	}
 }
 
@@ -35,7 +31,7 @@ impl From<Response> for hyper::Response {
 }
 
 impl From<hyper::Request> for Request {
-	fn from (req: hyper::Request) -> Request {
+	fn from(req: hyper::Request) -> Request {
 		let remote = req.remote_addr();
 		let (method, uri, version, headers, body) = req.deconstruct();
 

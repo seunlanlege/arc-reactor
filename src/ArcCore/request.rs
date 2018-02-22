@@ -1,4 +1,4 @@
-use hyper::{Uri, Body, HttpVersion, Headers, Method};
+use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use std::{fmt, net};
 use recognizer::Params;
 use anymap::AnyMap;
@@ -10,7 +10,7 @@ pub struct Request {
 	headers: Headers,
 	remote: Option<net::SocketAddr>,
 	method: Method,
-	pub(crate) paramsMap: AnyMap
+	pub(crate) paramsMap: AnyMap,
 }
 
 impl Request {
@@ -20,7 +20,7 @@ impl Request {
 		version: HttpVersion,
 		headers: Headers,
 		body: Body,
-		remote: Option<net::SocketAddr>
+		remote: Option<net::SocketAddr>,
 	) -> Self {
 		Self {
 			method,
@@ -29,30 +29,30 @@ impl Request {
 			headers,
 			body,
 			remote,
-			paramsMap: AnyMap::new()
+			paramsMap: AnyMap::new(),
 		}
 	}
-	
+
 	#[inline]
 	pub fn version(&self) -> &HttpVersion {
 		&self.version
 	}
-	
+
 	#[inline]
 	pub fn headers(&self) -> &Headers {
 		&self.headers
 	}
-	
+
 	#[inline]
 	pub fn method(&self) -> &Method {
 		&self.method
 	}
-	
+
 	#[inline]
 	pub fn uri(&self) -> &Uri {
 		&self.uri
 	}
-	
+
 	#[inline]
 	pub fn path(&self) -> &str {
 		self.uri.path()
