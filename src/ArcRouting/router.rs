@@ -24,11 +24,11 @@ impl Router {
 		}
 	}
 
-	//	pub fn middleware(self, middleware: Box<MiddleWare<ArcRequest>>) -> Self {
-	//		self.middleware = Some(middleware);
+	// 	pub fn middleware(self, middleware: Box<MiddleWare<ArcRequest>>) -> Self {
+	// 		self.middleware = Some(middleware);
 	//
-	//		self
-	//	}
+	// 		self
+	// 	}
 
 	pub fn routes(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;

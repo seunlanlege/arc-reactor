@@ -57,15 +57,31 @@ impl ArcService for ArcHandler {
 #[macro_export]
 macro_rules! arc {
 	($handler:expr) => {
-		ArcHandler { before: None, handler: Arc::new(box $handler), after: None }
+		ArcHandler {
+			before: None,
+			handler: Arc::new(box $handler),
+			after: None
+		}
 	};
 	($before:expr, $handler:expr) => {{
-		ArcHandler { before: Some(Arc::new($before)), handler: Arc::new(box $handler), after: None }
+		ArcHandler {
+			before: Some(Arc::new($before)),
+			handler: Arc::new(box $handler),
+			after: None
+		}
 	}};
 	($before:expr, $handler:expr, $after:expr) => {{
-		ArcHandler { before: Some(Arc::new($before)), handler: Arc::new(box $handler), after: Some(Arc::new($after)) }
+		ArcHandler {
+			before: Some(Arc::new($before)),
+			handler: Arc::new(box $handler),
+			after: Some(Arc::new($after))
+		}
 	}};
 	(_, $handler:expr, $after:expr) => {{
-		ArcHandler { before: None, handler: Arc::new(box $handler), after: Some(Arc::new($after)) }
+		ArcHandler {
+			before: None,
+			handler: Arc::new(box $handler),
+			after: Some(Arc::new($after))
+		}
 	}};
 }
