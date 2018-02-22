@@ -64,8 +64,8 @@ fn middleware1(req: Request) {
 
 #[middleware(Request)]
 fn middleware2(req: Request) {
-	// let accept = req.headers().get::<Accept>().and_then(|accept| Some(accept.clone()));
-	// println!("params {:?}", req.params());	
+	// let accept = req.headers().get::<Accept>().and_then(|accept|
+	// Some(accept.clone())); println!("params {:?}", req.params());
 	// println!("real accept {:?}", &accept);
 	// println!("fake accept {:?}", Accept::image());
 	// println!("has image: {}", accept == Some(Accept::image()));

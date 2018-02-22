@@ -23,6 +23,6 @@ mod tests {
 
 	#[test]
 	fn it_matches_the_correct_routes() {
-		//		let router =
+		// 		let router =
 	}
 }

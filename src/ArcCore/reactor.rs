@@ -8,7 +8,7 @@ use tokio_core::net::{TcpListener, TcpStream};
 use ArcCore::ReactorHandler;
 use ArcRouting::{ArcRouter, RouteGroup, Router};
 use std::sync::{Arc, Mutex};
-use futures::{Future, future, IntoFuture};
+use futures::{future, Future, IntoFuture};
 use futures::prelude::{async, await};
 use futures::task::{self, Task};
 use std::net::SocketAddr;
@@ -163,9 +163,11 @@ fn futureFactory(
 	let stream = await!(streamFuture);
 	if stream.is_ok() {
 		let _opaque = await!(http.serve_connection(stream.unwrap(), serviceHandler.clone()));
-		return Ok(())
+		return Ok(());
 	}
-	println!("[arc-reactor][error]: Failed to handshake with client aborting! \n[arc-reactor][error]: {}",
-	         stream.err().unwrap());
+	println!(
+		"[arc-reactor][error]: Failed to handshake with client aborting! \n[arc-reactor][error]: {}",
+		stream.err().unwrap()
+	);
 	Err(())
 }
