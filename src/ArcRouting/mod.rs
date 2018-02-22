@@ -77,7 +77,32 @@ mod tests {
 		let shouldNotExist = router.matchRoute("/world/seun/lanlege", &Method::Get);
 
 		assert!(shouldExist.is_some());
-		assert_eq!(shouldExist.unwrap().params["name"], "seun");
+		let routeMatch = shouldExist.unwrap();
+		assert_eq!(routeMatch.params["name"], "seun");
+		assert_ne!(routeMatch.params["name"], "seunlanlege");
 		assert!(shouldNotExist.is_none());
+	}
+
+	#[test]
+	fn it_matches_deeply_nested_routes() {
+		let subrouter = RouteGroup::new("users")
+			.get("/profile", AsyncService);
+
+		let routegroup = RouteGroup::new("admin")
+			.get("/roles", AsyncService)
+			.routes(subrouter);
+		let router = Router::new()
+			.routes(routegroup);
+
+		let router = ArcRouter {
+			routes: Arc::new(router.routes)
+		};
+
+		let shouldExist = router.matchRoute("/admin/roles", &Method::Get);
+		let shouldExist1 = router.matchRoute("/admin/users/profile", &Method::Get);
+
+
+		assert!(shouldExist.is_some());
+		assert!(shouldExist1.is_some());
 	}
 }

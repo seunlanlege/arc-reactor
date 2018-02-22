@@ -19,9 +19,15 @@ impl RouteGroup {
 
 	pub fn routes(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
+		let mut parent = self.parent;
+
+		if self.parent.starts_with("/") {
+			parent = self.parent.get(1..).unwrap();
+		}
 
 		for (path, (method, handler)) in routes.into_iter() {
-			self.routes.insert(path, (method, handler));
+			let fullPath = format!("/{}{}", parent, path);
+			self.routes.insert(fullPath, (method, handler));
 		}
 
 		self
@@ -65,9 +71,16 @@ impl RouteGroup {
 		path: &'static str,
 		handler: S,
 	) -> Self {
+		let mut parent = self.parent;
+
+		if self.parent.starts_with("/") {
+			parent = self.parent.get(1..).unwrap();
+		}
+
+		let fullPath = format!("/{}{}", parent, path);
 		self
 			.routes
-			.insert(format!("/{}{}", &self.parent, path), (method, box handler));
+			.insert(fullPath, (method, box handler));
 
 		self
 	}

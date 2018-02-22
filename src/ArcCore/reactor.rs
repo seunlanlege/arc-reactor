@@ -166,7 +166,8 @@ fn futureFactory(
 		return Ok(());
 	}
 	println!(
-		"[arc-reactor][error]: Failed to handshake with client aborting! \n[arc-reactor][error]: {}",
+		"[arc-reactor][error]: Failed to handshake with client aborting!\
+		\n[arc-reactor][error]: {}",
 		stream.err().unwrap()
 	);
 	Err(())
