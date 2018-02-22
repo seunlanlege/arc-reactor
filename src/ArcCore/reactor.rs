@@ -8,8 +8,8 @@ use tokio_core::net::{TcpListener, TcpStream};
 use ArcCore::ReactorHandler;
 use ArcRouting::{ArcRouter, RouteGroup, Router};
 use std::sync::{Arc, Mutex};
-use futures::Future;
-use futures::prelude::{async_block, await};
+use futures::{Future, future, IntoFuture};
+use futures::prelude::{async, await};
 use futures::task::{self, Task};
 use std::net::SocketAddr;
 use std::thread;
@@ -100,7 +100,6 @@ impl ArcReactor {
 		let der = include_bytes!("identity.p12");
 		let cert = Pkcs12::from_der(der, "mypass").unwrap();
 		let acceptor = TlsAcceptor::builder(cert).unwrap().build().unwrap();
-		// let acceptor = Arc::new(acceptor);
 		println!("[arc-reactor]: Running Main Event loop");
 		core.run(listener.incoming().for_each(move |(socket, peerIp)| {
 			let mut reactor = reactors[counter].lock().unwrap();
@@ -143,10 +142,6 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
 						let mut reactor = reactor.lock().unwrap();
 						for (socket, _peerAddr) in reactor.peers.drain(..) {
 							let future = futureFactory(socket, http.clone(), routeService.clone());
-							// let future = http.serve_connection(socket, routeService.clone());
-							let future = future
-								.map(|_stuff| ())
-								.map_err(|err| println!("[arc-reactor][error]: {:?}", err));
 							handle.spawn(future);
 						}
 						reactor.taskHandle = Some(task::current());
@@ -159,22 +154,18 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
 	Ok(reactors)
 }
 
+#[async]
 fn futureFactory(
-	io: AcceptAsync<TcpStream>,
+	streamFuture: AcceptAsync<TcpStream>,
 	http: Arc<Http<Chunk>>,
-	s: Arc<ArcRouter>,
-) -> impl Future<Item = (), Error = ()> {
-	io.then(move |socket| {
-		match socket {
-			Ok(socket) => {
-				println!("Serving Connection!");
-				http.serve_connection(socket, s.clone())
-			},
-			Err(err) => {
-				panic!("Failed to handshake with client aborting! {}", err)
-			}
-		}
-	})
-		.map(|_| ())
-		.map_err(|err| println!("[arc-reactor][error]: {:?}", err))
+	serviceHandler: Arc<ArcRouter>,
+) -> Result<(), ()> {
+	let stream = await!(streamFuture);
+	if stream.is_ok() {
+		let _opaque = await!(http.serve_connection(stream.unwrap(), serviceHandler.clone()));
+		return Ok(())
+	}
+	println!("[arc-reactor][error]: Failed to handshake with client aborting! \n[arc-reactor][error]: {}",
+	         stream.err().unwrap());
+	Err(())
 }
