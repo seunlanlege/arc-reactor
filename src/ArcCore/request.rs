@@ -10,7 +10,7 @@ pub struct Request {
 	headers: Headers,
 	remote: Option<net::SocketAddr>,
 	method: Method,
-	pub(crate) paramsMap: AnyMap,
+	pub(crate) anyMap: AnyMap,
 }
 
 impl Request {
@@ -29,7 +29,7 @@ impl Request {
 			headers,
 			body,
 			remote,
-			paramsMap: AnyMap::new(),
+			anyMap: AnyMap::new(),
 		}
 	}
 
@@ -64,7 +64,15 @@ impl Request {
 	}
 
 	pub fn params(&self) -> Option<&Params> {
-		self.paramsMap.get::<Params>()
+		self.anyMap.get::<Params>()
+	}
+
+	pub fn get<T: 'static>(&self) -> Option<&T> {
+		self.anyMap.get::<T>()
+	}
+
+	pub fn set<T: 'static>(&mut self, value: T) -> Option<T> {
+		self.anyMap.insert::<T>(value)
 	}
 }
 

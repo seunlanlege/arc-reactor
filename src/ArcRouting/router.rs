@@ -103,11 +103,11 @@ impl ArcRouter {
 	where
 		P: AsRef<str>,
 	{
-		if let Some(recognizer) = self.routes.get(method) {
-			return recognizer.recognize(route.as_ref()).ok();
-		} else {
-			None
-		}
+		self.routes
+			.get(method)
+			.and_then(|recognizer| {
+				recognizer.recognize(route.as_ref()).ok()
+			})
 	}
 }
 
@@ -124,7 +124,7 @@ impl Service for ArcRouter {
 	fn call(&self, req: Self::Request) -> Self::Future {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
 			let mut request: Request = req.into();
-			request.paramsMap.insert(routeMatch.params);
+			request.set(routeMatch.params);
 
 			let responseFuture = routeMatch
 				.handler

@@ -8,7 +8,7 @@ pub use self::router::*;
 mod tests {
 	use std::sync::Arc;
 	use impl_service::*;
-	use hyper::{Method, StatusCode, Error};
+	use hyper::{Method, StatusCode};
 	use futures::Future;
 	use futures::prelude::{async_block};
 	use ArcProto::ArcService;
@@ -88,6 +88,7 @@ mod tests {
 		let routegroup = RouteGroup::new("admin")
 			.get("/roles", AsyncService)
 			.group(subrouter);
+
 		let router = Router::new()
 			.group(routegroup);
 
