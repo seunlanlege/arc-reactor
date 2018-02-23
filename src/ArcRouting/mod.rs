@@ -1,8 +1,10 @@
 mod router;
 mod routegroup;
+mod util;
 
 pub use self::routegroup::*;
 pub use self::router::*;
+pub use self::util::*;
 
 #[cfg(test)]
 mod tests {
@@ -42,7 +44,8 @@ mod tests {
 	#[test]
 	fn it_matches_nested_routes() {
 		let routegroup = RouteGroup::new("admin")
-			.get("/roles", AsyncService);
+			.get("/roles", AsyncService)
+			.get("/", AsyncService);
 		let router = Router::new()
 			.group(routegroup);
 		let router = ArcRouter {
@@ -50,16 +53,15 @@ mod tests {
 		};
 
 		let shouldExist = router.matchRoute("/admin/roles", &Method::Get);
-		let shouldNotExist1 = router.matchRoute("/admin", &Method::Get);
-		let shouldNotExist2 = router.matchRoute("/admin/role", &Method::Get);
-		let shouldNotExist3 = router.matchRoute("/admin/roless", &Method::Get);
-		let shouldNotExist4 = router.matchRoute("/hello/world", &Method::Get);
+		let shouldExist1 = router.matchRoute("/admin", &Method::Get);
+		let shouldExist2 = router.matchRoute("/admin/roles/", &Method::Get);
+		let shouldExist3 = router.matchRoute("/admin/", &Method::Get);
+
 
 		assert!(shouldExist.is_some());
-		assert!(shouldNotExist1.is_none());
-		assert!(shouldNotExist2.is_none());
-		assert!(shouldNotExist3.is_none());
-		assert!(shouldNotExist4.is_none());
+		assert!(shouldExist1.is_some());
+		assert!(shouldExist2.is_some());
+		assert!(shouldExist3.is_some());
 	}
 
 	#[test]
@@ -96,8 +98,8 @@ mod tests {
 			routes: Arc::new(router.routes)
 		};
 
-		let shouldExist = router.matchRoute("/admin/roles", &Method::Get);
-		let shouldExist1 = router.matchRoute("/admin/users/profile", &Method::Get);
+		let shouldExist = router.matchRoute("/admin/roles/", &Method::Get);
+		let shouldExist1 = router.matchRoute("/admin/users/profile/", &Method::Get);
 
 
 		assert!(shouldExist.is_some());

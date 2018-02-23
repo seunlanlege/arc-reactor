@@ -1,3 +1,4 @@
+use ArcRouting::stripTrailingSlash;
 use ArcProto::*;
 
 use hyper::Method;
@@ -67,14 +68,21 @@ impl RouteGroup {
 	fn route<S: ArcService + 'static + Send + Sync>(
 		mut self,
 		method: Method,
-		path: &'static str,
+		mut path: &'static str,
 		handler: S,
 	) -> Self {
 		let mut parent = self.parent;
+		let length = path.chars().count();
 
 		if self.parent.starts_with("/") {
 			parent = self.parent.get(1..).unwrap();
 		}
+
+		if !path.starts_with("/") && length > 1 {
+			panic!("Valid route paths must start with '/' ");
+		}
+
+		path = stripTrailingSlash(path);
 
 		let fullPath = format!("/{}{}", parent, path);
 		self

@@ -62,9 +62,9 @@ fn middleware1(req: Request) {
 }
 
 #[middleware(Request)]
-fn middleware2(_req: Request) {
+fn middleware2(req: Request) {
 	println!("middleware 2");
-	let res = Response::new()
+	let _res = Response::new()
 		.with_body("Lol, that didn't work");
-	Err(res)
+	Ok(req)
 }

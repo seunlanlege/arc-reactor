@@ -5,7 +5,7 @@ use hyper::server::Service;
 use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
 use ArcProto::ArcService;
-use ArcRouting::RouteGroup;
+use ArcRouting::{RouteGroup, stripTrailingSlash};
 use ArcCore::{Request, Response};
 use std::sync::{Arc};
 
@@ -103,10 +103,11 @@ impl ArcRouter {
 	where
 		P: AsRef<str>,
 	{
+		let route = stripTrailingSlash(route.as_ref());
 		self.routes
 			.get(method)
 			.and_then(|recognizer| {
-				recognizer.recognize(route.as_ref()).ok()
+				recognizer.recognize(route).ok()
 			})
 	}
 }
