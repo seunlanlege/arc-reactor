@@ -1,14 +1,12 @@
 use futures::Stream;
 use std::io;
-use hyper;
 use hyper::Chunk;
-use hyper::server::{Http, Service};
+use hyper::server::{Http};
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpListener, TcpStream};
 use ArcCore::ReactorHandler;
 use ArcRouting::{ArcRouter, RouteGroup, Router};
 use std::sync::{Arc, Mutex};
-use futures::{future, Future, IntoFuture};
 use futures::prelude::{async, await};
 use futures::task::{self, Task};
 use std::net::SocketAddr;

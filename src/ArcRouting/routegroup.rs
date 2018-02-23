@@ -2,7 +2,6 @@ use ArcProto::*;
 
 use hyper::Method;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 pub struct RouteGroup {
 	pub(crate) parent: &'static str,
@@ -17,7 +16,7 @@ impl RouteGroup {
 		}
 	}
 
-	pub fn routes(mut self, group: RouteGroup) -> Self {
+	pub fn group(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 		let mut parent = self.parent;
 

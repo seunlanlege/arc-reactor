@@ -1,5 +1,5 @@
 use hyper::StatusCode;
-use ArcCore::{Request, Response};
+use ArcCore::{Response};
 
 pub struct ArcError(pub StatusCode, pub String);
 

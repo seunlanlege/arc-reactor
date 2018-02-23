@@ -7,15 +7,12 @@ pub use self::router::*;
 #[cfg(test)]
 mod tests {
 	use std::sync::Arc;
-	use std::collections::HashMap;
-	use recognizer::{Router as Recognizer};
 	use impl_service::*;
 	use hyper::{Method, StatusCode, Error};
 	use futures::Future;
 	use futures::prelude::{async_block};
 	use ArcProto::ArcService;
 	use ArcCore::{Response, Request};
-	use futures::future;
 
 	use super::*;
 
@@ -47,7 +44,7 @@ mod tests {
 		let routegroup = RouteGroup::new("admin")
 			.get("/roles", AsyncService);
 		let router = Router::new()
-			.routes(routegroup);
+			.group(routegroup);
 		let router = ArcRouter {
 			routes: Arc::new(router.routes)
 		};
@@ -90,9 +87,9 @@ mod tests {
 
 		let routegroup = RouteGroup::new("admin")
 			.get("/roles", AsyncService)
-			.routes(subrouter);
+			.group(subrouter);
 		let router = Router::new()
-			.routes(routegroup);
+			.group(routegroup);
 
 		let router = ArcRouter {
 			routes: Arc::new(router.routes)

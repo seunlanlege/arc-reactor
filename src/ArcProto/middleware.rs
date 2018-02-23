@@ -1,9 +1,8 @@
-use hyper::Error;
 use ArcCore::{Request, Response};
 use std::sync::Arc;
 use futures::future::{Future, IntoFuture};
 
-type MiddleWareFuture<I> = Box<Future<Item = I, Error = Error>>;
+type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 
 pub trait MiddleWare<T>: Sync + Send {
 	fn call(&self, param: T) -> MiddleWareFuture<T>;

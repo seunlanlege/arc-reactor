@@ -1,14 +1,13 @@
-use hyper::{Error, StatusCode};
-use ArcCore::{self, Request, Response};
-use futures::{Future, IntoFuture};
+use ArcCore::{Request, Response};
+use futures::{Future};
 use ArcProto::MiddleWare;
 use std::sync::Arc;
 
 pub trait ArcService: Send + Sync {
-	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Error>>;
+	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Response>>;
 }
 
-pub type FutureResponse = Box<Future<Item = Response, Error = Error>>;
+pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
 
 pub struct ArcHandler {
 	pub before: Option<Arc<Box<MiddleWare<Request>>>>,

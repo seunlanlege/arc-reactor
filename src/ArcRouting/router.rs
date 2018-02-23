@@ -1,13 +1,13 @@
 use hyper::{self, Method, StatusCode};
 use futures::{Future, IntoFuture};
+use futures::prelude::{async_block, await};
 use hyper::server::Service;
 use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
 use ArcProto::ArcService;
-use ArcProto::MiddleWare;
 use ArcRouting::RouteGroup;
 use ArcCore::{Request, Response};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 
 pub struct Router {
 	pub(crate) routes: HashMap<Method, Recognizer<Box<ArcService>>>,
@@ -26,7 +26,7 @@ impl Router {
 	// 		self
 	// 	}
 
-	pub fn routes(mut self, group: RouteGroup) -> Self {
+	pub fn group(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 		{
 			for (path, (method, handler)) in routes.into_iter() {
@@ -126,12 +126,19 @@ impl Service for ArcRouter {
 			let mut request: Request = req.into();
 			request.paramsMap.insert(routeMatch.params);
 
-			let response = routeMatch
+			let responseFuture = routeMatch
 				.handler
-				.call(request, Response::new())
-				.map(|res| res.into());
+				.call(request, Response::new());
 
-			return box response;
+			let future = async_block! {
+				let response = await!(responseFuture);
+				match response {
+					Ok(res) => Ok(res.into()),
+					Err(res) => Ok(res.into())
+				}
+			};
+
+			return box future;
 		} else {
 			return box Ok(hyper::Response::new().with_status(StatusCode::NotFound)).into_future();
 		}

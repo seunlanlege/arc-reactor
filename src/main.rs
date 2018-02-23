@@ -2,7 +2,6 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(dead_code)]
-#![allow(unused_imports)]
 
 extern crate anymap;
 extern crate futures_await as futures;
@@ -20,11 +19,9 @@ mod ArcCore;
 mod ArcProto;
 
 use impl_service::{middleware, service};
-use hyper::{Error, StatusCode};
-use hyper::header::Accept;
+use hyper::{StatusCode};
 use futures::future::Future;
 use futures::prelude::async_block;
-use futures::IntoFuture;
 use std::sync::Arc;
 
 use ArcCore::*;
@@ -50,6 +47,7 @@ fn main() {
 
 #[service]
 fn RequestHandler(request: Request, res: Response) {
+	println!("RequestHandler");
 	let url = request.params().unwrap();
 	let body = format!("Hello {}", url["username"]);
 	let res = res.with_status(StatusCode::Ok).with_body(body);
@@ -59,15 +57,14 @@ fn RequestHandler(request: Request, res: Response) {
 
 #[middleware(Request)]
 fn middleware1(req: Request) {
+	println!("middleware 1");
 	Ok(req)
 }
 
 #[middleware(Request)]
-fn middleware2(req: Request) {
-	// let accept = req.headers().get::<Accept>().and_then(|accept|
-	// Some(accept.clone())); println!("params {:?}", req.params());
-	// println!("real accept {:?}", &accept);
-	// println!("fake accept {:?}", Accept::image());
-	// println!("has image: {}", accept == Some(Accept::image()));
-	Ok(req)
+fn middleware2(_req: Request) {
+	println!("middleware 2");
+	let res = Response::new()
+		.with_body("Lol, that didn't work");
+	Err(res)
 }
