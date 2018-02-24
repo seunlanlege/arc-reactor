@@ -11,7 +11,7 @@ pub struct RouteGroup {
 	pub(crate) parent: &'static str,
 	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
 	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
-	pub(crate) routes: HashMap<String, (Method, Box<ArcService>)>,
+	pub(crate) routes: HashMap<String, (Method, ArcHandler)>,
 }
 
 impl RouteGroup {
@@ -32,13 +32,11 @@ impl RouteGroup {
 			parent = self.parent.get(1..).unwrap();
 		}
 
-
-
 		for (path, (method, handler)) in routes.into_iter() {
 			let fullPath = format!("/{}{}", parent, path);
-			let mut handler = box ArcHandler {
+			let mut handler = ArcHandler {
 				before: self.before.clone(),
-				handler: Arc::new(handler),
+				handler: Arc::new(box handler),
 				after: self.after.clone()
 			};
 			self.routes.insert(fullPath, (method, handler));
@@ -95,7 +93,7 @@ impl RouteGroup {
 		mut self,
 		method: Method,
 		mut path: &'static str,
-		handler: S,
+		routehandler: S,
 	) -> Self {
 		let mut parent = self.parent;
 		let length = path.chars().count();
@@ -111,9 +109,14 @@ impl RouteGroup {
 		path = stripTrailingSlash(path);
 
 		let fullPath = format!("/{}{}", parent, path);
+		let handler = ArcHandler {
+			before: self.before.clone(),
+			handler: Arc::new(box routehandler),
+			after: self.after.clone()
+		};
 		self
 			.routes
-			.insert(fullPath, (method, box handler));
+			.insert(fullPath, (method, handler));
 
 		self
 	}
