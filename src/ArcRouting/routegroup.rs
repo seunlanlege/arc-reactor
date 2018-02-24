@@ -1,7 +1,7 @@
 use ArcRouting::stripTrailingSlash;
 use std::sync::Arc;
 #[macro_use]
-use ArcProto::{ArcService, MiddleWare, ArcHandler};
+use ArcProto::{ArcHandler, ArcService, MiddleWare};
 use ArcCore::{Request, Response};
 
 use hyper::Method;
@@ -20,7 +20,7 @@ impl RouteGroup {
 			parent,
 			routes: HashMap::new(),
 			before: None,
-			after: None
+			after: None,
 		}
 	}
 
@@ -37,7 +37,7 @@ impl RouteGroup {
 			let mut handler = ArcHandler {
 				before: self.before.clone(),
 				handler: Arc::new(box handler),
-				after: self.after.clone()
+				after: self.after.clone(),
 			};
 			self.routes.insert(fullPath, (method, handler));
 		}
@@ -112,11 +112,9 @@ impl RouteGroup {
 		let handler = ArcHandler {
 			before: self.before.clone(),
 			handler: Arc::new(box routehandler),
-			after: self.after.clone()
+			after: self.after.clone(),
 		};
-		self
-			.routes
-			.insert(fullPath, (method, handler));
+		self.routes.insert(fullPath, (method, handler));
 
 		self
 	}

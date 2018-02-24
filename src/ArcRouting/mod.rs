@@ -12,9 +12,9 @@ mod tests {
 	use impl_service::*;
 	use hyper::{Method, StatusCode};
 	use futures::Future;
-	use futures::prelude::{async_block};
+	use futures::prelude::async_block;
 	use ArcProto::ArcService;
-	use ArcCore::{Response, Request};
+	use ArcCore::{Request, Response};
 
 	use super::*;
 
@@ -28,10 +28,9 @@ mod tests {
 
 	#[test]
 	fn it_matches_the_correct_routes() {
-		let router = Router::new()
-			.get("/hello", AsyncService);
+		let router = Router::new().get("/hello", AsyncService);
 		let router = ArcRouter {
-			routes: Arc::new(router.routes)
+			routes: Arc::new(router.routes),
 		};
 
 		let shouldExist = router.matchRoute("/hello", &Method::Get);
@@ -46,17 +45,15 @@ mod tests {
 		let routegroup = RouteGroup::new("admin")
 			.get("/roles", AsyncService)
 			.get("/", AsyncService);
-		let router = Router::new()
-			.group(routegroup);
+		let router = Router::new().group(routegroup);
 		let router = ArcRouter {
-			routes: Arc::new(router.routes)
+			routes: Arc::new(router.routes),
 		};
 
 		let shouldExist = router.matchRoute("/admin/roles", &Method::Get);
 		let shouldExist1 = router.matchRoute("/admin", &Method::Get);
 		let shouldExist2 = router.matchRoute("/admin/roles/", &Method::Get);
 		let shouldExist3 = router.matchRoute("/admin/", &Method::Get);
-
 
 		assert!(shouldExist.is_some());
 		assert!(shouldExist1.is_some());
@@ -66,10 +63,9 @@ mod tests {
 
 	#[test]
 	fn it_matches_routes_with_params() {
-		let router = Router::new()
-			.get("/hello/:name", AsyncService);
+		let router = Router::new().get("/hello/:name", AsyncService);
 		let router = ArcRouter {
-			routes: Arc::new(router.routes)
+			routes: Arc::new(router.routes),
 		};
 
 		let shouldExist = router.matchRoute("/hello/seun", &Method::Get);
@@ -84,23 +80,20 @@ mod tests {
 
 	#[test]
 	fn it_matches_deeply_nested_routes() {
-		let subrouter = RouteGroup::new("users")
-			.get("/profile", AsyncService);
+		let subrouter = RouteGroup::new("users").get("/profile", AsyncService);
 
 		let routegroup = RouteGroup::new("admin")
 			.get("/roles", AsyncService)
 			.group(subrouter);
 
-		let router = Router::new()
-			.group(routegroup);
+		let router = Router::new().group(routegroup);
 
 		let router = ArcRouter {
-			routes: Arc::new(router.routes)
+			routes: Arc::new(router.routes),
 		};
 
 		let shouldExist = router.matchRoute("/admin/roles/", &Method::Get);
 		let shouldExist1 = router.matchRoute("/admin/users/profile/", &Method::Get);
-
 
 		assert!(shouldExist.is_some());
 		assert!(shouldExist1.is_some());

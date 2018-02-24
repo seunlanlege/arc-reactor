@@ -4,10 +4,10 @@ use futures::prelude::{async_block, await};
 use hyper::server::Service;
 use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
-use ArcProto::{ArcService, ArcHandler, MiddleWare};
+use ArcProto::{ArcHandler, ArcService, MiddleWare};
 use ArcRouting::{RouteGroup, stripTrailingSlash};
 use ArcCore::{Request, Response};
-use std::sync::{Arc};
+use std::sync::Arc;
 
 pub struct Router {
 	pub(crate) routes: HashMap<Method, Recognizer<ArcHandler>>,
@@ -31,7 +31,7 @@ impl Router {
 				let handler = ArcHandler {
 					before: self.before.clone(),
 					handler: Arc::new(box routehandler),
-					after: self.after.clone()
+					after: self.after.clone(),
 				};
 				self
 					.routes
@@ -99,7 +99,7 @@ impl Router {
 			let handler = ArcHandler {
 				before: self.before.clone(),
 				handler: Arc::new(box routehandler),
-				after: self.after.clone()
+				after: self.after.clone(),
 			};
 			self
 				.routes
@@ -124,11 +124,10 @@ impl ArcRouter {
 		P: AsRef<str>,
 	{
 		let route = stripTrailingSlash(route.as_ref());
-		self.routes
+		self
+			.routes
 			.get(method)
-			.and_then(|recognizer| {
-				recognizer.recognize(route).ok()
-			})
+			.and_then(|recognizer| recognizer.recognize(route).ok())
 	}
 }
 
@@ -147,9 +146,7 @@ impl Service for ArcRouter {
 			let mut request: Request = req.into();
 			request.set(routeMatch.params);
 
-			let responseFuture = routeMatch
-				.handler
-				.call(request, Response::new());
+			let responseFuture = routeMatch.handler.call(request, Response::new());
 
 			let future = async_block! {
 				let response = await!(responseFuture);
