@@ -1,7 +1,7 @@
 use futures::Stream;
 use std::io;
 use hyper::Chunk;
-use hyper::server::{Http};
+use hyper::server::Http;
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpListener, TcpStream};
 use ArcCore::ReactorHandler;
@@ -157,7 +157,7 @@ fn futureFactory(
 	}
 	println!(
 		"[arc-reactor][error]: Failed to handshake with client aborting!\
-		\n[arc-reactor][error]: {}",
+		 \n[arc-reactor][error]: {}",
 		stream.err().unwrap()
 	);
 	Err(())

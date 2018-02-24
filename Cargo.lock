@@ -16,7 +16,6 @@ name = "arc-reactor"
 version = "0.1.0"
 dependencies = [
  "anymap 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-await 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.11.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "impl-service 0.1.0",
