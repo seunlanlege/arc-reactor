@@ -5,7 +5,7 @@ use hyper::server::{Http};
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpListener, TcpStream};
 use ArcCore::ReactorHandler;
-use ArcRouting::{ArcRouter, RouteGroup, Router};
+use ArcRouting::{ArcRouter, Router};
 use std::sync::{Arc, Mutex};
 use futures::prelude::{async, await};
 use futures::task::{self, Task};
@@ -44,14 +44,6 @@ impl ArcReactor {
 			timeout: 10,
 			RouteService: None,
 		}
-	}
-
-	pub fn router() -> ArcRouter {
-		ArcRouter::new()
-	}
-
-	pub fn routeGroup(parent: &'static str) -> RouteGroup {
-		RouteGroup::new(parent)
 	}
 
 	pub fn port(mut self, port: i16) -> Self {
@@ -145,7 +137,7 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
 						reactor.taskHandle = Some(task::current());
 					},
 				})
-				.expect("Could not spawn threads!");
+				.expect("Error running reactor core!");
 		});
 	}
 

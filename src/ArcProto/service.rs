@@ -1,3 +1,4 @@
+#![macro_use]
 use ArcCore::{Request, Response};
 use futures::{Future};
 use ArcProto::MiddleWare;
@@ -9,7 +10,7 @@ pub trait ArcService: Send + Sync {
 
 pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
 
-pub struct ArcHandler {
+pub(crate) struct ArcHandler {
 	pub before: Option<Arc<Box<MiddleWare<Request>>>>,
 	pub handler: Arc<Box<ArcService>>,
 	pub after: Option<Arc<Box<MiddleWare<Response>>>>,
@@ -55,14 +56,18 @@ impl ArcService for ArcHandler {
 
 #[macro_export]
 macro_rules! arc {
-	($handler:expr) => {
+	($handler:expr) => {{
+		use std::sync::Arc;
+		use $crate::ArcHandler;
 		ArcHandler {
 			before: None,
 			handler: Arc::new(box $handler),
 			after: None
 		}
-	};
+	}};
 	($before:expr, $handler:expr) => {{
+		use std::sync::Arc;
+		use $crate::ArcHandler;
 		ArcHandler {
 			before: Some(Arc::new($before)),
 			handler: Arc::new(box $handler),
@@ -70,6 +75,8 @@ macro_rules! arc {
 		}
 	}};
 	($before:expr, $handler:expr, $after:expr) => {{
+		use std::sync::Arc;
+		use $crate::ArcHandler;
 		ArcHandler {
 			before: Some(Arc::new($before)),
 			handler: Arc::new(box $handler),
@@ -77,6 +84,8 @@ macro_rules! arc {
 		}
 	}};
 	(_, $handler:expr, $after:expr) => {{
+		use std::sync::Arc;
+		use $crate::ArcHandler;
 		ArcHandler {
 			before: None,
 			handler: Arc::new(box $handler),

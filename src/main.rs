@@ -13,26 +13,31 @@ extern crate route_recognizer as recognizer;
 extern crate tokio_core;
 extern crate tokio_tls;
 
-mod ArcRouting;
-mod ArcCore;
+
 #[macro_use]
 mod ArcProto;
+mod ArcRouting;
+mod ArcCore;
 
 use impl_service::{middleware, service};
 use hyper::{StatusCode};
 use futures::future::Future;
 use futures::prelude::async_block;
-use std::sync::Arc;
 
 use ArcCore::*;
 use ArcRouting::*;
+#[macro_use]
 use ArcProto::*;
 
 fn getMainRoutes() -> Router {
-	let router: Router = Router::new().get(
-		"/:username",
-		arc!(mw![middleware1, middleware2], RequestHandler),
-	);
+	let router: Router = Router::new()
+		.before(LogMiddleware)
+		.get("/", RequestHandler)
+		.get(
+			"/:username",
+			arc!(mw![middleware1, middleware2], RequestHandler),
+		)
+		.get("/hello", RequestHandler);
 
 	return router;
 }
@@ -47,24 +52,30 @@ fn main() {
 
 #[service]
 fn RequestHandler(request: Request, res: Response) {
-	println!("RequestHandler");
 	let url = request.params().unwrap();
-	let body = format!("Hello {}", url["username"]);
-	let res = res.with_status(StatusCode::Ok).with_body(body);
+	println!("[RequestHandler]: Params {:?}", url);
+	let res = res.with_status(StatusCode::Ok).with_body("Well Hello there");
 
 	Ok(res)
 }
 
 #[middleware(Request)]
 fn middleware1(req: Request) {
-	println!("middleware 1");
+	println!("[middleware1]: middleware 1");
 	Ok(req)
 }
 
 #[middleware(Request)]
 fn middleware2(req: Request) {
-	println!("middleware 2");
+	println!("[middleware2]: middleware 2");
+	Ok(req)
+}
+
+#[middleware(Request)]
+fn LogMiddleware(req: Request) {
+	println!("[LogMiddleware]: called on {}", req.path());
 	let _res = Response::new()
 		.with_body("Lol, that didn't work");
+
 	Ok(req)
 }
