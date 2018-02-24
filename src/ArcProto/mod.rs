@@ -1,9 +1,8 @@
-#[macro_use]
 mod service;
+mod middleware;
+
 mod error;
 mod convert;
-#[macro_use]
-mod middleware;
 
 pub use self::middleware::*;
 pub use self::service::*;

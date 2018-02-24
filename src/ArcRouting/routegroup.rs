@@ -1,11 +1,16 @@
 use ArcRouting::stripTrailingSlash;
-use ArcProto::*;
+use std::sync::Arc;
+#[macro_use]
+use ArcProto::{ArcService, MiddleWare, ArcHandler};
+use ArcCore::{Request, Response};
 
 use hyper::Method;
 use std::collections::HashMap;
 
 pub struct RouteGroup {
 	pub(crate) parent: &'static str,
+	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
+	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
 	pub(crate) routes: HashMap<String, (Method, Box<ArcService>)>,
 }
 
@@ -14,6 +19,8 @@ impl RouteGroup {
 		RouteGroup {
 			parent,
 			routes: HashMap::new(),
+			before: None,
+			after: None
 		}
 	}
 
@@ -25,10 +32,29 @@ impl RouteGroup {
 			parent = self.parent.get(1..).unwrap();
 		}
 
+
+
 		for (path, (method, handler)) in routes.into_iter() {
 			let fullPath = format!("/{}{}", parent, path);
+			let mut handler = box ArcHandler {
+				before: self.before.clone(),
+				handler: Arc::new(handler),
+				after: self.after.clone()
+			};
 			self.routes.insert(fullPath, (method, handler));
 		}
+
+		self
+	}
+
+	pub fn before<T: 'static + MiddleWare<Request>>(mut self, before: T) -> Self {
+		self.before = Some(Arc::new(box before));
+
+		self
+	}
+
+	pub fn after<T: 'static + MiddleWare<Response>>(mut self, after: T) -> Self {
+		self.after = Some(Arc::new(box after));
 
 		self
 	}

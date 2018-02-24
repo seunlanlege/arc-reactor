@@ -4,32 +4,35 @@ use futures::prelude::{async_block, await};
 use hyper::server::Service;
 use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
-use ArcProto::ArcService;
+use ArcProto::{ArcService, ArcHandler, MiddleWare};
 use ArcRouting::{RouteGroup, stripTrailingSlash};
 use ArcCore::{Request, Response};
 use std::sync::{Arc};
 
 pub struct Router {
 	pub(crate) routes: HashMap<Method, Recognizer<Box<ArcService>>>,
+	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
+	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
 }
 
 impl Router {
 	pub fn new() -> Self {
 		Self {
+			before: None,
 			routes: HashMap::new(),
+			after: None,
 		}
 	}
-
-	// 	pub fn middleware(self, middleware: Box<MiddleWare<ArcRequest>>) -> Self {
-	// 		self.middleware = Some(middleware);
-	//
-	// 		self
-	// 	}
 
 	pub fn group(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 		{
-			for (path, (method, handler)) in routes.into_iter() {
+			for (path, (method, routehandler)) in routes.into_iter() {
+				let handler = box ArcHandler {
+					before: self.before.clone(),
+					handler: Arc::new(routehandler),
+					after: self.after.clone()
+				};
 				self
 					.routes
 					.entry(method)
@@ -37,6 +40,18 @@ impl Router {
 					.add(path.as_str(), handler)
 			}
 		}
+
+		self
+	}
+
+	pub fn before<T: 'static + MiddleWare<Request>>(mut self, before: T) -> Self {
+		self.before = Some(Arc::new(box before));
+
+		self
+	}
+
+	pub fn after<T: 'static + MiddleWare<Response>>(mut self, after: T) -> Self {
+		self.after = Some(Arc::new(box after));
 
 		self
 	}
@@ -76,16 +91,21 @@ impl Router {
 		self.route(Method::Delete, route, handler)
 	}
 
-	fn route<S>(mut self, method: Method, path: &'static str, handler: S) -> Self
+	fn route<S>(mut self, method: Method, path: &'static str, routehandler: S) -> Self
 	where
 		S: ArcService + 'static + Send + Sync,
 	{
 		{
+			let handler = box ArcHandler {
+				before: self.before.clone(),
+				handler: Arc::new(box routehandler),
+				after: self.after.clone()
+			};
 			self
 				.routes
 				.entry(method)
 				.or_insert(Recognizer::new())
-				.add(path.as_ref(), box handler);
+				.add(path.as_ref(), handler);
 		}
 
 		self
