@@ -10,7 +10,7 @@ use ArcCore::{Request, Response};
 use std::sync::{Arc};
 
 pub struct Router {
-	pub(crate) routes: HashMap<Method, Recognizer<Box<ArcService>>>,
+	pub(crate) routes: HashMap<Method, Recognizer<ArcHandler>>,
 	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
 	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
 }
@@ -28,9 +28,9 @@ impl Router {
 		let RouteGroup { routes, .. } = group;
 		{
 			for (path, (method, routehandler)) in routes.into_iter() {
-				let handler = box ArcHandler {
+				let handler = ArcHandler {
 					before: self.before.clone(),
-					handler: Arc::new(routehandler),
+					handler: Arc::new(box routehandler),
 					after: self.after.clone()
 				};
 				self
@@ -96,7 +96,7 @@ impl Router {
 		S: ArcService + 'static + Send + Sync,
 	{
 		{
-			let handler = box ArcHandler {
+			let handler = ArcHandler {
 				before: self.before.clone(),
 				handler: Arc::new(box routehandler),
 				after: self.after.clone()
@@ -119,7 +119,7 @@ impl ArcRouter {
 		}
 	}
 
-	pub(crate) fn matchRoute<P>(&self, route: P, method: &Method) -> Option<Match<&Box<ArcService>>>
+	pub(crate) fn matchRoute<P>(&self, route: P, method: &Method) -> Option<Match<&ArcHandler>>
 	where
 		P: AsRef<str>,
 	{
@@ -133,7 +133,7 @@ impl ArcRouter {
 }
 
 pub struct ArcRouter {
-	pub(crate) routes: Arc<HashMap<Method, Recognizer<Box<ArcService>>>>,
+	pub(crate) routes: Arc<HashMap<Method, Recognizer<ArcHandler>>>,
 }
 
 impl Service for ArcRouter {
