@@ -11,9 +11,9 @@ pub trait ArcService: Send + Sync {
 pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
 
 pub struct ArcHandler {
-	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
-	pub(crate) handler: Arc<Box<ArcService>>,
-	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
+	pub before: Option<Arc<Box<MiddleWare<Request>>>>,
+	pub handler: Arc<Box<ArcService>>,
+	pub after: Option<Arc<Box<MiddleWare<Response>>>>,
 }
 
 impl ArcHandler {

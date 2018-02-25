@@ -19,3 +19,7 @@ queryst-prime = "2.0.0"
 tokio-file-unix = "0.3.0"
 native-tls = "0.1"
 tokio-tls = "0.1"
+
+[dependencies.crossbeam-channel]
+path = "crossbeam-channel"
+features = ["nightly", "future"]

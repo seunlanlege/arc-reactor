@@ -12,6 +12,7 @@ extern crate num_cpus;
 extern crate route_recognizer as recognizer;
 extern crate tokio_core;
 extern crate tokio_tls;
+extern crate crossbeam_channel;
 
 #[macro_use]
 mod ArcProto;
