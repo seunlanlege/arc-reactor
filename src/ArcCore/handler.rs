@@ -1,5 +1,5 @@
 use futures::future::Future;
-use futures::{Async, Poll, task};
+use futures::{Async, Poll};
 
 pub struct ReactorHandler<F>
 where

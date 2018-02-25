@@ -4,6 +4,7 @@
 #![allow(dead_code)]
 
 extern crate anymap;
+extern crate crossbeam_channel;
 pub extern crate futures_await as futures;
 extern crate hyper;
 extern crate impl_service;
@@ -12,7 +13,6 @@ extern crate num_cpus;
 extern crate route_recognizer as recognizer;
 extern crate tokio_core;
 extern crate tokio_tls;
-extern crate crossbeam_channel;
 
 #[macro_use]
 mod ArcProto;

@@ -1,4 +1,4 @@
-use futures::{Stream, Sink, Future};
+use futures::Stream;
 use std::io;
 use hyper::Chunk;
 use hyper::server::Http;
@@ -8,11 +8,11 @@ use ArcCore::ReactorHandler;
 use ArcRouting::{ArcRouter, Router};
 use std::sync::{Arc, Mutex};
 use futures::prelude::{async, await};
-use futures::task::{self, Task};
+use futures::task::Task;
 use std::net::SocketAddr;
 use std::thread;
 use native_tls::{Pkcs12, TlsAcceptor};
-use crossbeam_channel::futures::mpsc::{channel, Sender, Receiver};
+use crossbeam_channel::futures::mpsc::{channel, Receiver, Sender};
 use tokio_tls::{AcceptAsync, TlsAcceptorExt};
 use num_cpus;
 
@@ -65,7 +65,6 @@ impl ArcReactor {
 	pub fn initiate(self) -> io::Result<()> {
 		println!("[arc-reactor]: Spawning threads!");
 		let mut sender = spawn(self.RouteService.expect("This thing needs routes to work!"))?;
-//		println!("[arc-reactor]: spawned {} threads!", reactors.len());
 		println!("[arc-reactor]: Starting main event loop!");
 		let mut core = Core::new()?;
 
@@ -85,26 +84,17 @@ impl ArcReactor {
 			}
 		};
 
-//		let mut counter = 0;
-
 		// for TLS support
 		let der = include_bytes!("identity.p12");
 		let cert = Pkcs12::from_der(der, "mypass").unwrap();
 		let acceptor = TlsAcceptor::builder(cert).unwrap().build().unwrap();
 		println!("[arc-reactor]: Running Main Event loop");
 		core.run(listener.incoming().for_each(move |(socket, peerIp)| {
-//			let mut reactor = reactors[counter].lock().unwrap();
 			let socket = acceptor.accept_async(socket);
-			sender.start_send((socket, peerIp));
-
-//			if let Some(ref task) = reactor.taskHandle {
-//				task.notify();
-//			}
-
-//			counter += 1;
-//			if counter == reactors.len() {
-//				counter = 0
-//			}
+			let _void = match sender.try_send((socket, peerIp)) {
+				Ok(_) => println!("Sent!"),
+				Err(e) => println!("Lol, couldn't send {:?}", e),
+			};
 			Ok(())
 		}))?;
 
@@ -113,8 +103,7 @@ impl ArcReactor {
 }
 
 fn spawn(RouteService: ArcRouter) -> io::Result<Sender<(AcceptAsync<TcpStream>, SocketAddr)>> {
-//	let SegQueue = Arc::new(SegQueue::new());
-	let (sendr, recv) = channel::<(AcceptAsync<TcpStream>, SocketAddr)>(16);
+	let (sendr, recv) = channel::<(AcceptAsync<TcpStream>, SocketAddr)>(4);
 
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
@@ -134,18 +123,8 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Sender<(AcceptAsync<TcpStream>, 
 			core
 				.run(ReactorHandler {
 					handler: || {
-//							let (socket, _peerIp) = peer.unwrap();
-
-								let future = futureFactory(stream.clone(), http.clone(), routeService.clone());
-								handle.spawn(future);
-
-//							let mut reactor = reactor.l
-//						let mut reactor = reactor.lock().unwrap();
-//						for (socket, _peerAddr) in reactor.peers.drain(..) {
-//							let future = futureFactory(socket, http.clone(), routeService.clone());
-//							handle.spawn(future);
-//						}
-//						reactor.taskHandle = Some(task::current());
+						let future = futureFactory(stream.clone(), http.clone(), routeService.clone());
+						handle.spawn(future);
 					},
 				})
 				.expect("Error running reactor core!");
@@ -155,43 +134,20 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Sender<(AcceptAsync<TcpStream>, 
 	Ok(sendr)
 }
 
-//#[async]
-//fn futureFactory(
-//	streamFuture: AcceptAsync<TcpStream>,
-//	http: Arc<Http<Chunk>>,
-//	serviceHandler: Arc<ArcRouter>,
-//) -> Result<(), ()> {
-//	println!("resolving!");
-//	let stream = await!(streamFuture);
-//	if stream.is_ok() {
-//		println!("resolved!");
-//		let _opaque = await!(http.serve_connection(stream.unwrap(), serviceHandler.clone()));
-//		return Ok(());
-//	}
-//	println!(
-//		"[arc-reactor][error]: Failed to handshake with client aborting!\
-//		 \n[arc-reactor][error]: {}",
-//		stream.err().unwrap()
-//	);
-//	Err(())
-//}
-
 #[async]
 fn futureFactory(
-	streamFuture:Receiver<(AcceptAsync<TcpStream>, SocketAddr)>,
+	streamFuture: Receiver<(AcceptAsync<TcpStream>, SocketAddr)>,
 	http: Arc<Http<Chunk>>,
 	serviceHandler: Arc<ArcRouter>,
 ) -> Result<(), ()> {
-	println!("Got a peer!");
 	#[async]
 	for (socket, _) in streamFuture {
-
+		println!("reading!");
 		let stream = await!(socket);
 		if !stream.is_ok() {
-			continue
+			continue;
 		}
-		await!(http.serve_connection(stream.unwrap(), serviceHandler.clone()));
+		let _opaque = await!(http.serve_connection(stream.unwrap(), serviceHandler.clone()));
 	}
 	Ok(())
 }
-
