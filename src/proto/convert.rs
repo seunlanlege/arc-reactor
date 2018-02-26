@@ -1,6 +1,6 @@
 use hyper::{self, StatusCode};
-use ArcProto::ArcError;
-use ArcCore::{Request, Response};
+use proto::ArcError;
+use core::{Request, Response};
 
 fn convertToStatusCode(number: u16) -> StatusCode {
 	match StatusCode::try_from(number) {
