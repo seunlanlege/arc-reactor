@@ -1,9 +1,4 @@
-#![feature(
-proc_macro,
-box_syntax,
-generators,
-)]
-
+#![feature(proc_macro, box_syntax, generators)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(dead_code)]
@@ -14,12 +9,9 @@ use arc_reactor::*;
 use arc_reactor::prelude::*;
 
 fn getMainRoutes() -> Router {
-	let router = Router::new()
+	return Router::new()
 		.get("/:username", RequestHandler)
 		.post("/", arc!(mw![middleware1, middleware2], RequestHandler));
-//		.post("/:username", (mw![middleware, middleware2], RequestHandler))
-
-	return router
 }
 
 fn main() {
@@ -34,21 +26,19 @@ fn main() {
 fn RequestHandler(request: Request, res: Response) {
 	let url = request.params().unwrap();
 	let body = format!("Hello {}", url["username"]);
-	let res =	res
-		.with_body(body);
+	let res = res.with_body(body);
 
 	Ok(res)
 }
 
-
 #[middleware(Request)]
-fn middleware1(req: Request){
+fn middleware1(req: Request) {
 	println!("[middleware1]");
 	Ok(req)
 }
 
 #[middleware(Request)]
-fn middleware2(req: Request){
+fn middleware2(req: Request) {
 	println!("[middleware2]");
 	Ok(req)
 }
