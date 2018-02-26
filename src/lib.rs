@@ -1,9 +1,9 @@
 #![feature(proc_macro, box_syntax, generators, conservative_impl_trait)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
+#![allow(dead_code)]
 
 extern crate anymap;
-extern crate crossbeam_channel;
 pub extern crate futures_await as futures;
 extern crate hyper;
 extern crate impl_service;
@@ -14,13 +14,13 @@ extern crate tokio_core;
 extern crate tokio_tls;
 
 #[macro_use]
-mod proto;
-mod routing;
-mod core;
+mod ArcProto;
+mod ArcRouting;
+mod ArcCore;
 
-pub use proto::*;
-pub use core::*;
-pub use routing::*;
+pub use ArcProto::*;
+pub use ArcCore::*;
+pub use ArcRouting::*;
 
 pub mod prelude {
 	pub use futures::prelude::async_block;

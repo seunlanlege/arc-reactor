@@ -1,8 +1,8 @@
-use routing::stripTrailingSlash;
+use ArcRouting::stripTrailingSlash;
 use std::sync::Arc;
 #[macro_use]
-use proto::{ArcHandler, ArcService, MiddleWare};
-use core::{Request, Response};
+use ArcProto::{ArcHandler, ArcService, MiddleWare};
+use ArcCore::{Request, Response};
 
 use hyper::Method;
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ pub struct RouteGroup {
 }
 
 impl RouteGroup {
-	pub fn new(parent: &'static str) -> Self {
+	pub(crate) fn new(parent: &'static str) -> Self {
 		RouteGroup {
 			parent,
 			routes: HashMap::new(),

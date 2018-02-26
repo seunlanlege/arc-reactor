@@ -3,4 +3,3 @@
 .vscode
 .idea
 **/.DS_Store
-crossbeam-channel

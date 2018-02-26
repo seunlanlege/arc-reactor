@@ -1,7 +1,7 @@
 #![macro_use]
-use core::{Request, Response};
+use ArcCore::{Request, Response};
 use futures::Future;
-use proto::MiddleWare;
+use ArcProto::MiddleWare;
 use std::sync::Arc;
 
 pub trait ArcService: Send + Sync {
@@ -11,9 +11,9 @@ pub trait ArcService: Send + Sync {
 pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
 
 pub struct ArcHandler {
-	pub before: Option<Arc<Box<MiddleWare<Request>>>>,
-	pub handler: Arc<Box<ArcService>>,
-	pub after: Option<Arc<Box<MiddleWare<Response>>>>,
+	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
+	pub(crate) handler: Arc<Box<ArcService>>,
+	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
 }
 
 impl ArcHandler {

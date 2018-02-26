@@ -13,8 +13,8 @@ mod tests {
 	use hyper::{Method, StatusCode};
 	use futures::Future;
 	use futures::prelude::async_block;
-	use proto::ArcService;
-	use core::{Request, Response};
+	use ArcProto::ArcService;
+	use ArcCore::{Request, Response};
 
 	use super::*;
 
