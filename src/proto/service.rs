@@ -1,7 +1,7 @@
 #![macro_use]
-use ArcCore::{Request, Response};
+use core::{Request, Response};
 use futures::Future;
-use ArcProto::MiddleWare;
+use proto::MiddleWare;
 use std::sync::Arc;
 
 pub trait ArcService: Send + Sync {

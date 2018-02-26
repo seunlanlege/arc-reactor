@@ -4,36 +4,17 @@ use hyper::Chunk;
 use hyper::server::Http;
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpListener, TcpStream};
-use ArcRouting::{ArcRouter, Router};
-use std::sync::{Arc, Mutex};
+use routing::{ArcRouter, Router};
+use std::sync::{Arc};
 use futures::prelude::{async, async_block, await};
-use futures::task::Task;
-use std::net::SocketAddr;
 use std::thread;
 use native_tls::{Pkcs12, TlsAcceptor};
 use crossbeam_channel::futures::mpmc::{channel, Sender};
 use tokio_tls::{AcceptAsync, TlsAcceptorExt};
 use num_cpus;
 
-pub type ReactorAlias = Arc<Mutex<Reactor>>;
-
-pub struct Reactor {
-	pub(crate) peers: Vec<(AcceptAsync<TcpStream>, SocketAddr)>,
-	pub(crate) taskHandle: Option<Task>,
-}
-
-impl Reactor {
-	pub fn new() -> ReactorAlias {
-		Arc::new(Mutex::new(Reactor {
-			peers: Vec::new(),
-			taskHandle: None,
-		}))
-	}
-}
-
 pub struct ArcReactor {
 	port: i16,
-	timeout: i8,
 	routeService: Option<ArcRouter>,
 }
 
@@ -41,7 +22,6 @@ impl ArcReactor {
 	pub fn new() -> ArcReactor {
 		ArcReactor {
 			port: 8080,
-			timeout: 10,
 			routeService: None,
 		}
 	}

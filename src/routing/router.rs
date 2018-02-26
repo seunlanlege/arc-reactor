@@ -4,9 +4,9 @@ use futures::prelude::{async_block, await};
 use hyper::server::Service;
 use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
-use ArcProto::{ArcHandler, ArcService, MiddleWare};
-use ArcRouting::{RouteGroup, stripTrailingSlash};
-use ArcCore::{Request, Response};
+use proto::{ArcHandler, ArcService, MiddleWare};
+use routing::{RouteGroup, stripTrailingSlash};
+use core::{Request, Response};
 use std::sync::Arc;
 
 pub struct Router {
