@@ -9,12 +9,9 @@ use arc_reactor::*;
 use arc_reactor::prelude::*;
 
 fn getMainRoutes() -> Router {
-	let router = Router::new()
+	return Router::new()
 		.get("/:username", RequestHandler)
 		.post("/", arc!(mw![middleware1, middleware2], RequestHandler));
-	// 		.post("/:username", (mw![middleware, middleware2], RequestHandler))
-
-	return router;
 }
 
 fn main() {
