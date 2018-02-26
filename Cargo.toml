@@ -22,4 +22,4 @@ tokio-tls = "0.1"
 
 [dependencies.crossbeam-channel]
 path = "crossbeam-channel"
-features = ["nightly", "future"]
+features = ["nightly"]

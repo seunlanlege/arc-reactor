@@ -1,18 +1,17 @@
-use futures::Stream;
+use futures::{Stream, Sink};
 use std::io;
 use hyper::Chunk;
 use hyper::server::Http;
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpListener, TcpStream};
-use ArcCore::ReactorHandler;
 use ArcRouting::{ArcRouter, Router};
 use std::sync::{Arc, Mutex};
-use futures::prelude::{async, await};
+use futures::prelude::{async, await, async_block};
 use futures::task::Task;
 use std::net::SocketAddr;
 use std::thread;
 use native_tls::{Pkcs12, TlsAcceptor};
-use crossbeam_channel::futures::mpsc::{channel, Receiver, Sender};
+use crossbeam_channel::futures::mpmc::{channel, Sender};
 use tokio_tls::{AcceptAsync, TlsAcceptorExt};
 use num_cpus;
 
@@ -64,7 +63,7 @@ impl ArcReactor {
 
 	pub fn initiate(self) -> io::Result<()> {
 		println!("[arc-reactor]: Spawning threads!");
-		let mut sender = spawn(self.RouteService.expect("This thing needs routes to work!"))?;
+		let sender = spawn(self.RouteService.expect("This thing needs routes to work!"))?;
 		println!("[arc-reactor]: Starting main event loop!");
 		let mut core = Core::new()?;
 
@@ -88,22 +87,29 @@ impl ArcReactor {
 		let der = include_bytes!("identity.p12");
 		let cert = Pkcs12::from_der(der, "mypass").unwrap();
 		let acceptor = TlsAcceptor::builder(cert).unwrap().build().unwrap();
+		let acceptor = Arc::new(acceptor);
 		println!("[arc-reactor]: Running Main Event loop");
-		core.run(listener.incoming().for_each(move |(socket, peerIp)| {
-			let socket = acceptor.accept_async(socket);
-			let _void = match sender.try_send((socket, peerIp)) {
-				Ok(_) => println!("Sent!"),
-				Err(e) => println!("Lol, couldn't send {:?}", e),
-			};
-			Ok(())
-		}))?;
+		core.run(listener.incoming()
+			.for_each(move |(socket, _)| {
+				let accept = acceptor.clone();
+				let sink = sender.clone();				
+				let f = async_block! {
+					let socket = accept.accept_async(socket);
+					let _void = await!(sink.send(socket));
+					Ok(())
+				};
+				handle.spawn(f);
+				Ok(())
+			}))?;
 
 		Ok(())
 	}
 }
 
-fn spawn(RouteService: ArcRouter) -> io::Result<Sender<(AcceptAsync<TcpStream>, SocketAddr)>> {
-	let (sendr, recv) = channel::<(AcceptAsync<TcpStream>, SocketAddr)>(4);
+
+
+fn spawn(RouteService: ArcRouter) -> io::Result<Sender<AcceptAsync<TcpStream>>> {
+	let (sendr, recv) = channel::<AcceptAsync<TcpStream>>();
 
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
@@ -116,17 +122,14 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Sender<(AcceptAsync<TcpStream>, 
 
 		thread::spawn(move || {
 			let mut core = Core::new().expect("Could not start event loop");
-			let handle = core.handle();
 			let http: Http<Chunk> = Http::new();
 			let http = Arc::new(http);
 
 			core
-				.run(ReactorHandler {
-					handler: || {
-						let future = futureFactory(stream.clone(), http.clone(), routeService.clone());
-						handle.spawn(future);
-					},
-				})
+				.run(stream.for_each(|socket| {
+							return futureFactory(socket, http.clone(), routeService.clone());
+					})
+				)
 				.expect("Error running reactor core!");
 		});
 	}
@@ -136,18 +139,16 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Sender<(AcceptAsync<TcpStream>, 
 
 #[async]
 fn futureFactory(
-	streamFuture: Receiver<(AcceptAsync<TcpStream>, SocketAddr)>,
+	streamFuture: AcceptAsync<TcpStream>,
 	http: Arc<Http<Chunk>>,
 	serviceHandler: Arc<ArcRouter>,
 ) -> Result<(), ()> {
-	#[async]
-	for (socket, _) in streamFuture {
-		println!("reading!");
-		let stream = await!(socket);
-		if !stream.is_ok() {
-			continue;
-		}
-		let _opaque = await!(http.serve_connection(stream.unwrap(), serviceHandler.clone()));
+	let stream = await!(streamFuture);
+
+	if !stream.is_ok() {
+		return Err(())
 	}
+		
+	let _opaque = await!(http.serve_connection(stream.unwrap(), serviceHandler.clone()));
 	Ok(())
 }
