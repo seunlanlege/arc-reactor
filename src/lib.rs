@@ -7,7 +7,9 @@ pub extern crate futures_await as futures;
 extern crate hyper;
 extern crate impl_service;
 extern crate num_cpus;
+extern crate queryst_prime;
 extern crate route_recognizer as recognizer;
+extern crate serde_json;
 extern crate tokio_core;
 
 #[macro_use]
@@ -24,7 +26,7 @@ pub mod prelude {
 	pub use impl_service::{middleware, service};
 	pub use futures::future::Future;
 	pub use futures;
-	pub use proto::{ArcService, ArcHandler};
+	pub use proto::{ArcHandler, ArcService};
 }
 
 pub use hyper::StatusCode;

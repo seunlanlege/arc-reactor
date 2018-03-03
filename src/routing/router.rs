@@ -1,7 +1,5 @@
-use hyper::{self, Method, StatusCode};
+use hyper::{Method, StatusCode};
 use futures::{Future, IntoFuture};
-use futures::prelude::{async_block, await};
-use hyper::server::Service;
 use std::collections::HashMap;
 use recognizer::{Match, Router as Recognizer};
 use proto::{ArcHandler, ArcService, MiddleWare};
@@ -13,6 +11,7 @@ pub struct Router {
 	pub(crate) routes: HashMap<Method, Recognizer<ArcHandler>>,
 	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
 	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
+	pub(crate) notFound: Option<Box<ArcService>>,
 }
 
 impl Router {
@@ -21,6 +20,7 @@ impl Router {
 			before: None,
 			routes: HashMap::new(),
 			after: None,
+			notFound: None,
 		}
 	}
 
@@ -110,14 +110,6 @@ impl Router {
 
 		self
 	}
-}
-
-impl ArcRouter {
-	pub fn new() -> Self {
-		Self {
-			routes: Arc::new(HashMap::new()),
-		}
-	}
 
 	pub(crate) fn matchRoute<P>(&self, route: P, method: &Method) -> Option<Match<&ArcHandler>>
 	where
@@ -131,34 +123,20 @@ impl ArcRouter {
 	}
 }
 
-pub struct ArcRouter {
-	pub(crate) routes: Arc<HashMap<Method, Recognizer<ArcHandler>>>,
-}
-
-impl Service for ArcRouter {
-	type Request = hyper::Request;
-	type Response = hyper::Response;
-	type Error = hyper::Error;
-	type Future = Box<Future<Item = Self::Response, Error = Self::Error>>;
-
-	fn call(&self, req: Self::Request) -> Self::Future {
+impl ArcService for Router {
+	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Response>> {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
 			let mut request: Request = req.into();
 			request.set(routeMatch.params);
 
-			let responseFuture = routeMatch.handler.call(request, Response::new());
-
-			let future = async_block! {
-				let response = await!(responseFuture);
-				match response {
-					Ok(res) => Ok(res.into()),
-					Err(res) => Ok(res.into())
-				}
-			};
+			let future = ArcService::call(&*routeMatch.handler, request, res);
 
 			return box future;
 		} else {
-			return box Ok(hyper::Response::new().with_status(StatusCode::NotFound)).into_future();
+			if let Some(ref notFound) = self.notFound {
+				return notFound.call(req, res);
+			}
+			return box Ok(Response::new().with_status(StatusCode::NotFound)).into_future();
 		}
 	}
 }

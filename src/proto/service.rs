@@ -1,5 +1,8 @@
 #![macro_use]
 use core::{Request, Response};
+use hyper::server::Service;
+use hyper;
+use futures::prelude::{async_block, await};
 use futures::Future;
 use proto::MiddleWare;
 use std::sync::Arc;
@@ -51,6 +54,28 @@ impl ArcService for ArcHandler {
 		}
 
 		return box self.handler.call(req, res);
+	}
+}
+
+impl Service for ArcHandler {
+	type Request = hyper::Request;
+	type Response = hyper::Response;
+	type Error = hyper::Error;
+	type Future = Box<Future<Item = Self::Response, Error = Self::Error>>;
+
+	fn call(&self, req: Self::Request) -> Self::Future {
+		let request: Request = req.into();
+		let responseFuture = ArcService::call(&*self, request, Response::new());
+
+		let future = async_block! {
+			let response = await!(responseFuture);
+			match response {
+				Ok(res) => Ok(res.into()),
+				Err(res) => Ok(res.into())
+			}
+		};
+
+		return box future;
 	}
 }
 
