@@ -32,7 +32,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let span = Span::call_site();
 
 	let output = quote_spanned! {span=>
-		struct #ident;
+		pub struct #ident;
 		
 		impl ArcService for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item = Response, Error = Response>> {
@@ -70,7 +70,7 @@ pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream 
 	let span = Span::call_site();
 
 	let output = quote_spanned! {span=>
-		struct #ident;
+		pub struct #ident;
 
 		impl MiddleWare<#attribute> for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item=#attribute, Error=Response>> {
