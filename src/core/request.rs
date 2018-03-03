@@ -2,7 +2,7 @@ use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use std::{fmt, net};
 use recognizer::Params;
 use anymap::AnyMap;
-use serde_json::{from_value};
+use serde_json::from_value;
 use serde::de::DeserializeOwned;
 use queryst_prime::parse;
 
@@ -63,9 +63,12 @@ impl Request {
 
 	#[inline]
 	pub fn query<T>(&self) -> Option<T>
-	where T: DeserializeOwned
+	where
+		T: DeserializeOwned,
 	{
-		self.uri.query()
+		self
+			.uri
+			.query()
 			.and_then(|query| parse(query).ok())
 			.and_then(|value| from_value::<T>(value).ok())
 	}
