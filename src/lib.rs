@@ -11,6 +11,7 @@ extern crate queryst_prime;
 extern crate route_recognizer as recognizer;
 extern crate serde_json;
 extern crate tokio_core;
+extern crate serde;
 
 #[macro_use]
 mod proto;
