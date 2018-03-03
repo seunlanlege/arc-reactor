@@ -1,4 +1,4 @@
-use futures::{Stream, Future, Async, Poll};
+use futures::{Async, Future, Poll, Stream};
 use futures::task::{self, Task};
 use std::io;
 use std::net::SocketAddr;
@@ -13,15 +13,15 @@ use std::thread;
 use num_cpus;
 
 pub struct ReactorFuture<F>
-	where
-		F: Fn(),
+where
+	F: Fn(),
 {
 	pub handler: F,
 }
 
 impl<F> Future for ReactorFuture<F>
-	where
-		F: Fn(),
+where
+	F: Fn(),
 {
 	type Item = ();
 	type Error = ();
@@ -34,7 +34,6 @@ impl<F> Future for ReactorFuture<F>
 }
 
 pub type ReactorAlias = Arc<Mutex<Reactor>>;
-
 
 pub struct Reactor {
 	pub(crate) peers: Vec<(TcpStream, SocketAddr)>,
@@ -49,7 +48,6 @@ impl Reactor {
 		}))
 	}
 }
-
 
 pub struct ArcReactor {
 	port: i16,
@@ -150,13 +148,9 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
 				reactor.taskHandle = Some(task::current());
 			};
 
-			let future = ReactorFuture {
-				handler
-			};
+			let future = ReactorFuture { handler };
 
-			core
-				.run(future)
-				.expect("Error running reactor core!");
+			core.run(future).expect("Error running reactor core!");
 		});
 	}
 
