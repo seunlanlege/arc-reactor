@@ -6,11 +6,13 @@ use hyper::Chunk;
 use hyper::server::Http;
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpListener, TcpStream};
-use routing::{ArcRouter, Router};
+use routing::Router;
 use std::sync::{Arc, Mutex};
 use futures::prelude::{async, await};
 use std::thread;
 use num_cpus;
+use proto::{ArcHandler, ArcService, MiddleWare};
+use super::{Request, Response};
 
 pub struct ReactorFuture<F>
 where
@@ -51,14 +53,14 @@ impl Reactor {
 
 pub struct ArcReactor {
 	port: i16,
-	routeService: Option<ArcRouter>,
+	handler: Option<ArcHandler>,
 }
 
 impl ArcReactor {
 	pub fn new() -> ArcReactor {
 		ArcReactor {
 			port: 8080,
-			routeService: None,
+			handler: None,
 		}
 	}
 
@@ -68,18 +70,40 @@ impl ArcReactor {
 		self
 	}
 
+	pub fn before(mut self, before: Box<MiddleWare<Request>>) -> Self {
+		if let Some(ref mut archandler) = self.handler {
+			archandler.before = Some(Arc::new(before));
+		}
+
+		self
+	}
+
+	pub fn after(mut self, after: Box<MiddleWare<Response>>) -> Self {
+		if let Some(ref mut archandler) = self.handler {
+			archandler.after = Some(Arc::new(after));
+		}
+
+		self
+	}
+
 	pub fn routes(mut self, routes: Router) -> Self {
-		let routes = ArcRouter {
-			routes: Arc::new(routes.routes),
-		};
-		self.routeService = Some(routes);
+		let routes = Arc::new(box routes as Box<ArcService>);
+		if let Some(ref mut archandler) = self.handler {
+			archandler.handler = routes;
+		} else {
+			self.handler = Some(ArcHandler {
+				before: None,
+				after: None,
+				handler: routes,
+			});
+		}
 
 		self
 	}
 
 	pub fn initiate(self) -> io::Result<()> {
 		println!("[arc-reactor]: Spawning threads!");
-		let reactors = spawn(self.routeService.expect("This thing needs routes to work!"))?;
+		let reactors = spawn(self.handler.expect("This thing needs routes to work!"))?;
 		println!(
 			"[arc-reactor]: Starting main event loop!\n[arc-reactor]: Spawned {} threads",
 			num_cpus::get() * 2
@@ -124,7 +148,7 @@ impl ArcReactor {
 	}
 }
 
-fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
+fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
 
@@ -161,7 +185,7 @@ fn spawn(RouteService: ArcRouter) -> io::Result<Vec<ReactorAlias>> {
 fn socketHandler(
 	stream: TcpStream,
 	http: Arc<Http<Chunk>>,
-	serviceHandler: Arc<ArcRouter>,
+	serviceHandler: Arc<ArcHandler>,
 ) -> Result<(), ()> {
 	println!("handling connection");
 	let _opaque = await!(http.serve_connection(stream, serviceHandler.clone()));

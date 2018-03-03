@@ -2,6 +2,8 @@ use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use std::{fmt, net};
 use recognizer::Params;
 use anymap::AnyMap;
+use serde_json::value::Value;
+use queryst_prime::parse;
 
 pub struct Request {
 	uri: Uri,
@@ -59,8 +61,8 @@ impl Request {
 	}
 
 	#[inline]
-	pub fn query(&self) -> Option<&str> {
-		self.uri.query()
+	pub fn query(&self) -> Option<Value> {
+		self.uri.query().and_then(|query| parse(query).ok())
 	}
 
 	pub fn params(&self) -> Option<&Params> {
