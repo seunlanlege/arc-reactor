@@ -5,21 +5,10 @@ authors = ["seunlanlege <seunlanlege@gmail.com>"]
 
 [dependencies]
 impl-service = { path = "impl-service" }
-tokio-io = "*"
 tokio-core = "*"
-tokio-proto = "*"
-tokio-service = "*"
 futures-await = "0.1"
 hyper = "0.11"
 num_cpus = "1.6.2"
-net2 = "*"
 route-recognizer = "0.1.12"
 anymap = "0.12.1"
 queryst-prime = "2.0.0"
-tokio-file-unix = "0.3.0"
-native-tls = "0.1"
-tokio-tls = "0.1"
-
-[dependencies.crossbeam-channel]
-path = "crossbeam-channel"
-features = ["nightly"]
