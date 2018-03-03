@@ -20,9 +20,11 @@ pub use core::*;
 pub use routing::*;
 
 pub mod prelude {
-	pub use futures::prelude::async_block;
+	pub use futures::prelude::{async_block, await};
 	pub use impl_service::{middleware, service};
 	pub use futures::future::Future;
+	pub use futures;
+	pub use proto::{ArcService, ArcHandler};
 }
 
 pub use hyper::StatusCode;
