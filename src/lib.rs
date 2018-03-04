@@ -1,4 +1,4 @@
-#![feature(proc_macro, box_syntax, generators, conservative_impl_trait)]
+#![feature(proc_macro, box_syntax, generators, conservative_impl_trait, fn_must_use)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
@@ -18,9 +18,9 @@ mod proto;
 mod routing;
 mod core;
 
-pub use proto::*;
-pub use core::*;
-pub use routing::*;
+pub use proto::{ArcService, MiddleWare, ArcHandler};
+pub use core::{ArcReactor, Request, Response};
+pub use routing::{Router, RouteGroup};
 
 pub mod prelude {
 	pub use futures::prelude::{async_block, await};

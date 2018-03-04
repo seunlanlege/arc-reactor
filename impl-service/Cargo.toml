@@ -5,7 +5,7 @@ authors = ["seunlanlege <slanlege@c2gconsulting.com>"]
 
 [dependencies]
 quote = { version = '0.4' }
-proc-macro2 = { version = "0.2", feautures=["nightly"] }
+proc-macro2 = { version = "0.2", features = ["nightly"] }
 
 
 [lib]
