@@ -102,10 +102,6 @@ impl RouteGroup {
 			parent = self.parent.get(1..).unwrap();
 		}
 
-		if !path.starts_with("/") && length > 1 {
-			panic!("Valid route paths must start with '/' ");
-		}
-
 		path = stripTrailingSlash(path);
 
 		let fullPath = format!("/{}{}", parent, path);
