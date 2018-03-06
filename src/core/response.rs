@@ -90,17 +90,57 @@ impl Response {
 		self.inner.body_ref()
 	}
 
-	pub fn redirect(url: &'static str) -> hyper::Response {
+	pub fn redirectTo(url: &'static str) -> hyper::Response {
 		let mut headers = Headers::new();
 		headers.set(Location::new(url));
-		Response::new()
+		res()
 			.with_status(StatusCode::MovedPermanently)
 			.with_headers(headers)
 			.inner
 	}
 
-	pub fn badRequest() -> hyper::Response {
-		Response::new().with_status(StatusCode::BadRequest).inner
+	pub fn redirect(self, url: &'static str) -> Response {
+		let mut headers = Headers::new();
+		headers.set(Location::new(url));
+		self
+			.with_status(StatusCode::MovedPermanently)
+			.with_headers(headers)
+	}
+
+	pub fn ok(self) -> Self {
+		self.with_status(StatusCode::Ok)
+	}
+
+	pub fn unauthorized(self) -> Self {
+		self.with_status(StatusCode::Unauthorized)
+	}
+
+	pub fn forbidden(self) -> Self {
+		self.with_status(StatusCode::Forbidden)
+	}
+
+	pub fn methodNotAllowed(self) -> Self {
+		self.with_status(StatusCode::MethodNotAllowed)
+	}
+
+	pub fn notAcceptable(self) -> Self {
+		self.with_status(StatusCode::NotAcceptable)
+	}
+
+	pub fn requestTimeout(self) -> Self {
+		self.with_status(StatusCode::RequestTimeout)
+	}
+
+	pub fn internalServerError(self) -> Self {
+		self.with_status(StatusCode::InternalServerError)
+	}
+
+	pub fn badGateway(self) -> Self {
+		self.with_status(StatusCode::BadGateway)
+	}
+
+	pub fn serviceUnavailable(self) -> Self {
+		self.with_status(StatusCode::ServiceUnavailable)
 	}
 }
 
@@ -110,4 +150,8 @@ impl Default for Response {
 			inner: hyper::Response::default(),
 		}
 	}
+}
+
+pub fn res() -> Response {
+	Response::default()
 }
