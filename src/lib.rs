@@ -19,16 +19,17 @@ mod routing;
 mod core;
 
 pub use proto::{ArcService, MiddleWare, ArcHandler};
-pub use core::{ArcReactor, res};
+pub use core::{ArcReactor, res, JsonError};
 pub use routing::{Router, RouteGroup};
 
 pub mod prelude {
 	pub use futures::prelude::{async_block, await};
 	pub use impl_service::{middleware, service};
 	pub use core::{Request, Response};
-	pub use futures::future::Future;
+	pub use futures::{Future, Stream};
 	pub use futures;
-	pub use proto::{ArcHandler, ArcService};
+	pub use proto::{ArcHandler, ArcService, MiddleWare};
 }
 
 pub use hyper::StatusCode;
+pub use hyper::header;
