@@ -18,9 +18,9 @@ mod proto;
 mod routing;
 mod core;
 
-pub use proto::{ArcService, MiddleWare, ArcHandler};
-pub use core::{ArcReactor, res, JsonError};
-pub use routing::{Router, RouteGroup};
+pub use proto::{ArcHandler, ArcService, MiddleWare};
+pub use core::{res, ArcReactor, JsonError};
+pub use routing::{RouteGroup, Router};
 
 pub mod prelude {
 	pub use futures::prelude::{async_block, await};

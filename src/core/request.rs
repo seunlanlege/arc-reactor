@@ -2,7 +2,7 @@ use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use std::{fmt, net};
 use recognizer::Params;
 use anymap::AnyMap;
-use serde_json::{from_value, Value, self};
+use serde_json::{self, from_value, Value};
 use serde::de::DeserializeOwned;
 use queryst_prime::parse;
 
@@ -20,17 +20,11 @@ pub struct Request {
 #[derive(Debug)]
 pub enum JsonError {
 	None,
-	Err(serde_json::Error)
+	Err(serde_json::Error),
 }
 
 impl Request {
-	pub fn new(
-		method: Method,
-		uri: Uri,
-		version: HttpVersion,
-		headers: Headers,
-		body: Body,
-	) -> Self {
+	pub fn new(method: Method, uri: Uri, version: HttpVersion, headers: Headers, body: Body) -> Self {
 		Self {
 			method,
 			uri,
@@ -69,7 +63,7 @@ impl Request {
 	}
 
 	#[inline]
-	pub fn remote_ip(&self) -> net::SocketAddr  {
+	pub fn remote_ip(&self) -> net::SocketAddr {
 		self.remote.unwrap()
 	}
 
@@ -98,19 +92,20 @@ impl Request {
 	}
 
 	#[inline]
-	pub fn body(self) -> Body { self.body.unwrap_or_default() }
+	pub fn body(self) -> Body {
+		self.body.unwrap_or_default()
+	}
 
 	pub fn json<T>(&self) -> Result<T, JsonError>
-		where
-			T: DeserializeOwned + fmt::Debug
+	where
+		T: DeserializeOwned + fmt::Debug,
 	{
 		let json = self.json.clone();
 		if json.is_none() {
-			return Err(JsonError::None)
+			return Err(JsonError::None);
 		}
 
-		from_value::<T>(json.unwrap())
-			.map_err(JsonError::Err)
+		from_value::<T>(json.unwrap()).map_err(JsonError::Err)
 	}
 
 	pub fn set_json(&mut self, value: Value) {
@@ -124,14 +119,22 @@ impl Request {
 	}
 
 	#[inline]
-	pub fn body_ref(&self) -> Option<&Body> { self.body.as_ref() }
+	pub fn body_ref(&self) -> Option<&Body> {
+		self.body.as_ref()
+	}
 
 	pub fn set_body(&mut self, body: Body) {
 		self.body = Some(body)
 	}
 
 	pub fn deconstruct(self) -> (Method, Uri, HttpVersion, Headers, Body) {
-		(self.method, self.uri, self.version, self.headers, self.body.unwrap_or_default())
+		(
+			self.method,
+			self.uri,
+			self.version,
+			self.headers,
+			self.body.unwrap_or_default(),
+		)
 	}
 }
 

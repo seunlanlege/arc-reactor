@@ -1,9 +1,9 @@
 use hyper;
-use hyper::server::{Service};
+use hyper::server::Service;
 use futures::Future;
 use futures::prelude::{async_block, await};
 use super::{Request, Response};
-use proto::{ArcService, ArcHandler};
+use proto::{ArcHandler, ArcService};
 use std::sync::Arc;
 use std::net::SocketAddr;
 
@@ -11,7 +11,7 @@ use std::net::SocketAddr;
 // clientIp to the ArcService.
 pub(crate) struct RootService {
 	pub(crate) remote_ip: SocketAddr,
-	pub(crate) service: Arc<ArcHandler>
+	pub(crate) service: Arc<ArcHandler>,
 }
 
 impl Service for RootService {
