@@ -2,18 +2,26 @@ use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use std::{fmt, net};
 use recognizer::Params;
 use anymap::AnyMap;
-use serde_json::from_value;
+use serde_json::{from_value, Value, self};
 use serde::de::DeserializeOwned;
 use queryst_prime::parse;
+use std::fmt::Debug;
 
 pub struct Request {
 	uri: Uri,
-	pub body: Body,
+	pub body: Option<Body>,
 	version: HttpVersion,
-	headers: Headers,
+	pub headers: Headers,
 	remote: Option<net::SocketAddr>,
 	method: Method,
+	pub json: Option<Value>,
 	pub(crate) anyMap: AnyMap,
+}
+
+#[derive(Debug)]
+pub enum JsonError {
+	None,
+	Err(serde_json::Error)
 }
 
 impl Request {
@@ -30,8 +38,9 @@ impl Request {
 			uri,
 			version,
 			headers,
-			body,
+			body: Some(body),
 			remote,
+			json: None,
 			anyMap: AnyMap::new(),
 		}
 	}
@@ -83,6 +92,43 @@ impl Request {
 
 	pub fn set<T: 'static>(&mut self, value: T) -> Option<T> {
 		self.anyMap.insert::<T>(value)
+	}
+
+	#[inline]
+	pub fn body(self) -> Body { self.body.unwrap_or_default() }
+
+	pub fn json<T>(&self) -> Result<T, JsonError>
+		where
+			T: DeserializeOwned + Debug
+	{
+		let json = self.json.clone();
+		if json.is_none() {
+			return Err(JsonError::None)
+		}
+
+		from_value::<T>(json.unwrap())
+			.map_err(JsonError::Err)
+	}
+
+	pub fn set_json(&mut self, value: Value) {
+		self.json = Some(value);
+	}
+
+	pub fn with_json(mut self, value: Value) -> Self {
+		self.json = Some(value);
+
+		self
+	}
+
+	#[inline]
+	pub fn body_ref(&self) -> Option<&Body> { self.body.as_ref() }
+
+	pub fn set_body(&mut self, body: Body) {
+		self.body = Some(body)
+	}
+
+	pub fn deconstruct(self) -> (Method, Uri, HttpVersion, Headers, Body) {
+		(self.method, self.uri, self.version, self.headers, self.body.unwrap_or_default())
 	}
 }
 

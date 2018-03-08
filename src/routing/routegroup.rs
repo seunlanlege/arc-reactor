@@ -96,7 +96,6 @@ impl RouteGroup {
 		routehandler: S,
 	) -> Self {
 		let mut parent = self.parent;
-		let length = path.chars().count();
 
 		if self.parent.starts_with("/") {
 			parent = self.parent.get(1..).unwrap();
