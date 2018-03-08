@@ -5,14 +5,13 @@ use anymap::AnyMap;
 use serde_json::{from_value, Value, self};
 use serde::de::DeserializeOwned;
 use queryst_prime::parse;
-use std::fmt::Debug;
 
 pub struct Request {
 	uri: Uri,
 	pub body: Option<Body>,
 	version: HttpVersion,
 	pub headers: Headers,
-	remote: Option<net::SocketAddr>,
+	pub remote: Option<net::SocketAddr>,
 	method: Method,
 	pub json: Option<Value>,
 	pub(crate) anyMap: AnyMap,
@@ -31,7 +30,6 @@ impl Request {
 		version: HttpVersion,
 		headers: Headers,
 		body: Body,
-		remote: Option<net::SocketAddr>,
 	) -> Self {
 		Self {
 			method,
@@ -39,7 +37,7 @@ impl Request {
 			version,
 			headers,
 			body: Some(body),
-			remote,
+			remote: None,
 			json: None,
 			anyMap: AnyMap::new(),
 		}
@@ -71,6 +69,11 @@ impl Request {
 	}
 
 	#[inline]
+	pub fn remote_ip(&self) -> net::SocketAddr  {
+		self.remote.unwrap()
+	}
+
+	#[inline]
 	pub fn query<T>(&self) -> Option<T>
 	where
 		T: DeserializeOwned,
@@ -99,7 +102,7 @@ impl Request {
 
 	pub fn json<T>(&self) -> Result<T, JsonError>
 		where
-			T: DeserializeOwned + Debug
+			T: DeserializeOwned + fmt::Debug
 	{
 		let json = self.json.clone();
 		if json.is_none() {

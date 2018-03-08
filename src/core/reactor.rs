@@ -2,8 +2,8 @@ use futures::{Async, Future, Poll, Stream};
 use futures::task::{self, Task};
 use std::io;
 use std::net::SocketAddr;
-use hyper::Chunk;
-use hyper::server::Http;
+use hyper::{Chunk};
+use hyper::server::{Http};
 use tokio_core::reactor::Core;
 use tokio_core::net::{TcpListener, TcpStream};
 use routing::Router;
@@ -12,7 +12,8 @@ use futures::prelude::{async, await};
 use std::thread;
 use num_cpus;
 use proto::{ArcHandler, ArcService, MiddleWare};
-use super::{Request, Response};
+use super::{Request, Response, rootservice};
+use self::rootservice::RootService;
 
 // A wrapper around a closure i can run forever on an event loop.
 struct ReactorFuture<F>
@@ -212,12 +213,12 @@ fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
 			let mut core = Core::new().expect("Could not start event loop");
 			let handle = core.handle();
 			let http = Http::new();
-			let http = Arc::new(http);
 
 			let handler = || {
 				let mut reactor = reactor.lock().unwrap();
-				for (socket, _peerAddr) in reactor.peers.drain(..) {
-					let future = socketHandler(socket, http.clone(), routeService.clone());
+				for (socket, remote_ip) in reactor.peers.drain(..) {
+					let service = routeService.clone();
+					let future = socketHandler(socket, http.clone(), RootService { service, remote_ip });
 					handle.spawn(future);
 				}
 				reactor.taskHandle = Some(task::current());
@@ -235,10 +236,9 @@ fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
 #[async]
 fn socketHandler(
 	stream: TcpStream,
-	http: Arc<Http<Chunk>>,
-	serviceHandler: Arc<ArcHandler>,
+	http: Http<Chunk>,
+	serviceHandler: RootService,
 ) -> Result<(), ()> {
-	println!("handling connection");
-	let _opaque = await!(http.serve_connection(stream, serviceHandler.clone()));
+	let _opaque = await!(http.serve_connection(stream, serviceHandler));
 	Ok(())
 }
