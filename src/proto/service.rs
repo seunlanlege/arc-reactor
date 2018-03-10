@@ -1,8 +1,5 @@
 #![macro_use]
 use core::{Request, Response};
-use hyper::server::Service;
-use hyper;
-use futures::prelude::{async_block, await};
 use futures::Future;
 use proto::MiddleWare;
 use std::sync::Arc;
@@ -57,28 +54,19 @@ impl ArcService for ArcHandler {
 	}
 }
 
-impl Service for ArcHandler {
-	type Request = hyper::Request;
-	type Response = hyper::Response;
-	type Error = hyper::Error;
-	type Future = Box<Future<Item = Self::Response, Error = Self::Error>>;
-
-	fn call(&self, req: Self::Request) -> Self::Future {
-		let request: Request = req.into();
-		let responseFuture = ArcService::call(&*self, request, Response::new());
-
-		let future = async_block! {
-			let response = await!(responseFuture);
-			match response {
-				Ok(res) => Ok(res.into()),
-				Err(res) => Ok(res.into())
-			}
-		};
-
-		return box future;
-	}
-}
-
+///
+/// This macro exists for composing a route handler with middlewares in order to mount them on a router.
+///
+/// ```
+/// fn rootRoutes() -> Router {
+///   let RequestMiddlewares = mw![middleware1, middleware2];
+///   let ResponseMiddlewares = mw![middleware3, middleware4];
+///   Router::new()
+///     .get("/", arc!(RequestMiddlewares, RouteHandler, ResponseMiddlewares)) // set both middlewares and Routehandler
+///     .get("/test", arc!(RequestMiddleware, RouteHandler)) // set only the request middleware and route handler
+///     .get("/test2", arc!(_, RouteHandler, ResponseMiddlewares)) // set only the response middleware and routehandler
+/// }
+///
 #[macro_export]
 macro_rules! arc {
 	($handler:expr) => {{
