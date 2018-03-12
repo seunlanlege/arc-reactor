@@ -96,6 +96,7 @@ impl Request {
 	/// Ideally this should return a `Result<T, serde_json::Error>`
 	/// It would be corrected in a later version.
 	///
+
 	#[inline]
 	pub fn query<T>(&self) -> Option<T>
 	where
