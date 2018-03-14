@@ -1,5 +1,6 @@
 use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use std::{fmt, net};
+use tokio_core::reactor::Handle;
 use recognizer::Params;
 use anymap::AnyMap;
 use serde_json::{self, from_value, Value};
@@ -11,6 +12,7 @@ use queryst_prime::parse;
 ///
 pub struct Request {
 	uri: Uri,
+	pub(crate) handle: Option<Handle>,
 	pub body: Option<Body>,
 	version: HttpVersion,
 	pub headers: Headers,
@@ -37,7 +39,12 @@ impl Request {
 			remote: None,
 			json: None,
 			anyMap: AnyMap::new(),
+			handle: None
 		}
+	}
+
+	pub fn reactor_handle(&self) -> Handle {
+		self.handle.clone().unwrap()
 	}
 
 	/// returns a reference to the request's HttpVersion

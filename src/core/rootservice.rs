@@ -2,6 +2,7 @@ use hyper;
 use hyper::server::Service;
 use futures::Future;
 use futures::prelude::{async_block, await};
+use tokio_core::reactor::Handle;
 use super::{Request, Response};
 use proto::{ArcHandler, ArcService};
 use std::sync::Arc;
@@ -12,6 +13,7 @@ use std::net::SocketAddr;
 pub(crate) struct RootService {
 	pub(crate) remote_ip: SocketAddr,
 	pub(crate) service: Arc<ArcHandler>,
+	pub(crate) handle: Handle
 }
 
 impl Service for RootService {
@@ -22,6 +24,7 @@ impl Service for RootService {
 
 	fn call(&self, req: Self::Request) -> Self::Future {
 		let mut request: Request = req.into();
+		request.handle = Some(self.handle.clone());
 		request.remote = Some(self.remote_ip);
 		let responseFuture = ArcService::call(&*self.service, request, Response::new());
 
