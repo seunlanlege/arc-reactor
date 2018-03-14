@@ -127,7 +127,6 @@ impl ArcReactor {
 		self
 	}
 
-
 	pub fn routes(mut self, routes: Router) -> Self {
 		let routes = Arc::new(box routes as Box<ArcService>);
 		if let Some(ref mut archandler) = self.handler {
