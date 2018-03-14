@@ -54,6 +54,19 @@ impl ArcService for ArcHandler {
 	}
 }
 
+///
+/// This macro exists for composing a route handler with middlewares in order to mount them on a router.
+///
+/// ```
+/// fn rootRoutes() -> Router {
+///   let RequestMiddlewares = mw![middleware1, middleware2];
+///   let ResponseMiddlewares = mw![middleware3, middleware4];
+///   Router::new()
+///     .get("/", arc!(RequestMiddlewares, RouteHandler, ResponseMiddlewares)) // set both middlewares and Routehandler
+///     .get("/test", arc!(RequestMiddleware, RouteHandler)) // set only the request middleware and route handler
+///     .get("/test2", arc!(_, RouteHandler, ResponseMiddlewares)) // set only the response middleware and routehandler
+/// }
+///
 #[macro_export]
 macro_rules! arc {
 	($handler:expr) => {{

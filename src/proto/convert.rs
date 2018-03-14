@@ -1,5 +1,6 @@
 use hyper::{self, StatusCode};
-use core::{res, Request, Response};
+use serde_json::to_string;
+use core::{res, Request, Response, JsonError};
 
 fn toStatusCode(number: u16) -> StatusCode {
 	match StatusCode::try_from(number) {
@@ -27,5 +28,24 @@ impl From<hyper::Request> for Request {
 		let request = Request::new(method, uri, version, headers, body);
 
 		request
+	}
+}
+
+impl From<JsonError> for Response {
+	fn from(error: JsonError) -> Response {
+		match error {
+			JsonError::None => {
+				let json = json!({
+					"error": "Json was empty",
+				});
+				res().with_body(to_string(&json).unwrap())
+			},
+			JsonError::Err(e) => {
+				let json = json!({
+					"error": format!("{}", e),
+				});
+				res().with_body(to_string(&json).unwrap())
+			}
+		}
 	}
 }

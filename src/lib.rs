@@ -10,6 +10,7 @@ extern crate num_cpus;
 extern crate queryst_prime;
 extern crate route_recognizer as recognizer;
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 extern crate tokio_core;
 

@@ -13,7 +13,7 @@ type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 /// Think of a `MiddleWare<T>` as a function that returns `Result<T, Response>`
 /// 
 /// E.g A middleware is given a `Request` to do some processing, if that MiddleWare, returns Ok(request).
-/// Then the returned request is passed to the route handler.
+/// Then the returned request is passed to the next middleware or route handler.
 /// 
 /// ```
 /// use arc_reactor::prelude::*;
@@ -21,7 +21,8 @@ type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 /// #[middleware(Request)]
 /// fn hasAccessToken(req: Request) {
 /// 	if let Some(user) = req.query::AccessToken().and_then(|token| 
-/// 			await!(db::fetchUserFromToken(token)).ok() // psuedo-code
+/// 			await!(db::fetchUserFromToken(token)).ok() // psuedo-code this won't compile,
+///       // the await macro is exported in the prelude. it is re-exported from futures_await
 /// 		)
 /// 		req.set::<User>(user);
 /// 		return Ok(req);
@@ -49,7 +50,7 @@ type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 /// 
 /// ## Working With a `Vec<MiddleWare<T>>`
 /// 
-/// The same rules as above applies, each middleware pass the request among themselves to do processing. If any of them returns `Err(Response)`, the rest of the middlewares are skipped.
+/// The same rules as above applies, each middleware pass the request among themselves to do processing. If any of them returns `Err(Response)`, the rest of the middlewares are skipped as well as the route handler.
 /// 
 /// 
 /// ```
@@ -94,12 +95,14 @@ type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 /// Please note that you would probably never have a reason to implement this trait on your type directly.
 /// 
 /// Instead you'll use the middleware proc_macro [`#[middleware]`](../impl_service/fn.middleware.html) to decorate your functions.
+/// The proc_macro makes `MiddleWare`'s aasynchronous by default. so you can `await!()` on futures.
 pub trait MiddleWare<T>: Sync + Send {
 	fn call(&self, param: T) -> MiddleWareFuture<T>;
 }
 
 /// This enables an vector of `MiddleWare<Request>` to behave like a single `MiddleWare<Request>`
 /// returning `Err(Response)` in any of the `MiddleWare<Request>` will cause the rest of the middlewares to be skipped.
+/// Note that there's a conveinience macro `mw` that allows you not write boxes everywhere.
 /// 
 impl MiddleWare<Request> for Vec<Arc<Box<MiddleWare<Request>>>> {
 	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
@@ -114,7 +117,7 @@ impl MiddleWare<Request> for Vec<Arc<Box<MiddleWare<Request>>>> {
 
 /// This enables an vector of `MiddleWare<Request>` to behave like a single `MiddleWare<Request>`
 /// returning `Err(Response)` in any of the `MiddleWare<Request>` will cause the rest of the middlewares to be skipped.
-/// Note that there's a conveinience macro that allows you not write boxes everywhere.
+/// Note that there's a conveinience macro `mw` that allows you not write boxes everywhere.
 ///   
 impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
 	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
