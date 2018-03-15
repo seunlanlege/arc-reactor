@@ -29,6 +29,15 @@ impl From<(u16, String)> for Response {
 	}
 }
 
+impl<T: Serialize> From<(u16, T)> for Response {
+	default fn from(tuple: (u16, T)) -> Response {
+		res()
+			.with_header(ContentType::plaintext())
+			.with_status(toStatusCode(tuple.0))
+			.with_body(to_string(&tuple.1).unwrap())
+	}
+}
+
 impl<T: Serialize> From<T> for Response {
 	default fn from(json: T) -> Response {
 		res()
