@@ -1,5 +1,7 @@
 use hyper::{self, StatusCode};
-use serde_json::to_string;
+use hyper::header::ContentType;
+use serde_json::{to_string};
+use serde::ser::Serialize;
 use core::{res, Request, Response, JsonError};
 
 fn toStatusCode(number: u16) -> StatusCode {
@@ -11,7 +13,28 @@ fn toStatusCode(number: u16) -> StatusCode {
 
 impl From<(u16, &'static str)> for Response {
 	fn from(tuple: (u16, &'static str)) -> Response {
-		res().with_status(toStatusCode(tuple.0)).with_body(tuple.1)
+		res()
+			.with_header(ContentType::plaintext())
+			.with_status(toStatusCode(tuple.0))
+			.with_body(tuple.1)
+	}
+}
+
+impl From<(u16, String)> for Response {
+	fn from(tuple: (u16, String)) -> Response {
+		res()
+			.with_header(ContentType::plaintext())
+			.with_status(toStatusCode(tuple.0))
+			.with_body(tuple.1)
+	}
+}
+
+impl<T: Serialize> From<T> for Response {
+	default fn from(json: T) -> Response {
+		res()
+			.with_header(ContentType::json())
+			.with_status(toStatusCode(200))
+			.with_body(to_string(&json).unwrap())
 	}
 }
 
