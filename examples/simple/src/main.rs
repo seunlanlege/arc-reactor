@@ -10,6 +10,7 @@ use arc_reactor::prelude::*;
 
 fn getMainRoutes() -> Router {
 	return Router::new()
+		.get("/", arc!(mw![middleware1], RequestHandler))
 		.get("/:username", RequestHandler)
 		.post("/", arc!(mw![middleware1, middleware2], RequestHandler));
 }

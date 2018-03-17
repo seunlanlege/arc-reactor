@@ -155,7 +155,7 @@ impl ArcReactor {
 		let reactors = spawn(self.handler.expect("This thing needs routes to work!"))?;
 		println!(
 			"[arc-reactor]: Starting main event loop!\n[arc-reactor]: Spawned {} threads",
-			num_cpus::get() * 2
+			reactors.len()
 		);
 		let mut core = Core::new()?;
 
@@ -179,6 +179,8 @@ impl ArcReactor {
 
 		println!("[arc-reactor]: Running Main Event loop");
 		core.run(listener.incoming().for_each(move |(socket, peerIp)| {
+			println!("current counter {}", counter);
+			println!("current reactors {}", reactors.len());
 			let mut reactor = reactors[counter].lock().unwrap();
 			reactor.peers.push((socket, peerIp));
 
@@ -201,7 +203,7 @@ fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
 
-	for _ in 0..1 {
+	for id in 0..num_cpus::get() * 2 {
 		let reactor = Reactor::new();
 		reactors.push(reactor.clone());
 		let routeService = routeService.clone();
@@ -214,6 +216,7 @@ fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
 			let handler = || {
 				let mut reactor = reactor.lock().unwrap();
 				for (socket, remote_ip) in reactor.peers.drain(..) {
+					println!("thread {} handling", id);
 					let service = routeService.clone();
 					let future = socketHandler(socket, http.clone(), RootService { service, remote_ip, handle: handle.clone() });
 					handle.spawn(future);
