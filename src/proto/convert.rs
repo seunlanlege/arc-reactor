@@ -94,14 +94,14 @@ impl From<QueryParseError> for Response {
 
 			QueryParseError::ParseError(_e) => {
 				let json = json!({
-					"error": "failed to parse query data",
+					"error": format!("{}", _e.message),
 				});
 				res().with_body(to_string(&json).unwrap())
 			}
 
 			QueryParseError::SerdeError(_e) => {
 				let json = json!({
-					"error": "failed to deserialize data",
+					"error": format!("{}", _e),
 				});
 				res().with_body(to_string(&json).unwrap())
 			}
