@@ -1,8 +1,8 @@
 use hyper::{self, StatusCode};
 use hyper::header::ContentType;
-use serde_json::{to_string};
+use serde_json::to_string;
 use serde::ser::Serialize;
-use core::{res, Request, Response, JsonError};
+use core::{res, JsonError, QueryParseError, Request, Response};
 
 fn toStatusCode(number: u16) -> StatusCode {
 	match StatusCode::try_from(number) {
@@ -71,10 +71,37 @@ impl From<JsonError> for Response {
 					"error": "Json was empty",
 				});
 				res().with_body(to_string(&json).unwrap())
-			},
+			}
 			JsonError::Err(e) => {
 				let json = json!({
 					"error": format!("{}", e),
+				});
+				res().with_body(to_string(&json).unwrap())
+			}
+		}
+	}
+}
+
+impl From<QueryParseError> for Response {
+	fn from(error: QueryParseError) -> Response {
+		match error {
+			QueryParseError::None => {
+				let json = json!({
+					"error": "query data was empty",
+				});
+				res().with_body(to_string(&json).unwrap())
+			}
+
+			QueryParseError::ParseError(_e) => {
+				let json = json!({
+					"error": "failed to parse query data",
+				});
+				res().with_body(to_string(&json).unwrap())
+			}
+
+			QueryParseError::SerdeError(_e) => {
+				let json = json!({
+					"error": "failed to deserialize data",
 				});
 				res().with_body(to_string(&json).unwrap())
 			}
