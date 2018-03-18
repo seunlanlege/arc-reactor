@@ -5,9 +5,8 @@ use recognizer::Params;
 use anymap::AnyMap;
 use serde_json::{self, from_value, Value};
 use serde::de::DeserializeOwned;
-use queryst_prime::parse;
+use queryst_prime::{self, parse};
 
-///
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
 pub struct Request {
@@ -28,8 +27,21 @@ pub enum JsonError {
 	Err(serde_json::Error),
 }
 
+#[derive(Debug)]
+pub enum QueryParseError {
+	SerdeError(serde_json::Error),
+	ParseError(queryst_prime::ParseError),
+	None,
+}
+
 impl Request {
-	pub(crate) fn new(method: Method, uri: Uri, version: HttpVersion, headers: Headers, body: Body) -> Self {
+	pub(crate) fn new(
+		method: Method,
+		uri: Uri,
+		version: HttpVersion,
+		headers: Headers,
+		body: Body,
+	) -> Self {
 		Self {
 			method,
 			uri,
@@ -39,7 +51,7 @@ impl Request {
 			remote: None,
 			json: None,
 			anyMap: AnyMap::new(),
-			handle: None
+			handle: None,
 		}
 	}
 
@@ -105,15 +117,16 @@ impl Request {
 	///
 
 	#[inline]
-	pub fn query<T>(&self) -> Option<T>
+	pub fn query<T>(&self) -> Result<T, QueryParseError>
 	where
 		T: DeserializeOwned,
 	{
 		self
 			.uri
 			.query()
-			.and_then(|query| parse(query).ok())
-			.and_then(|value| from_value::<T>(value).ok())
+			.ok_or(QueryParseError::None)
+			.and_then(|query| parse(query).map_err(|err| QueryParseError::ParseError(err)))
+			.and_then(|value| from_value::<T>(value).map_err(|err| QueryParseError::SerdeError(err)))
 	}
 
 	/// Get the url params for the request
@@ -132,7 +145,8 @@ impl Request {
 		self.anyMap.get::<Params>()
 	}
 
-	/// The request struct constains an `AnyMap` so that middlewares can append additional information.
+	/// The request struct constains an `AnyMap` so that middlewares can append additional
+	/// information.
 	///
 	/// you can get values out of the `AnyMap` by using this method.
 	///
@@ -177,7 +191,8 @@ impl Request {
 		self.anyMap.insert::<T>(value)
 	}
 
-	/// move the request body. note that this takes ownership of `self`, use wisely.
+	/// move the request body. note that this takes ownership of `self`, use
+	/// wisely.
 	#[inline]
 	pub fn body(self) -> Body {
 		self.body.unwrap_or_default()

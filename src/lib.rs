@@ -20,7 +20,7 @@ mod routing;
 mod core;
 
 pub use proto::{ArcHandler, ArcService, MiddleWare};
-pub use core::{res, ArcReactor, JsonError};
+pub use core::{res, ArcReactor, JsonError, QueryParseError};
 pub use routing::{RouteGroup, Router};
 
 pub mod prelude {
