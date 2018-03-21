@@ -4,20 +4,20 @@
 
 extern crate anymap;
 pub extern crate futures_await as futures;
-extern crate hyper;
+pub extern crate hyper;
 extern crate impl_service;
 extern crate num_cpus;
 extern crate queryst_prime;
 extern crate route_recognizer as recognizer;
 extern crate serde;
-#[macro_use]
-extern crate serde_json;
+#[macro_use]extern crate serde_json;
 pub extern crate tokio_core;
 
 #[macro_use]
-mod proto;
-mod routing;
-mod core;
+pub mod proto;
+pub mod routing;
+pub mod core;
+pub mod contrib;
 
 pub use proto::{ArcHandler, ArcService, MiddleWare};
 pub use core::{res, ArcReactor, JsonError, QueryParseError};

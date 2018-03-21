@@ -201,7 +201,7 @@ fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
 	let mut reactors = Vec::new();
 	let routeService = Arc::new(RouteService);
 
-	for id in 0..num_cpus::get() * 2 {
+	for _ in 0..num_cpus::get() * 2 {
 		let reactor = Reactor::new();
 		reactors.push(reactor.clone());
 		let routeService = routeService.clone();

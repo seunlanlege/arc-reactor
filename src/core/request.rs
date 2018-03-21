@@ -3,12 +3,13 @@ use std::{fmt, net};
 use tokio_core::reactor::Handle;
 use recognizer::Params;
 use anymap::AnyMap;
-use serde_json::{self, from_value, Value};
+use serde_json::{self, from_slice, from_value};
+use hyper::Chunk;
 use serde::de::DeserializeOwned;
 use queryst_prime::{self, parse};
 
 /// The Request Struct, This is passed to Middlewares and route handlers.
-///
+/// 
 pub struct Request {
 	uri: Uri,
 	pub(crate) handle: Option<Handle>,
@@ -17,7 +18,6 @@ pub struct Request {
 	pub headers: Headers,
 	pub remote: Option<net::SocketAddr>,
 	method: Method,
-	pub json: Option<Value>,
 	pub(crate) anyMap: AnyMap,
 }
 
@@ -49,7 +49,6 @@ impl Request {
 			headers,
 			body: Some(body),
 			remote: None,
-			json: None,
 			anyMap: AnyMap::new(),
 			handle: None,
 		}
@@ -100,16 +99,16 @@ impl Request {
 	///  # Examples
 	///
 	/// ```
-	/// #[derive(Serialize, Deserialize)]
-	/// struct AccessToken {
-	///   token: String
-	/// }
+	/// [derive(Serialize, Deserialize)]
+	/// truct AccessToken {
+	/// token: String,
+	/// 	}
 	///
-	/// pub fn login(req: Request, _res: Response) {
-	///   if let AccessToken { token } = req.query::<AccessToken>() {
-	///     // do something with the token here.
-	///   }
+	/// ub fn login(req: Request, _res: Response) {
+	/// if let AccessToken { token } = req.query::<AccessToken>() {
+	/// 	// do something with the token here.
 	/// }
+	/// 	}
 	/// ```
 	/// returns `None` if the query could not be serialized.
 	/// Ideally this should return a `Result<T, serde_json::Error>`
@@ -134,12 +133,11 @@ impl Request {
 	/// e.g `/profile/:id`
 	///
 	/// ```
-	/// #[service]
-	/// pub fn ProfileService(req: Request, res: Response) {
-	///   let profileId = req.params().unwrap()["id"];
+	/// [service]
+	/// ub fn ProfileService(req: Request, res: Response) {
+	/// let profileId = req.params().unwrap()["id"];
 	/// // Its safe to unwrap here as this woute would never be matched without the `id`
-	/// }
-	///
+	/// 	}
 	/// ```
 	pub fn params(&self) -> Option<&Params> {
 		self.anyMap.get::<Params>()
@@ -153,37 +151,42 @@ impl Request {
 	/// # Examples
 	///
 	/// ```
-	/// #[derive(Serialize, Deserialize)]
-	/// struct AccessToken {
-	///   token: String
-	/// }
+	/// [derive(Serialize, Deserialize)]
+	/// truct AccessToken {
+	/// token: String,
+	/// 	}
 	///
-	/// struct User {
-	///   name: String
-	/// }
+	/// truct User {
+	/// name: String,
+	/// 	}
 	///
-	/// #[middleware(Request)]
-	/// pub fn AssertAuth(req: Request) {
-	///   if let AccessToken { token } = req.query::<AccessToken>() {
-	///     if let user = db::fetchUser::<User>(token) { // pseudo code
-	///       req.set::<User>(user); // Set the user
-	///     } else {
-	///       return Err((404, "User Not Found!").into())
-	///     }
-	///   } else {
-	///     return Err((401, "Unauthorized!").into())
-	///   }
+	/// [middleware(Request)]
+	/// ub fn AssertAuth(req: Request) {
+	/// if let AccessToken { token } = req.query::<AccessToken>() {
+	/// 	if let user = db::fetchUser::<User>(token) {
+	/// 		// pseudo code
+	/// 		req.set::<User>(user); // Set the user
+	/// 	} else {
+	/// 		return Err((404, "User Not Found!").into());
+	/// 	}
+	/// } else {
+	/// 	return Err((401, "Unauthorized!").into());
 	/// }
+	/// 	}
 	///
-	/// #[service]
-	/// pub fn ProfileService(req: Request, res: Response) {
-	///   let user = req.get::<User>().unwrap();
-	/// // Its safe to unwrap here, because if user isn't set this service will never be called.
-	/// }
-	///
+	/// [service]
+	/// ub fn ProfileService(req: Request, res: Response) {
+	/// let user = req.get::<User>().unwrap();
+	/// // Its safe to unwrap here, because if user isn't set this service will never
+	/// // be called.
+	/// 	}
 	/// ```
 	pub fn get<T: 'static>(&self) -> Option<&T> {
 		self.anyMap.get::<T>()
+	}
+
+	pub fn get_owned<T: 'static>(&mut self) -> Option<T> {
+		self.anyMap.remove::<T>()
 	}
 
 	/// same as above.
@@ -206,24 +209,10 @@ impl Request {
 	where
 		T: DeserializeOwned + fmt::Debug,
 	{
-		let json = self.json.clone();
-		if json.is_none() {
-			return Err(JsonError::None);
+		match self.get::<Chunk>() {
+			Some(ref slice) => from_slice::<T>(slice).map_err(JsonError::Err),
+			_ => Err(JsonError::None)
 		}
-
-		from_value::<T>(json.unwrap()).map_err(JsonError::Err)
-	}
-
-	/// set the json.
-	pub fn set_json(&mut self, value: Value) {
-		self.json = Some(value);
-	}
-
-	/// builder style, set the request json and move the response
-	pub fn with_json(mut self, value: Value) -> Self {
-		self.json = Some(value);
-
-		self
 	}
 
 	/// get a reference to the body
