@@ -15,7 +15,7 @@ type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 /// E.g A middleware is given a `Request` to do some processing, if that MiddleWare, returns Ok(request).
 /// Then the returned request is passed to the next middleware or route handler.
 /// 
-/// ```
+/// ```rust,ignore
 /// use arc_reactor::prelude::*;
 /// 
 /// #[middleware(Request)]
@@ -53,7 +53,7 @@ type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 /// The same rules as above applies, each middleware pass the request among themselves to do processing. If any of them returns `Err(Response)`, the rest of the middlewares are skipped as well as the route handler.
 /// 
 /// 
-/// ```
+/// ```rust,ignore
 /// use arc_reactor::prelude::*;
 /// 
 /// #[middleware(Request)]

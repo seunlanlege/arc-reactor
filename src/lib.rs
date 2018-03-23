@@ -1,4 +1,5 @@
-#![feature(proc_macro, box_syntax, generators, conservative_impl_trait, fn_must_use, specialization)]
+#![feature(proc_macro, box_syntax, generators, conservative_impl_trait, fn_must_use,
+           specialization)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
@@ -10,7 +11,8 @@ extern crate num_cpus;
 extern crate queryst_prime;
 extern crate route_recognizer as recognizer;
 extern crate serde;
-#[macro_use]extern crate serde_json;
+#[macro_use]
+extern crate serde_json;
 pub extern crate tokio_core;
 
 #[macro_use]

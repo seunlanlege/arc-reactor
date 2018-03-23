@@ -98,7 +98,7 @@ impl Request {
 	///
 	///  # Examples
 	///
-	/// ```
+	/// ```rust,ignore
 	/// [derive(Serialize, Deserialize)]
 	/// truct AccessToken {
 	/// token: String,
@@ -132,7 +132,7 @@ impl Request {
 	///
 	/// e.g `/profile/:id`
 	///
-	/// ```
+	/// ```rust,ignore
 	/// [service]
 	/// ub fn ProfileService(req: Request, res: Response) {
 	/// let profileId = req.params().unwrap()["id"];
@@ -150,7 +150,7 @@ impl Request {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```rust,ignore
 	/// [derive(Serialize, Deserialize)]
 	/// truct AccessToken {
 	/// token: String,
@@ -207,11 +207,11 @@ impl Request {
 	/// otherwise this would return `Err(JsonError::None)`
 	pub fn json<T>(&self) -> Result<T, JsonError>
 	where
-		T: DeserializeOwned + fmt::Debug,
+		T: DeserializeOwned,
 	{
 		match self.get::<Chunk>() {
 			Some(ref slice) => from_slice::<T>(slice).map_err(JsonError::Err),
-			_ => Err(JsonError::None)
+			_ => Err(JsonError::None),
 		}
 	}
 

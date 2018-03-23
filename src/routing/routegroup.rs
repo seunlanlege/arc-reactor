@@ -8,16 +8,16 @@ use hyper::Method;
 use std::collections::HashMap;
 
 pub struct RouteGroup {
-	pub(crate) parent: &'static str,
+	pub(crate) parent: String,
 	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
 	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
-	pub(crate) routes: HashMap<String, (Method, ArcHandler)>,
+	pub(crate) routes: HashMap<Method, HashMap<String, ArcHandler>>,
 }
 
 impl RouteGroup {
-	pub fn new(parent: &'static str) -> Self {
+	pub fn new<T: ToString>(parent: T) -> Self {
 		RouteGroup {
-			parent,
+			parent: parent.to_string(),
 			routes: HashMap::new(),
 			before: None,
 			after: None,
@@ -26,20 +26,26 @@ impl RouteGroup {
 
 	pub fn group(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
-		let mut parent = self.parent;
+		let mut parent = self.parent.clone();
 
-		if self.parent.starts_with("/") {
-			parent = self.parent.get(1..).unwrap();
+		if parent.starts_with("/") {
+			parent.remove(0);
 		}
 
-		for (path, (method, handler)) in routes.into_iter() {
-			let fullPath = format!("/{}{}", parent, path);
-			let mut handler = ArcHandler {
-				before: self.before.clone(),
-				handler: Arc::new(box handler),
-				after: self.after.clone(),
-			};
-			self.routes.insert(fullPath, (method, handler));
+		for (method, map) in routes.into_iter() {
+			for (path, handler) in map.into_iter() {
+				let fullPath = format!("/{}{}", parent, path);
+				let mut handler = ArcHandler {
+					before: self.before.clone(),
+					handler: Arc::new(box handler),
+					after: self.after.clone(),
+				};
+				self
+					.routes
+					.entry(method.clone())
+					.or_insert(HashMap::new())
+					.insert(fullPath, handler);
+			}
 		}
 
 		self
@@ -89,27 +95,43 @@ impl RouteGroup {
 		self.route(Method::Delete, route, handler)
 	}
 
-	fn route<S: ArcService + 'static + Send + Sync>(
+	fn route<T: ToString, S: ArcService + 'static + Send + Sync>(
 		mut self,
 		method: Method,
-		mut path: &'static str,
+		path: T,
 		routehandler: S,
 	) -> Self {
-		let mut parent = self.parent;
+		let mut parent = self.parent.clone();
 
-		if self.parent.starts_with("/") {
-			parent = self.parent.get(1..).unwrap();
+		if parent.len() == 0 {
+			panic!("RouteGroup cannot have an empty parent route!")
 		}
 
-		path = stripTrailingSlash(path);
+		if parent.starts_with("/") && parent.len() == 1 {
+			parent = "".to_owned();
+		} else if !parent.starts_with("/") {
+			parent.insert(0, '/');
+		}
 
-		let fullPath = format!("/{}{}", parent, path);
+		let mut path = path.to_string();
+
+		path = stripTrailingSlash(&path).to_owned();
+		if !path.starts_with("/") && path.len() > 1 {
+			path.insert(0, '/');
+		}
+		let fullPath = format!("{}{}", &parent, path);
+
 		let handler = ArcHandler {
 			before: self.before.clone(),
 			handler: Arc::new(box routehandler),
 			after: self.after.clone(),
 		};
-		self.routes.insert(fullPath, (method, handler));
+		
+		self
+			.routes
+			.entry(method)
+			.or_insert(HashMap::new())
+			.insert(fullPath, handler);
 
 		self
 	}

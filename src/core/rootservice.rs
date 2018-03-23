@@ -13,7 +13,7 @@ use std::net::SocketAddr;
 pub(crate) struct RootService {
 	pub(crate) remote_ip: SocketAddr,
 	pub(crate) service: Arc<ArcHandler>,
-	pub(crate) handle: Handle
+	pub(crate) handle: Handle,
 }
 
 impl Service for RootService {
