@@ -67,12 +67,12 @@ impl Reactor {
 ///
 /// #Examples
 ///
-/// ```
-/// extern crate arc_reactor;
-/// use arc_reactor::ArcReactor;
+/// ```rust,ignore
+/// xtern crate arc_reactor;
+/// se arc_reactor::ArcReactor;
 ///
-/// fn main() {
-///    ArcReactor::new().routes(..).port(1234).initiate().unwrap()
+/// n main() {
+/// ArcReactor::new().routes(..).port(1234).initiate().unwrap()
 /// 	}
 /// ```
 pub struct ArcReactor {
@@ -145,7 +145,7 @@ impl ArcReactor {
 	/// Binds the listener and blocks the main thread while listening for incoming connections.
 	///
 	/// # Panics
-	/// 
+	///
 	/// Calling this function will panic if: no routes are supplied, or it cannot
 	/// start the main event loop.
 
@@ -215,7 +215,15 @@ fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
 				let mut reactor = reactor.lock().unwrap();
 				for (socket, remote_ip) in reactor.peers.drain(..) {
 					let service = routeService.clone();
-					let future = socketHandler(socket, http.clone(), RootService { service, remote_ip, handle: handle.clone() });
+					let future = socketHandler(
+						socket,
+						http.clone(),
+						RootService {
+							service,
+							remote_ip,
+							handle: handle.clone(),
+						},
+					);
 					handle.spawn(future);
 				}
 				reactor.taskHandle = Some(task::current());

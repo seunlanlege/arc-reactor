@@ -8,7 +8,6 @@ pub use self::util::*;
 
 #[cfg(test)]
 mod tests {
-	use std::sync::Arc;
 	use impl_service::*;
 	use hyper::{Method, StatusCode};
 	use futures::Future;
@@ -29,9 +28,6 @@ mod tests {
 	#[test]
 	fn it_matches_the_correct_routes() {
 		let router = Router::new().get("/hello", AsyncService);
-		let router = ArcRouter {
-			routes: Arc::new(router.routes),
-		};
 
 		let shouldExist = router.matchRoute("/hello", &Method::Get);
 		let shouldNotExist = router.matchRoute("/world", &Method::Get);
@@ -46,9 +42,6 @@ mod tests {
 			.get("/roles", AsyncService)
 			.get("/", AsyncService);
 		let router = Router::new().group(routegroup);
-		let router = ArcRouter {
-			routes: Arc::new(router.routes),
-		};
 
 		let shouldExist = router.matchRoute("/admin/roles", &Method::Get);
 		let shouldExist1 = router.matchRoute("/admin", &Method::Get);
@@ -64,9 +57,6 @@ mod tests {
 	#[test]
 	fn it_matches_routes_with_params() {
 		let router = Router::new().get("/hello/:name", AsyncService);
-		let router = ArcRouter {
-			routes: Arc::new(router.routes),
-		};
 
 		let shouldExist = router.matchRoute("/hello/seun", &Method::Get);
 		let shouldNotExist = router.matchRoute("/world/seun/lanlege", &Method::Get);
@@ -88,9 +78,6 @@ mod tests {
 
 		let router = Router::new().group(routegroup);
 
-		let router = ArcRouter {
-			routes: Arc::new(router.routes),
-		};
 
 		let shouldExist = router.matchRoute("/admin/roles/", &Method::Get);
 		let shouldExist1 = router.matchRoute("/admin/users/profile/", &Method::Get);

@@ -27,17 +27,20 @@ impl Router {
 	pub fn group(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 		{
-			for (path, (method, routehandler)) in routes.into_iter() {
-				let handler = ArcHandler {
-					before: self.before.clone(),
-					handler: Arc::new(box routehandler),
-					after: self.after.clone(),
-				};
-				self
-					.routes
-					.entry(method)
-					.or_insert(Recognizer::new())
-					.add(path.as_str(), handler)
+			for (method, map) in routes.into_iter() {
+				for (path, routehandler) in map {
+					let handler = ArcHandler {
+						before: self.before.clone(),
+						handler: Arc::new(box routehandler),
+						after: self.after.clone(),
+					};
+
+					self
+						.routes
+						.entry(method.clone())
+						.or_insert(Recognizer::new())
+						.add(path.as_str(), handler)
+				}
 			}
 		}
 
@@ -91,6 +94,15 @@ impl Router {
 		self.route(Method::Delete, route, handler)
 	}
 
+	pub fn notFound<S>(mut self, handler: S) -> Self
+	where
+		S: ArcService + 'static + Send + Sync,
+	{
+		self.notFound = Some(box handler);
+
+		self
+	}
+
 	fn route<S>(mut self, method: Method, path: &'static str, routehandler: S) -> Self
 	where
 		S: ArcService + 'static + Send + Sync,
@@ -129,9 +141,7 @@ impl ArcService for Router {
 			let mut request: Request = req.into();
 			request.set(routeMatch.params);
 
-			let future = ArcService::call(&*routeMatch.handler, request, res);
-
-			return box future;
+			return box ArcService::call(&*routeMatch.handler, request, res);
 		} else {
 			if let Some(ref notFound) = self.notFound {
 				return notFound.call(req, res);

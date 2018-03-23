@@ -1,5 +1,5 @@
 use futures::{Future, Stream};
-use futures::prelude::{await, async_block};
+use futures::prelude::{async_block, await};
 use core::{Request, Response};
 use proto::MiddleWare;
 use impl_service::middleware;
@@ -24,7 +24,7 @@ pub fn body_parser(mut req: Request) {
 				let error = json!({
 					"error": "Could not read request payload"
 				});
-				
+
 				return Err((400, error).into());
 			}
 		};
@@ -33,7 +33,7 @@ pub fn body_parser(mut req: Request) {
 		// otherwise bad request.
 		if chunk.len() == 0 {
 			let error = json!({ "error": "Empty request body" });
-			return Err((400, error).into())
+			return Err((400, error).into());
 		}
 
 		req.set(chunk);

@@ -70,13 +70,17 @@ impl From<JsonError> for Response {
 				let json = json!({
 					"error": "Json was empty",
 				});
-				res().with_body(to_string(&json).unwrap())
+				res()
+					.with_header(ContentType::json())
+					.with_body(to_string(&json).unwrap())
 			}
 			JsonError::Err(e) => {
 				let json = json!({
 					"error": format!("{}", e),
 				});
-				res().with_body(to_string(&json).unwrap())
+				res()
+					.with_header(ContentType::json())
+					.with_body(to_string(&json).unwrap())
 			}
 		}
 	}
@@ -89,21 +93,27 @@ impl From<QueryParseError> for Response {
 				let json = json!({
 					"error": "query data was empty",
 				});
-				res().with_body(to_string(&json).unwrap())
+				res()
+					.with_header(ContentType::json())
+					.with_body(to_string(&json).unwrap())
 			}
 
 			QueryParseError::ParseError(_e) => {
 				let json = json!({
 					"error": format!("{}", _e.message),
 				});
-				res().with_body(to_string(&json).unwrap())
+				res()
+					.with_header(ContentType::json())
+					.with_body(to_string(&json).unwrap())
 			}
 
 			QueryParseError::SerdeError(_e) => {
 				let json = json!({
 					"error": format!("{}", _e),
 				});
-				res().with_body(to_string(&json).unwrap())
+				res()
+					.with_header(ContentType::json())
+					.with_body(to_string(&json).unwrap())
 			}
 		}
 	}
