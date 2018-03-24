@@ -1,6 +1,6 @@
 use routing::Router;
 use futures::Future;
-use super::{Response, Request};
+use core::{Response, Request};
 use proto::{ArcService};
 use hyper::{Method, Uri, Headers, HttpVersion, Body};
 use serde::ser::Serialize;
@@ -43,6 +43,7 @@ impl FakeReactor {
 	{
 		self.build(Method::Put, route, body, headers)
 	}
+
 	pub fn patch<T>(
 		&self,
 		route: &str,
@@ -98,7 +99,7 @@ impl FakeReactor {
 
 
 		let matched = self.routes.matchRoute(req.path(), &method)
-			.expect(&format!("No Handler registered for METHOD::{}", method));
+			.expect(&format!("No Handler registered for Method::{}", method));
 
 		return ArcService::call(matched.handler, req, Response::new());
 	}
