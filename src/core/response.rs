@@ -90,6 +90,12 @@ impl Response {
 		self.inner.body_ref()
 	}
 
+	/// Take the `Body` of this response.
+	#[inline]
+	pub fn body(self) -> Body {
+		self.inner.body()
+	}
+
 	pub fn redirectTo(url: &'static str) -> hyper::Response {
 		let mut headers = Headers::new();
 		headers.set(Location::new(url));
