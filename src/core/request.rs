@@ -11,13 +11,13 @@ use queryst_prime::{self, parse};
 /// The Request Struct, This is passed to Middlewares and route handlers.
 /// 
 pub struct Request {
-	uri: Uri,
+	pub(crate) uri: Uri,
 	pub(crate) handle: Option<Handle>,
-	pub body: Option<Body>,
-	version: HttpVersion,
-	pub headers: Headers,
-	pub remote: Option<net::SocketAddr>,
-	method: Method,
+	pub(crate) body: Option<Body>,
+	pub(crate) version: HttpVersion,
+	pub(crate) headers: Headers,
+	pub(crate) remote: Option<net::SocketAddr>,
+	pub(crate) method: Method,
 	pub(crate) anyMap: AnyMap,
 }
 
