@@ -74,7 +74,7 @@ impl FakeReactor {
 	) -> Box<Future<Item=Response, Error=Response>>
 		where T: Serialize
 	{
-		let newbody = match body {
+		let body = match body {
 			Some(b) => Some(to_vec(&b).unwrap().into()),
 			None => Some(Body::default())
 		};
@@ -90,7 +90,7 @@ impl FakeReactor {
 			uri: Uri::from_str(route).unwrap(),
 			version: HttpVersion::Http11,
 			headers,
-			body: newbody,
+			body,
 			remote: None,
 			anyMap: AnyMap::new(),
 			handle: None,
