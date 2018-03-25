@@ -100,15 +100,15 @@ impl Request {
 	///
 	/// ```rust,ignore
 	/// [derive(Serialize, Deserialize)]
-	/// truct AccessToken {
-	/// token: String,
-	/// 	}
-	///
-	/// ub fn login(req: Request, _res: Response) {
-	/// if let AccessToken { token } = req.query::<AccessToken>() {
-	/// 	// do something with the token here.
+	/// struct AccessToken {
+	/// 	token: String,
 	/// }
+	///
+	/// pub fn login(req: Request, _res: Response) {
+	/// 	if let AccessToken { token } = req.query::<AccessToken>() {
+	/// 		// do something with the token here.
 	/// 	}
+	/// }
 	/// ```
 	/// returns `None` if the query could not be serialized.
 	/// Ideally this should return a `Result<T, serde_json::Error>`
@@ -124,8 +124,8 @@ impl Request {
 			.uri
 			.query()
 			.ok_or(QueryParseError::None)
-			.and_then(|query| parse(query).map_err(|err| QueryParseError::ParseError(err)))
-			.and_then(|value| from_value::<T>(value).map_err(|err| QueryParseError::SerdeError(err)))
+			.and_then(|query| parse(query).map_err(QueryParseError::ParseError))
+			.and_then(|value| from_value::<T>(value).map_err(QueryParseError::SerdeError))
 	}
 
 	/// Get the url params for the request
@@ -134,10 +134,10 @@ impl Request {
 	///
 	/// ```rust,ignore
 	/// [service]
-	/// ub fn ProfileService(req: Request, res: Response) {
-	/// let profileId = req.params().unwrap()["id"];
-	/// // Its safe to unwrap here as this woute would never be matched without the `id`
-	/// 	}
+	/// pub fn ProfileService(req: Request, res: Response) {
+	/// 	let profileId = req.params().unwrap()["id"];
+	/// 	// Its safe to unwrap here as this woute would never be matched without the `id`
+	/// }
 	/// ```
 	pub fn params(&self) -> Option<&Params> {
 		self.anyMap.get::<Params>()
@@ -152,34 +152,34 @@ impl Request {
 	///
 	/// ```rust,ignore
 	/// [derive(Serialize, Deserialize)]
-	/// truct AccessToken {
-	/// token: String,
-	/// 	}
+	/// struct AccessToken {
+	/// 	token: String,
+	/// }
 	///
-	/// truct User {
-	/// name: String,
-	/// 	}
+	/// struct User {
+	/// 	name: String,
+	/// }
 	///
 	/// [middleware(Request)]
-	/// ub fn AssertAuth(req: Request) {
-	/// if let AccessToken { token } = req.query::<AccessToken>() {
-	/// 	if let user = db::fetchUser::<User>(token) {
-	/// 		// pseudo code
-	/// 		req.set::<User>(user); // Set the user
+	/// pub fn AssertAuth(req: Request) {
+	/// 	if let AccessToken { token } = req.query::<AccessToken>() {
+	/// 		if let user = db::fetchUser::<User>(token) {
+	/// 			// pseudo code
+	/// 			req.set::<User>(user); // Set the user
+	/// 		} else {
+	/// 			return Err((404, "User Not Found!").into());
+	/// 		}
 	/// 	} else {
-	/// 		return Err((404, "User Not Found!").into());
+	/// 		return Err((401, "Unauthorized!").into());
 	/// 	}
-	/// } else {
-	/// 	return Err((401, "Unauthorized!").into());
 	/// }
-	/// 	}
 	///
 	/// [service]
-	/// ub fn ProfileService(req: Request, res: Response) {
-	/// let user = req.get::<User>().unwrap();
-	/// // Its safe to unwrap here, because if user isn't set this service will never
-	/// // be called.
-	/// 	}
+	/// pub fn ProfileService(req: Request, res: Response) {
+	/// 	let user = req.get::<User>().unwrap();
+	/// 	// Its safe to unwrap here, because if user isn't set this service will never
+	/// 	// be called.
+	/// }
 	/// ```
 	pub fn get<T: 'static>(&self) -> Option<&T> {
 		self.anyMap.get::<T>()
