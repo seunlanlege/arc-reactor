@@ -89,9 +89,10 @@ impl Request {
 	}
 
 	/// returns the IP of the connected client.
+	/// this should always be set, except in testing environments with `FakeReactor`
 	#[inline]
-	pub fn remote_ip(&self) -> net::SocketAddr {
-		self.remote.unwrap()
+	pub fn remote_ip(&self) -> Option<net::SocketAddr> {
+		self.remote
 	}
 
 	/// Serializes the query string into a struct via serde.

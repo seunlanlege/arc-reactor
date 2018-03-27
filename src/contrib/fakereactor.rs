@@ -8,11 +8,17 @@ use std::str::FromStr;
 use serde_json::to_vec;
 use tokio_core::reactor::Core;
 
+/// Fake reactor allows for testing your application's endpoints
+///
+/// Do note that Ip addresses won't be present on the request struct, when testing for obvious reasons
 pub struct FakeReactor {
 	pub routes: Router,
 }
 
 impl FakeReactor {
+	/// post a request to the fake reactor,
+	/// returns a `Result<Response, Response>`
+	/// or panics if the route wasn't found
 	pub fn post<T>(
 		&self,
 		route: &str,
@@ -25,6 +31,7 @@ impl FakeReactor {
 		self.build(Method::Post, route, body, headers)
 	}
 
+	/// send a get request to the `FakeReactor`
 	pub fn get(&self, route: &str, headers: Option<Headers>) -> Result<Response, Response> {
 		self.build(Method::Get, route, None::<u8>, headers)
 	}
@@ -65,7 +72,7 @@ impl FakeReactor {
 		self.build(Method::Delete, route, body, headers)
 	}
 
-	pub fn build<T>(
+	 fn build<T>(
 		&self,
 		method: Method,
 		route: &str,
