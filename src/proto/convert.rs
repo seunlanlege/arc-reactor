@@ -11,26 +11,8 @@ fn toStatusCode(number: u16) -> StatusCode {
 	}
 }
 
-impl From<(u16, &'static str)> for Response {
-	fn from(tuple: (u16, &'static str)) -> Response {
-		res()
-			.with_header(ContentType::plaintext())
-			.with_status(toStatusCode(tuple.0))
-			.with_body(tuple.1)
-	}
-}
-
-impl From<(u16, String)> for Response {
-	fn from(tuple: (u16, String)) -> Response {
-		res()
-			.with_header(ContentType::plaintext())
-			.with_status(toStatusCode(tuple.0))
-			.with_body(tuple.1)
-	}
-}
-
 impl<T: Serialize> From<(u16, T)> for Response {
-	default fn from(tuple: (u16, T)) -> Response {
+	fn from(tuple: (u16, T)) -> Response {
 		res()
 			.with_header(ContentType::plaintext())
 			.with_status(toStatusCode(tuple.0))

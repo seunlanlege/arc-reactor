@@ -8,7 +8,7 @@ keywords = ["web", "framework", "asynchronous", "futures", "http"]
 categories = ["web-programming::http-server", "web-programming"]
 
 [dependencies]
-impl-service = { path = "impl-service", version="0.1" }
+impl-service = { path = "./impl-service", version="0.1" }
 tokio-core = "*"
 futures-await = "0.1"
 hyper = "0.11"
