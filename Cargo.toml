@@ -2,9 +2,13 @@
 name = "arc-reactor"
 version = "0.1.0"
 authors = ["seunlanlege <seunlanlege@gmail.com>"]
+license-file ="./LICENSE"
+description = "Minimal, Asynchronous, Web Framework"
+keywords = ["web", "framework", "asynchronous", "futures", "http"]
+categories = ["web-programming::http-server", "web-programming"]
 
 [dependencies]
-impl-service = { path = "impl-service" }
+impl-service = { path = "impl-service", version="0.1" }
 tokio-core = "*"
 futures-await = "0.1"
 hyper = "0.11"
