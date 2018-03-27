@@ -11,9 +11,8 @@ use std::sync::{Arc, Mutex};
 use futures::prelude::{async, await};
 use std::thread;
 use num_cpus;
-use proto::{ArcHandler, ArcService, MiddleWare};
-use super::{rootservice, Request, Response};
-use self::rootservice::RootService;
+use proto::{ArcHandler, ArcService};
+use super::rootservice::RootService;
 
 // A wrapper around a closure i can run forever on an event loop.
 struct ReactorFuture<F>
@@ -99,33 +98,33 @@ impl ArcReactor {
 		self
 	}
 
-	/// Mount a global MiddleWare on the server, Note that it takes a type
-	/// [`MiddleWare<Request>`](trait.MiddleWare.html#impl-MiddleWare<Request>) this is because, the
-	/// middleware(s) supplied here are run before any other middleware or route handlers.
-	///
-	/// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to understand how middlewares
-	/// work.
-	pub fn before(mut self, before: Box<MiddleWare<Request>>) -> Self {
-		if let Some(ref mut archandler) = self.handler {
-			archandler.before = Some(Arc::new(before));
-		}
+//	/// Mount a global MiddleWare on the server, Note that it takes a type
+//	/// [`MiddleWare<Request>`](trait.MiddleWare.html#impl-MiddleWare<Request>) this is because, the
+//	/// middleware(s) supplied here are run before any other middleware or route handlers.
+//	///
+//	/// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to understand how middlewares
+//	/// work.
+//	pub fn before(mut self, before: Box<MiddleWare<Request>>) -> Self {
+//		if let Some(ref mut archandler) = self.handler {
+//			archandler.before = Some(Arc::new(before));
+//		}
+//
+//		self
+//	}
 
-		self
-	}
-
-	/// Mount a global MiddleWare on the server, Note that it takes a type
-	/// [`MiddleWare<Response>`](trait.MiddleWare.html#impl-MiddleWare<Response>) this is because,
-	/// the middleware(s) supplied here are run before any other middleware or route handlers.
-	///
-	/// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to understand how middlewares
-	/// work.
-	pub fn after(mut self, after: Box<MiddleWare<Response>>) -> Self {
-		if let Some(ref mut archandler) = self.handler {
-			archandler.after = Some(Arc::new(after));
-		}
-
-		self
-	}
+//	/// Mount a global MiddleWare on the server, Note that it takes a type
+//	/// [`MiddleWare<Response>`](trait.MiddleWare.html#impl-MiddleWare<Response>) this is because,
+//	/// the middleware(s) supplied here are run before any other middleware or route handlers.
+//	///
+//	/// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to understand how middlewares
+//	/// work.
+//	pub fn after(mut self, after: Box<MiddleWare<Response>>) -> Self {
+//		if let Some(ref mut archandler) = self.handler {
+//			archandler.after = Some(Arc::new(after));
+//		}
+//
+//		self
+//	}
 
 	pub fn routes(mut self, routes: Router) -> Self {
 		let routes = Arc::new(box routes as Box<ArcService>);

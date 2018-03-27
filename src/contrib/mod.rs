@@ -1,3 +1,5 @@
+//! Utilities that make working with arc reactor easier.
+
 mod body_parser;
 mod fakereactor;
 
