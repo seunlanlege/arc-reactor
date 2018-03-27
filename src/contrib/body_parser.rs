@@ -5,6 +5,10 @@ use proto::MiddleWare;
 use impl_service::middleware;
 use hyper::header::ContentType;
 
+///! parses the request body as json
+///! if the content-type header is set.
+///! note that if there are any errors in parsing the json
+///! it will return an error response.
 #[middleware(Request)]
 pub fn body_parser(mut req: Request) {
 	let mut isJson = false;
