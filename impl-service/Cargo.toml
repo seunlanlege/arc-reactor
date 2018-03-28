@@ -2,6 +2,8 @@
 name = "impl-service"
 version = "0.1.0"
 authors = ["seunlanlege <slanlege@c2gconsulting.com>"]
+license-file ="../LICENSE"
+description = "Proc Macro fo deriving the ArcService trait"
 
 [dependencies]
 quote = { version = '0.4' }
