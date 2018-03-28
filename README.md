@@ -1,4 +1,4 @@
-#arc reactor
+# arc reactor
 
 > Asynchronous, Multithreaded, Minimal web framework
 
@@ -19,4 +19,4 @@ add this to your `cargo.toml`
 arc-reactor = "0.1"
 ```
 ## Guides
-check out the examples folder to get a feel for how `arc reactor`, it's well documented. and i'm terrible at explaining things without using code.
+check out the examples folder and the [api documentation](https://docs.rs/arc-reactor/~0.1) to get a feel for how `arc reactor` works, it's well documented. and i'm terrible at explaining things without using code.
