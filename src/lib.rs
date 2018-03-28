@@ -36,8 +36,12 @@ pub extern crate futures_await as futures;
 pub extern crate hyper;
 extern crate impl_service;
 extern crate num_cpus;
-extern crate queryst_prime;
 extern crate route_recognizer as recognizer;
+extern crate regex;
+extern crate url;
+
+#[macro_use]
+extern crate lazy_static;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;

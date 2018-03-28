@@ -6,7 +6,7 @@ use anymap::AnyMap;
 use serde_json::{self, from_slice, from_value};
 use hyper::Chunk;
 use serde::de::DeserializeOwned;
-use queryst_prime::{self, parse};
+use contrib::query_parser::{self, parse};
 
 /// The Request Struct, This is passed to Middlewares and route handlers.
 /// 
@@ -59,7 +59,7 @@ pub enum JsonError {
 #[derive(Debug)]
 pub enum QueryParseError {
 	SerdeError(serde_json::Error),
-	ParseError(queryst_prime::ParseError),
+	ParseError(query_parser::ParseError),
 	None,
 }
 
