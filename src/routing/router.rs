@@ -7,6 +7,8 @@ use routing::{RouteGroup, stripTrailingSlash};
 use core::{Request, Response};
 use std::sync::Arc;
 
+/// The main router of you application
+/// that is supplied to the ArcReactor.
 pub struct Router {
 	pub(crate) routes: HashMap<Method, Recognizer<ArcHandler>>,
 	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
@@ -15,6 +17,7 @@ pub struct Router {
 }
 
 impl Router {
+	/// construct a new Router.
 	pub fn new() -> Self {
 		Self {
 			before: None,
@@ -24,6 +27,21 @@ impl Router {
 		}
 	}
 
+
+	/// Mount a routegroup on this router.
+	/// It will apply the middlewares already mounted
+	/// on the `Router` to all the routes on the `RouteGroup`
+	///
+	/// ```
+	///  let router = Router::new();
+	///  router.get("/users", UserService); // this will match "/users"
+	///
+	/// let nestedgroup = RouteGroup::new("admin");
+	///  // by nesting it on `router`, this will match "/admin/delete/user"
+	///  let nestedgroup.get("/delete/user", DeleteService);
+	///
+	///  router.group(nestedgroup);
+	/// ```
 	pub fn group(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 		{
@@ -47,18 +65,27 @@ impl Router {
 		self
 	}
 
+	/// mount a request middleware on this router
+	///
+	/// ensure that the request middleware is added before any routes on the router.
+	/// the middleware only applies to the routes that are added after it has been mounted.
 	pub fn before<T: 'static + MiddleWare<Request>>(mut self, before: T) -> Self {
 		self.before = Some(Arc::new(box before));
 
 		self
 	}
 
+	/// mount a reesponse middleware on this router
+	///
+	/// ensure that the request middleware is added before any routes on the router.
+	/// the middleware only applies to the routes that are added after it has been mounted.
 	pub fn after<T: 'static + MiddleWare<Response>>(mut self, after: T) -> Self {
 		self.after = Some(Arc::new(box after));
 
 		self
 	}
 
+	/// add a route and a ServiceHandler for a get request
 	pub fn get<S>(self, route: &'static str, handler: S) -> Self
 	where
 		S: ArcService + 'static + Send + Sync,
@@ -66,6 +93,7 @@ impl Router {
 		self.route(Method::Get, route, handler)
 	}
 
+	/// add a route and a ServiceHandler for a post request
 	pub fn post<S>(self, route: &'static str, handler: S) -> Self
 	where
 		S: ArcService + 'static + Send + Sync,
@@ -73,6 +101,7 @@ impl Router {
 		self.route(Method::Post, route, handler)
 	}
 
+	/// add a route and a ServiceHandler for a put request
 	pub fn put<S>(self, route: &'static str, handler: S) -> Self
 	where
 		S: ArcService + 'static + Send + Sync,
@@ -80,6 +109,7 @@ impl Router {
 		self.route(Method::Put, route, handler)
 	}
 
+	/// add a route and a ServiceHandler for a patch request
 	pub fn patch<S>(self, route: &'static str, handler: S) -> Self
 	where
 		S: ArcService + 'static + Send + Sync,
@@ -87,6 +117,7 @@ impl Router {
 		self.route(Method::Patch, route, handler)
 	}
 
+	/// add a route and a ServiceHandler for a delete request
 	pub fn delete<S>(self, route: &'static str, handler: S) -> Self
 	where
 		S: ArcService + 'static + Send + Sync,
@@ -94,6 +125,7 @@ impl Router {
 		self.route(Method::Delete, route, handler)
 	}
 
+	/// add a 404 handler
 	pub fn notFound<S>(mut self, handler: S) -> Self
 	where
 		S: ArcService + 'static + Send + Sync,

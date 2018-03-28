@@ -10,7 +10,7 @@ use tokio_core::reactor::Core;
 
 /// Fake reactor allows for testing your application's endpoints
 ///
-/// Do note that Ip addresses won't be present on the request struct, when testing for obvious reasons
+/// Do note that Ip addresses won't be present on the request struct when testing for obvious reasons
 pub struct FakeReactor {
 	pub routes: Router,
 }
@@ -36,6 +36,7 @@ impl FakeReactor {
 		self.build(Method::Get, route, None::<u8>, headers)
 	}
 
+	/// send a put request to the `FakeReactor`
 	pub fn put<T>(
 		&self,
 		route: &str,
@@ -48,6 +49,7 @@ impl FakeReactor {
 		self.build(Method::Put, route, body, headers)
 	}
 
+	/// send a patch request to the `FakeReactor`
 	pub fn patch<T>(
 		&self,
 		route: &str,
@@ -60,6 +62,7 @@ impl FakeReactor {
 		self.build(Method::Patch, route, body, headers)
 	}
 
+	/// send a delete request to the `FakeReactor`
 	pub fn delete<T>(
 		&self,
 		route: &str,

@@ -67,12 +67,12 @@ impl Reactor {
 /// #Examples
 ///
 /// ```rust,ignore
-/// xtern crate arc_reactor;
-/// se arc_reactor::ArcReactor;
+/// extern crate arc_reactor;
+/// use arc_reactor::ArcReactor;
 ///
-/// n main() {
-/// ArcReactor::new().routes(..).port(1234).initiate().unwrap()
-/// 	}
+/// fn main() {
+///   ArcReactor::new().routes(..).port(1234).initiate().unwrap()
+/// }
 /// ```
 pub struct ArcReactor {
 	port: i16,
@@ -126,6 +126,7 @@ impl ArcReactor {
 //		self
 //	}
 
+	/// mount the Router on the ArcReactor
 	pub fn routes(mut self, routes: Router) -> Self {
 		let routes = Arc::new(box routes as Box<ArcService>);
 		if let Some(ref mut archandler) = self.handler {

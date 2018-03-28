@@ -2,12 +2,19 @@
 extern crate arc_reactor;
 
 use arc_reactor::prelude::*;
-use arc_reactor::{ArcReactor, Router, futures};
+use arc_reactor::{ArcReactor, Router, futures, RouteGroup, bodyParser};
 
 fn get_main_routes() -> Router {
+	// create a routegroup.
+	let group = RouteGroup::new("api")
+		.before(bodyParser) // mount the bodyparser request middleware on this routegroup.
+		.get("/route", IndexService); // you can also nest a routegroup on a routegroup, node-style.
+
+
 	Router::new() // you can also mount a routegroup on the router.
-		.before(VerifyAuth) // mount a request middleware, for all the routes on the router.
+		.before(VerifyAuth) // mount a request middleware, for all the routes on the router. including the nested routes.
 		.get("/", IndexService)
+		.group(group)
 }
 
 fn main() {
@@ -26,6 +33,7 @@ fn main() {
 ///
 #[service]
 fn IndexService(_req: Request, res: Response) {
+	println("Request Path => {}", req.path());
 	Ok(res)
 }
 
@@ -46,7 +54,7 @@ fn VerifyAuth(req: Request) {
 		}
 	}
 
-	Err((401, "Unauthorized!").into()) // <T: Serialize> From<(i32, T)> is implemented for Response
+	Err((401, "Unauthorized!").into()) // <T: Serialize> From<(i16, T)> is implemented for Response
 }
 
 

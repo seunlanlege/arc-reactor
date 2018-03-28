@@ -7,6 +7,9 @@ use core::{Request, Response};
 use hyper::Method;
 use std::collections::HashMap;
 
+/// The routegroup allows for conviniently nesting route handlers
+/// and applying group middlewares for protected routes
+
 pub struct RouteGroup {
 	pub(crate) parent: String,
 	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
@@ -15,6 +18,13 @@ pub struct RouteGroup {
 }
 
 impl RouteGroup {
+	/// create a new routegroup with the specified parent
+	///
+	/// ```
+	///   let routegroup = RouteGroup::new("api");
+	///   routegroup.get("/users", UserService); // this will match "/api/users"
+	/// ```
+	///
 	pub fn new<T: ToString>(parent: T) -> Self {
 		RouteGroup {
 			parent: parent.to_string(),
@@ -24,6 +34,20 @@ impl RouteGroup {
 		}
 	}
 
+	/// Mount a routegroup on this routegroup.
+	/// It will apply the middlewares already mounted
+	/// on the Parent `RouteGroup` to all the routes on the child `RouteGroup`
+	///
+	/// ```
+	///  let routegroup = RouteGroup::new("api");
+	///  routegroup.get("/users", UserService); // this will match "/api/users"
+	///
+	/// let nestedgroup = RouteGroup::new("admin");
+	///  // by nesting it on `routegroup`, this will match "/api/admin/delete/user"
+	///  let nestedgroup.get("/delete/user", DeleteService);
+	///
+	///  routegroup.group(nestedgroup);
+	/// ```
 	pub fn group(mut self, group: RouteGroup) -> Self {
 		let RouteGroup { routes, .. } = group;
 		let mut parent = self.parent.clone();
@@ -51,22 +75,32 @@ impl RouteGroup {
 		self
 	}
 
+	/// mount a request middleware on this routegroup
+	///
+	/// ensure that the request middleware is added before any routes on the route group.
+	/// the middleware only applies to the routes that are added after it has been mounted.
 	pub fn before<T: 'static + MiddleWare<Request>>(mut self, before: T) -> Self {
 		self.before = Some(Arc::new(box before));
 
 		self
 	}
 
+	/// mount a response middleware on this routegroup
+	///
+	/// ensure that the response middleware is added before any routes on the route group.
+	/// the middleware only applies to the routes that are added after it has been mounted.
 	pub fn after<T: 'static + MiddleWare<Response>>(mut self, after: T) -> Self {
 		self.after = Some(Arc::new(box after));
 
 		self
 	}
 
+	/// add a route and a ServiceHandler for a get request
 	pub fn get<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
 		self.route(Method::Get, route, handler)
 	}
 
+	/// add a route and a ServiceHandler for a post request
 	pub fn post<S: ArcService + 'static + Send + Sync>(
 		self,
 		route: &'static str,
@@ -75,10 +109,12 @@ impl RouteGroup {
 		self.route(Method::Post, route, handler)
 	}
 
+	/// add a route and a ServiceHandler for a put request
 	pub fn put<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
 		self.route(Method::Put, route, handler)
 	}
 
+	/// add a route and a ServiceHandler for a patch request
 	pub fn patch<S: ArcService + 'static + Send + Sync>(
 		self,
 		route: &'static str,
@@ -87,6 +123,7 @@ impl RouteGroup {
 		self.route(Method::Patch, route, handler)
 	}
 
+	/// add a route and a ServiceHandler for a delete request
 	pub fn delete<S: ArcService + 'static + Send + Sync>(
 		self,
 		route: &'static str,

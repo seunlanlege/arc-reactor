@@ -4,6 +4,7 @@ use futures::Future;
 use proto::MiddleWare;
 use std::sync::Arc;
 
+/// this trait is automatically derived by the #[service] proc_macro
 pub trait ArcService: Send + Sync {
 	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Response>>;
 }

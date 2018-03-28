@@ -96,15 +96,6 @@ impl Response {
 		self.inner.body()
 	}
 
-	pub fn redirectTo(url: &'static str) -> hyper::Response {
-		let mut headers = Headers::new();
-		headers.set(Location::new(url));
-		res()
-			.with_status(StatusCode::MovedPermanently)
-			.with_headers(headers)
-			.inner
-	}
-
 	pub fn redirect(self, url: &'static str) -> Response {
 		let mut headers = Headers::new();
 		headers.set(Location::new(url));
@@ -113,38 +104,47 @@ impl Response {
 			.with_headers(headers)
 	}
 
+	/// set the status code 200 on the response
 	pub fn ok(self) -> Self {
 		self.with_status(StatusCode::Ok)
 	}
 
+	/// set the status code 401 on the response
 	pub fn unauthorized(self) -> Self {
 		self.with_status(StatusCode::Unauthorized)
 	}
 
+	/// set the status code 403 on the response
 	pub fn forbidden(self) -> Self {
 		self.with_status(StatusCode::Forbidden)
 	}
 
+	/// set the status code 405 on the response
 	pub fn methodNotAllowed(self) -> Self {
 		self.with_status(StatusCode::MethodNotAllowed)
 	}
 
+	/// set the status code 406 on the response
 	pub fn notAcceptable(self) -> Self {
 		self.with_status(StatusCode::NotAcceptable)
 	}
 
+	/// set the status code 408 on the response
 	pub fn requestTimeout(self) -> Self {
 		self.with_status(StatusCode::RequestTimeout)
 	}
 
+	/// set the status code 500 on the response
 	pub fn internalServerError(self) -> Self {
 		self.with_status(StatusCode::InternalServerError)
 	}
 
+	/// set the status code 502 on the response
 	pub fn badGateway(self) -> Self {
 		self.with_status(StatusCode::BadGateway)
 	}
 
+	/// set the status code 503 on the response
 	pub fn serviceUnavailable(self) -> Self {
 		self.with_status(StatusCode::ServiceUnavailable)
 	}

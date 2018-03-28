@@ -21,12 +21,41 @@ pub struct Request {
 	pub(crate) anyMap: AnyMap,
 }
 
+/// the error returned by Request::json()
+///
+/// `From<JsonError>` is implemented for Response
+/// so you can use the `?` to unwrap or return an early response
+///
+/// ```
+/// #[service]
+/// fn UserService(req: Request, res: Response) {
+///   let User { name } = req.json()?;
+///   // will return an error response with the  json '{ "error": "Json was empty" }' if JsonError::None
+///   // or '{ "error": "{serde error}" }' if it failed to deserialize.
+/// }
+/// ```
+///
 #[derive(Debug)]
 pub enum JsonError {
 	None,
 	Err(serde_json::Error),
 }
 
+/// the error returned by Request::query()
+///
+/// `From<QueryParseError>` is implemented for Response
+/// so you can use the `?` to unwrap or return an early response
+///
+/// ```
+/// #[service]
+/// fn UserService(req: Request, res: Response) {
+///   let AccessToken { token } = req.query()?;
+///   // will return an error response with the  json '{ "error": "query data was empty" }' if QueryParseError::None
+///   // or '{ "error": "{serde error}" }' if it failed to deserialize.
+///   // or '{ "error": "{parse error}" }' if it failed to parse.
+/// }
+/// ```
+///
 #[derive(Debug)]
 pub enum QueryParseError {
 	SerdeError(serde_json::Error),
@@ -105,15 +134,13 @@ impl Request {
 	/// 	token: String,
 	/// }
 	///
+	/// #[service]
 	/// pub fn login(req: Request, _res: Response) {
-	/// 	if let AccessToken { token } = req.query::<AccessToken>() {
+	/// 	if let Ok(AccessToken { token }) = req.query() {
 	/// 		// do something with the token here.
 	/// 	}
 	/// }
 	/// ```
-	/// returns `None` if the query could not be serialized.
-	/// Ideally this should return a `Result<T, serde_json::Error>`
-	/// It would be corrected in a later version.
 	///
 
 	#[inline]
@@ -186,13 +213,15 @@ impl Request {
 		self.anyMap.get::<T>()
 	}
 
-	pub fn get_owned<T: 'static>(&mut self) -> Option<T> {
-		self.anyMap.remove::<T>()
-	}
 
-	/// same as above.
+	/// set a type on the request.
 	pub fn set<T: 'static>(&mut self, value: T) -> Option<T> {
 		self.anyMap.insert::<T>(value)
+	}
+
+	/// removes the type previously set on the request.
+	pub fn remove<T: 'static>(&mut self) -> Option<T> {
+		self.anyMap.remove::<T>()
 	}
 
 	/// move the request body. note that this takes ownership of `self`, use

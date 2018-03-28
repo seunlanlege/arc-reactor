@@ -16,14 +16,15 @@ extern crate serde_json;
 pub extern crate tokio_core;
 
 #[macro_use]
-pub mod proto;
-pub mod routing;
-pub mod core;
-pub mod contrib;
+pub(crate) mod proto;
+pub(crate) mod routing;
+pub(crate) mod core;
+pub(crate) mod contrib;
 
 pub use proto::{ArcHandler, ArcService, MiddleWare};
 pub use core::{res, ArcReactor, JsonError, QueryParseError};
 pub use routing::{RouteGroup, Router};
+pub use contrib::*;
 
 pub mod prelude {
 	pub use futures::prelude::{async_block, await};
