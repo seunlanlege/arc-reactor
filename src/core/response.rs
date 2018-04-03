@@ -37,6 +37,20 @@ impl Response {
 	}
 
 	/// Set the `StatusCode` for this response.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use hyper::StatusCode;
+	///
+	/// pub fn get_profile(req: Request, _res: Response) {
+	/// 	// performed task on request
+	///
+	///   // return an Ok response
+	/// 	_res.set_status(StatusCode::Unauthorized);
+	/// }
+	/// ```
+	///
 	#[inline]
 	pub fn set_status(&mut self, status: StatusCode) {
 		self.inner.set_status(status);
@@ -96,6 +110,7 @@ impl Response {
 		self.inner.body()
 	}
 
+	/// Set a HTTP redirect on the response header
 	pub fn redirect(self, url: &'static str) -> Response {
 		let mut headers = Headers::new();
 		headers.set(Location::new(url));
@@ -104,47 +119,47 @@ impl Response {
 			.with_headers(headers)
 	}
 
-	/// set the status code 200 on the response
+	/// Set the status code 200 on the response
 	pub fn ok(self) -> Self {
 		self.with_status(StatusCode::Ok)
 	}
 
-	/// set the status code 401 on the response
+	/// Set the status code 401 on the response
 	pub fn unauthorized(self) -> Self {
 		self.with_status(StatusCode::Unauthorized)
 	}
 
-	/// set the status code 403 on the response
+	/// Set the status code 403 on the response
 	pub fn forbidden(self) -> Self {
 		self.with_status(StatusCode::Forbidden)
 	}
 
-	/// set the status code 405 on the response
+	/// Set the status code 405 on the response
 	pub fn methodNotAllowed(self) -> Self {
 		self.with_status(StatusCode::MethodNotAllowed)
 	}
 
-	/// set the status code 406 on the response
+	/// Set the status code 406 on the response
 	pub fn notAcceptable(self) -> Self {
 		self.with_status(StatusCode::NotAcceptable)
 	}
 
-	/// set the status code 408 on the response
+	/// Set the status code 408 on the response
 	pub fn requestTimeout(self) -> Self {
 		self.with_status(StatusCode::RequestTimeout)
 	}
 
-	/// set the status code 500 on the response
+	/// Set the status code 500 on the response
 	pub fn internalServerError(self) -> Self {
 		self.with_status(StatusCode::InternalServerError)
 	}
 
-	/// set the status code 502 on the response
+	/// Set the status code 502 on the response
 	pub fn badGateway(self) -> Self {
 		self.with_status(StatusCode::BadGateway)
 	}
 
-	/// set the status code 503 on the response
+	/// Set the status code 503 on the response
 	pub fn serviceUnavailable(self) -> Self {
 		self.with_status(StatusCode::ServiceUnavailable)
 	}

@@ -16,12 +16,12 @@
 //!
 //! ## Installation
 //!
-//! add this to your `cargo.toml`
+//! Add this to your `cargo.toml`
 //! ```toml
 //! arc-reactor = "0.1"
 //! ```
 //! ## Guides
-//! check out the examples folder to get a feel for how `arc reactor`, it's well documented. and i'm terrible at
+//! Check out the examples folder to get a feel for how `arc reactor`, it's well documented. and i'm terrible at
 //! explaining things without using code.
 //!
 //!

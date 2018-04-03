@@ -29,20 +29,22 @@ fn main() {
 		.unwrap()
 }
 
+// DB Person Schema.
 #[derive(Queryable, Serialize, Deserialize)]
 struct Person {
 	pub id: i64,
 	pub name: String
 }
 
-/// create a table called `people` and add data to it
+/// Create a table called `people` and add data to it
 /// set the database url as an env.
+/// 
 /// This guide assumes you already know how to use diesel.
-
 #[service]
 fn IndexService(_req: Request, res: Response) {
 	use db::people::dsl::*;
-	// returns a future, that resolves to the rows in the query
+	
+	// Returns a future, that resolves to the rows in the query.
 	let future = db::query(|conn| people.load::<Person>(conn));
 
 	match await!(future) { // the await macro is exported in the arc_reactor::prelude;
@@ -50,7 +52,7 @@ fn IndexService(_req: Request, res: Response) {
 		_ => {}
 	};
 
-	// diesel error? then return NotFound
+	// diesel error occured ? then return NotFound.
 	return Err(res.with_status(StatusCode::NotFound))
 }
 
