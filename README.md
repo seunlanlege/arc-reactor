@@ -1,7 +1,8 @@
 # arc reactor
 
-> Asynchronous, Multithreaded, Minimal web framework
+An **asynchronous**, **multithreaded** and **minimal** web framework for Rust.
 
+## Features
 - **Asynchronous**. In arc reactor, route handlers are asynchronous by default.
 
 - **Integration With futures-await**. The `#[service]` proc macro not only derives the `ArcService` trait for your route handler, but also marks it as `#[async]` so you can await on futures in  your route handlers with no extra stress.
@@ -14,7 +15,7 @@
 
 ## Installation
 
-add this to your `cargo.toml`
+Add this to your `cargo.toml`
 ```toml
 arc-reactor = "0.1"
 ```
@@ -64,4 +65,12 @@ fn fakeFuture() -> impl Future<Item=bool, Error=()> {
 ```
 
 ## Guides
-check out the examples folder and the [api documentation](https://docs.rs/arc-reactor/~0.1) to get a feel for how `arc reactor` works, it's well documented. and i'm terrible at explaining things without using code.
+Check out the examples folder and the [api documentation](https://docs.rs/arc-reactor/~0.1) to get a feel for how `arc reactor` works.
+<br>
+It's well documented and should get you up and running in little time.
+
+## Contributions
+If you feel something is missing, feel free to submit a PR.
+
+## License
+Refer to [License](https://github.com/SeunLanLege/arc-reactor/blob/master/LICENSE).
