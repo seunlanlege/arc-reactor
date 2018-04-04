@@ -1,5 +1,5 @@
 # Arc-reactor
-![Arc Reactor](https://preview.ibb.co/cQYP4x/Arc_reactor.png "Arc-Reactor: Asynchronous, multi-threaded & minimal web framework for Rust.")
+![Arc Reactor](https://preview.ibb.co/dFjdxH/Arc_reactor.png "Arc-Reactor: Asynchronous, multi-threaded & minimal web framework for Rust.")
 <br><br>
 An **asynchronous**, **multi-threaded** and **minimal** web framework for Rust.
 
