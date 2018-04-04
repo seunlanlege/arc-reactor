@@ -137,17 +137,24 @@ impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
 }
 
 /// Set middlewares that should be executed on a request.
-/// 
+///
 /// # Example
 ///
 /// ```
 /// fn getMainRoutes() -> Router {
-/// 	let app_middlewares = mw![middleware1, middleware2];
+/// 	let app_middlewares = mw![checkIfAuth];
 ///
 /// 	// Feel free to use pre-configured app middleware
 /// }
 ///
-/// fn checkIf
+/// #[middleware(Request)]
+/// fn checkIfAuth(req: Request) {
+/// 	if req.body().is_empty() {
+/// 		return Err((401, "You need to include some data to access this route!").into());
+/// 	}
+///
+/// 	Ok(req)
+/// }
 /// ```
 #[macro_export]
 macro_rules! mw {
