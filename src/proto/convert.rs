@@ -1,8 +1,8 @@
-use hyper::{self, StatusCode};
-use hyper::header::ContentType;
-use serde_json::to_string;
-use serde::ser::Serialize;
 use core::{res, JsonError, QueryParseError, Request, Response};
+use hyper::header::ContentType;
+use hyper::{self, StatusCode};
+use serde::ser::Serialize;
+use serde_json::to_string;
 
 /// Converts a u16 value into equivalent status code of type ```StatusCode```.
 ///
@@ -85,15 +85,6 @@ impl From<QueryParseError> for Response {
 			}
 
 			QueryParseError::ParseError(_e) => {
-				let json = json!({
-					"error": format!("{}", _e.message),
-				});
-				res()
-					.with_header(ContentType::json())
-					.with_body(to_string(&json).unwrap())
-			}
-
-			QueryParseError::SerdeError(_e) => {
 				let json = json!({
 					"error": format!("{}", _e),
 				});

@@ -98,33 +98,6 @@ impl ArcReactor {
 		self
 	}
 
-	// 	/// Mount a global MiddleWare on the server, Note that it takes a type
- // /// [`MiddleWare<Request>`](trait.MiddleWare.html#impl-MiddleWare<Request>)
- // this is because, the /// middleware(s) supplied here are run before any
- // other middleware or route handlers. 	///
- // /// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to
- // understand how middlewares 	/// work.
- // 	pub fn before(mut self, before: Box<MiddleWare<Request>>) -> Self {
- // 		if let Some(ref mut archandler) = self.handler {
- // 			archandler.before = Some(Arc::new(before));
- // 		}
- //
- // 		self
- // 	}
-
-	// 	/// Mount a global MiddleWare on the server, Note that it takes a type
- // /// [`MiddleWare<Response>`](trait.MiddleWare.
- // html#impl-MiddleWare<Response>) this is because, /// the middleware(s)
- // supplied here are run before any other middleware or route handlers. 	///
- // /// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to
- // understand how middlewares 	/// work.
- // 	pub fn after(mut self, after: Box<MiddleWare<Response>>) -> Self {
- // 		if let Some(ref mut archandler) = self.handler {
- // 			archandler.after = Some(Arc::new(after));
- // 		}
- //
- // 		self
- // 	}
 
 	/// Mounts the Router on the ArcReactor.
 	pub fn routes(mut self, routes: Router) -> Self {
