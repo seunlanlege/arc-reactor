@@ -1,6 +1,9 @@
 # Arc-reactor
-
+![Arc Reactor](https://preview.ibb.co/cQYP4x/Arc_reactor.png "Arc-Reactor: Asynchronous, multi-threaded & minimal web framework for Rust.")
+<br><br>
 An **asynchronous**, **multi-threaded** and **minimal** web framework for Rust.
+
+![Crates.io](https://img.shields.io/crates/d/arc-reactor.svg)
 
 ## Features
 - **Asynchronous**. In arc reactor, route handlers are asynchronous by default.
@@ -64,7 +67,7 @@ fn fakeFuture() -> impl Future<Item=bool, Error=()> {
 
 ```
 
-## Guides
+## Examples
 Check out the examples folder and the [api documentation](https://docs.rs/arc-reactor/~0.1) to get a feel for how `arc reactor` works.
 <br>
 It's well documented and should get you up and running in no time.
