@@ -8,17 +8,18 @@ use std::str::FromStr;
 use serde_json::to_vec;
 use tokio_core::reactor::Core;
 
-/// Fake reactor allows for testing your application's endpoints
+/// Fake reactor allows for testing your application's endpoints.
 ///
-/// Do note that Ip addresses won't be present on the request struct when testing for obvious reasons
+/// Do note that Ip addresses won't be present on the request struct 
+/// when testing for obvious reasons.
 pub struct FakeReactor {
 	pub routes: Router,
 }
 
 impl FakeReactor {
-	/// post a request to the fake reactor,
+	/// Post a request to the fake reactor, and either
 	/// returns a `Result<Response, Response>`
-	/// or panics if the route wasn't found
+	/// or panics if the route wasn't found.
 	pub fn post<T>(
 		&self,
 		route: &str,
@@ -31,12 +32,12 @@ impl FakeReactor {
 		self.build(Method::Post, route, body, headers)
 	}
 
-	/// send a get request to the `FakeReactor`
+	/// Send a GET request to the `FakeReactor`.
 	pub fn get(&self, route: &str, headers: Option<Headers>) -> Result<Response, Response> {
 		self.build(Method::Get, route, None::<u8>, headers)
 	}
 
-	/// send a put request to the `FakeReactor`
+	/// Send a PUT request to the `FakeReactor`.
 	pub fn put<T>(
 		&self,
 		route: &str,
@@ -49,7 +50,7 @@ impl FakeReactor {
 		self.build(Method::Put, route, body, headers)
 	}
 
-	/// send a patch request to the `FakeReactor`
+	/// Send a PATCH request to the `FakeReactor`.
 	pub fn patch<T>(
 		&self,
 		route: &str,
@@ -62,7 +63,7 @@ impl FakeReactor {
 		self.build(Method::Patch, route, body, headers)
 	}
 
-	/// send a delete request to the `FakeReactor`
+	/// Send a DELETE request to the `FakeReactor`.
 	pub fn delete<T>(
 		&self,
 		route: &str,
@@ -142,7 +143,7 @@ mod tests {
 
 		let fakereactor = FakeReactor { routes };
 
-		// assert it returns Ok
+		// Assert it returns Ok.
 		let result = fakereactor
 			.get("/hello?lol=p", None)
 			.expect("Should return ok");

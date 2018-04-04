@@ -8,7 +8,7 @@ use proto::{ArcHandler, ArcService};
 use std::sync::Arc;
 use std::net::SocketAddr;
 
-// The only reason this exists is so i can pass the
+// The only reason this exists is so I can pass the
 // clientIp to the ArcService.
 pub(crate) struct RootService {
 	pub(crate) remote_ip: SocketAddr,
