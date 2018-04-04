@@ -30,9 +30,10 @@ pub struct Request {
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let User { name } = req.json()?;
-/// // will return an error response with the  json '{ "error": "Json was
-/// empty" }' if JsonError::None // or '{ "error": "{serde error}" }' if it
-/// failed to deserialize. }
+///   // will return an error response with the json
+///   // '{ "error": "Json was empty" }' if JsonError::None
+///   // or '{ "error": "{serde error}" }' if it failed to deserialize.
+/// }
 /// ```
 ///
 #[derive(Debug)]
@@ -50,10 +51,10 @@ pub enum JsonError {
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let AccessToken { token } = req.query()?;
-/// // will return an error response with the  json '{ "error": "query data
-/// was empty" }' if QueryParseError::None // or '{ "error": "{serde error}"
-/// }' if it failed to deserialize. // or '{ "error": "{parse error}" }' if
-/// it failed to parse. }
+/// // will return an error response with the
+/// // json '{ "error": "query data was empty" }' if QueryParseError::None
+/// // or '{ "error": "{parse error}" }' if it failed to parse.
+/// }
 /// ```
 ///
 #[derive(Debug)]

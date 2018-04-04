@@ -3,5 +3,5 @@
 mod body_parser;
 mod fakereactor;
 
-pub use self::body_parser::body_parser as bodyParser;
+pub use self::body_parser::*;
 pub use self::fakereactor::*;
