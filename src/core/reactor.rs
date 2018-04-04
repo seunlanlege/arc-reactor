@@ -1,18 +1,18 @@
-use futures::{Async, Future, Poll, Stream};
+use super::rootservice::RootService;
+use futures::prelude::{async, await};
 use futures::task::{self, Task};
-use std::io;
-use std::net::SocketAddr;
+use futures::{Async, Future, Poll, Stream};
 use hyper::Chunk;
 use hyper::server::Http;
-use tokio_core::reactor::Core;
-use tokio_core::net::{TcpListener, TcpStream};
-use routing::Router;
-use std::sync::{Arc, Mutex};
-use futures::prelude::{async, await};
-use std::thread;
 use num_cpus;
 use proto::{ArcHandler, ArcService};
-use super::rootservice::RootService;
+use routing::Router;
+use std::io;
+use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use tokio_core::net::{TcpListener, TcpStream};
+use tokio_core::reactor::Core;
 
 // A wrapper around a closure i can run forever on an event loop.
 struct ReactorFuture<F>
@@ -61,8 +61,8 @@ impl Reactor {
 	}
 }
 
-/// The main server, the ArcReactor is where you mount your routes, middlewares and initiate the
-/// server.
+/// The main server, the ArcReactor is where you mount your routes, middlewares
+/// and initiate the server.
 ///
 /// #Examples
 ///
@@ -71,8 +71,8 @@ impl Reactor {
 /// use arc_reactor::ArcReactor;
 ///
 /// fn main() {
-///   ArcReactor::new().routes(..).port(1234).initiate().unwrap()
-/// }
+/// 	ArcReactor::new().routes(..).port(1234).initiate().unwrap()
+/// 	}
 /// ```
 pub struct ArcReactor {
 	port: i16,
@@ -82,8 +82,8 @@ pub struct ArcReactor {
 impl ArcReactor {
 	/// Creates an instance of the server.
 	/// with a default port of `8080`
-	/// and *No* routes. Note that calling `initiate` on an `ArcReactor` without routes
-	/// will cause your program to panic.
+	/// and *No* routes. Note that calling `initiate` on an `ArcReactor` without
+	/// routes will cause your program to panic.
 	pub fn new() -> ArcReactor {
 		ArcReactor {
 			port: 8080,
@@ -98,33 +98,33 @@ impl ArcReactor {
 		self
 	}
 
-//	/// Mount a global MiddleWare on the server, Note that it takes a type
-//	/// [`MiddleWare<Request>`](trait.MiddleWare.html#impl-MiddleWare<Request>) this is because, the
-//	/// middleware(s) supplied here are run before any other middleware or route handlers.
-//	///
-//	/// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to understand how middlewares
-//	/// work.
-//	pub fn before(mut self, before: Box<MiddleWare<Request>>) -> Self {
-//		if let Some(ref mut archandler) = self.handler {
-//			archandler.before = Some(Arc::new(before));
-//		}
-//
-//		self
-//	}
+	// 	/// Mount a global MiddleWare on the server, Note that it takes a type
+	// /// [`MiddleWare<Request>`](trait.MiddleWare.html#impl-MiddleWare<Request>)
+	// this is because, the /// middleware(s) supplied here are run before any
+	// other middleware or route handlers. 	///
+	// /// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to
+	// understand how middlewares 	/// work.
+	// 	pub fn before(mut self, before: Box<MiddleWare<Request>>) -> Self {
+	// 		if let Some(ref mut archandler) = self.handler {
+	// 			archandler.before = Some(Arc::new(before));
+	// 		}
+	//
+	// 		self
+	// 	}
 
-//	/// Mount a global MiddleWare on the server, Note that it takes a type
-//	/// [`MiddleWare<Response>`](trait.MiddleWare.html#impl-MiddleWare<Response>) this is because,
-//	/// the middleware(s) supplied here are run before any other middleware or route handlers.
-//	///
-//	/// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to understand how middlewares
-//	/// work.
-//	pub fn after(mut self, after: Box<MiddleWare<Response>>) -> Self {
-//		if let Some(ref mut archandler) = self.handler {
-//			archandler.after = Some(Arc::new(after));
-//		}
-//
-//		self
-//	}
+	// 	/// Mount a global MiddleWare on the server, Note that it takes a type
+	// /// [`MiddleWare<Response>`](trait.MiddleWare.
+	// html#impl-MiddleWare<Response>) this is because, /// the middleware(s)
+	// supplied here are run before any other middleware or route handlers. 	///
+	// /// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to
+	// understand how middlewares 	/// work.
+	// 	pub fn after(mut self, after: Box<MiddleWare<Response>>) -> Self {
+	// 		if let Some(ref mut archandler) = self.handler {
+	// 			archandler.after = Some(Arc::new(after));
+	// 		}
+	//
+	// 		self
+	// 	}
 
 	/// mount the Router on the ArcReactor
 	pub fn routes(mut self, routes: Router) -> Self {
@@ -142,7 +142,8 @@ impl ArcReactor {
 		self
 	}
 
-	/// Binds the listener and blocks the main thread while listening for incoming connections.
+	/// Binds the listener and blocks the main thread while listening for
+	/// incoming connections.
 	///
 	/// # Panics
 	///

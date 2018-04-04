@@ -1,12 +1,12 @@
-use hyper;
-use hyper::server::Service;
+use super::{Request, Response};
 use futures::Future;
 use futures::prelude::{async_block, await};
-use tokio_core::reactor::Handle;
-use super::{Request, Response};
+use hyper;
+use hyper::server::Service;
 use proto::{ArcHandler, ArcService};
-use std::sync::Arc;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio_core::reactor::Handle;
 
 // The only reason this exists is so i can pass the
 // clientIp to the ArcService.
