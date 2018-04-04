@@ -8,7 +8,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio_core::reactor::Handle;
 
-// The only reason this exists is so i can pass the
+// The only reason this exists is so I can pass the
 // clientIp to the ArcService.
 pub(crate) struct RootService {
 	pub(crate) remote_ip: SocketAddr,

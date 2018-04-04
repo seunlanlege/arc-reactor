@@ -22,6 +22,12 @@
 //! ```toml
 //! arc-reactor = "0.1"
 //! ```
+<<<<<<< HEAD
+=======
+//! ## Guides
+//! Check out the examples folder to get a feel for how `arc reactor`, it's well documented. and i'm terrible at
+//! explaining things without using code.
+>>>>>>> 4e7de3c05c824ba011cfdfde566f36d3a39e55cd
 //!
 //! ## Demo
 //!

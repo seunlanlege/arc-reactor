@@ -1,12 +1,12 @@
-use anymap::AnyMap;
-use hyper::Chunk;
 use hyper::{Body, Headers, HttpVersion, Method, Uri};
-use recognizer::Params;
-use serde::de::DeserializeOwned;
-use serde_json::{self, from_slice};
-use serde_qs::{self, from_str};
 use std::{fmt, net};
 use tokio_core::reactor::Handle;
+use recognizer::Params;
+use anymap::AnyMap;
+use serde_json::{self, from_slice, from_value};
+use hyper::Chunk;
+use serde::de::DeserializeOwned;
+use contrib::query_parser::{self, parse};
 
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
@@ -21,7 +21,7 @@ pub struct Request {
 	pub(crate) anyMap: AnyMap,
 }
 
-/// the error returned by Request::json()
+/// The error returned by `Request::json()`.
 ///
 /// `From<JsonError>` is implemented for Response
 /// so you can use the `?` to unwrap or return an early response
@@ -30,8 +30,7 @@ pub struct Request {
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let User { name } = req.json()?;
-///   // will return an error response with the json
-///   // '{ "error": "Json was empty" }' if JsonError::None
+///   // will return an error response with the  json '{ "error": "Json was empty" }' if JsonError::None
 ///   // or '{ "error": "{serde error}" }' if it failed to deserialize.
 /// }
 /// ```
@@ -42,7 +41,7 @@ pub enum JsonError {
 	Err(serde_json::Error),
 }
 
-/// the error returned by Request::query()
+/// The error returned by `Request::query()`.
 ///
 /// `From<QueryParseError>` is implemented for Response
 /// so you can use the `?` to unwrap or return an early response
@@ -51,15 +50,16 @@ pub enum JsonError {
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let AccessToken { token } = req.query()?;
-/// // will return an error response with the
-/// // json '{ "error": "query data was empty" }' if QueryParseError::None
-/// // or '{ "error": "{parse error}" }' if it failed to parse.
+///   // will return an error response with the  json '{ "error": "query data was empty" }' if QueryParseError::None
+///   // or '{ "error": "{serde error}" }' if it failed to deserialize.
+///   // or '{ "error": "{parse error}" }' if it failed to parse.
 /// }
 /// ```
 ///
 #[derive(Debug)]
 pub enum QueryParseError {
-	ParseError(serde_qs::Error),
+	SerdeError(serde_json::Error),
+	ParseError(query_parser::ParseError),
 	None,
 }
 
@@ -87,39 +87,41 @@ impl Request {
 		self.handle.clone().unwrap()
 	}
 
-	/// returns a reference to the request's HttpVersion
+	/// Returns a reference to the request's HttpVersion
 	#[inline]
 	pub fn version(&self) -> &HttpVersion {
 		&self.version
 	}
 
-	/// returns a reference to the request's headers
+	/// Returns a reference to the request's headers
 	#[inline]
 	pub fn headers(&self) -> &Headers {
 		&self.headers
 	}
 
-	/// returns a reference to the request's method
+	/// Returns a reference to the request's method
+	/// 
+	/// The methods can be any of the following:
+	/// GET, HEAD, POST, PUT DELETE, CONNECT, OPTIONS, TRACE, PATCH.
 	#[inline]
 	pub fn method(&self) -> &Method {
 		&self.method
 	}
 
-	/// returns a request to the request's Uri
+	/// Returns a request to the request's Uri
 	#[inline]
 	pub fn uri(&self) -> &Uri {
 		&self.uri
 	}
 
-	/// returns the query path
+	/// Returns the query path of the request.
 	#[inline]
 	pub fn path(&self) -> &str {
 		self.uri.path()
 	}
 
-	/// returns the IP of the connected client.
-	/// this should always be set, except in testing environments with
-	/// `FakeReactor`
+	/// Returns the IP of the connected client.
+	/// This should always be set, except in testing environments with `FakeReactor`.
 	#[inline]
 	pub fn remote_ip(&self) -> Option<net::SocketAddr> {
 		self.remote
@@ -143,7 +145,6 @@ impl Request {
 	/// }
 	/// ```
 	///
-
 	#[inline]
 	pub fn query<T>(&self) -> Result<T, QueryParseError>
 	where
@@ -153,10 +154,11 @@ impl Request {
 			.uri
 			.query()
 			.ok_or(QueryParseError::None)
-			.and_then(|query| from_str::<T>(query).map_err(QueryParseError::ParseError))
+			.and_then(|query| parse(query).map_err(QueryParseError::ParseError))
+			.and_then(|value| from_value::<T>(value).map_err(QueryParseError::SerdeError))
 	}
 
-	/// Get the url params for the request
+	/// Get the url params for the request.
 	///
 	/// e.g `/profile/:id`
 	///
@@ -171,10 +173,10 @@ impl Request {
 		self.anyMap.get::<Params>()
 	}
 
-	/// The request struct constains an `AnyMap` so that middlewares can append
-	/// additional information.
+	/// The request struct constains an `AnyMap` so that middlewares can append additional
+	/// information.
 	///
-	/// you can get values out of the `AnyMap` by using this method.
+	/// You can get values out of the `AnyMap` by using this method.
 	///
 	/// # Examples
 	///
@@ -213,27 +215,27 @@ impl Request {
 		self.anyMap.get::<T>()
 	}
 
-	/// set a type on the request.
+	/// Set a type on the request.
 	pub fn set<T: 'static>(&mut self, value: T) -> Option<T> {
 		self.anyMap.insert::<T>(value)
 	}
 
-	/// removes the type previously set on the request.
+	/// Removes the type previously set on the request.
 	pub fn remove<T: 'static>(&mut self) -> Option<T> {
 		self.anyMap.remove::<T>()
 	}
 
-	/// move the request body. note that this takes ownership of `self`, use
+	/// Move the request body. note that this takes ownership of `self`, use
 	/// wisely.
 	#[inline]
 	pub fn body(self) -> Body {
 		self.body.unwrap_or_default()
 	}
 
-	/// serialize the request's json value into a struct
+	/// Serialize the request's json value into a struct.
 	///
-	/// Note that the json value needs to have been previously set on the request
-	/// by a middleware. otherwise this would return `Err(JsonError::None)`
+	/// Note that the json value needs to have been previously set on the request by a middleware;
+	/// otherwise this would return `Err(JsonError::None)`.
 	pub fn json<T>(&self) -> Result<T, JsonError>
 	where
 		T: DeserializeOwned,
@@ -244,13 +246,13 @@ impl Request {
 		}
 	}
 
-	/// get a reference to the body
+	/// Get a reference to the request body.
 	#[inline]
 	pub fn body_ref(&self) -> Option<&Body> {
 		self.body.as_ref()
 	}
 
-	/// set the request body
+	/// Set the request body.
 	pub fn set_body(&mut self, body: Body) {
 		self.body = Some(body)
 	}

@@ -1,20 +1,20 @@
-use super::rootservice::RootService;
-use futures::prelude::{async, await};
-use futures::task::{self, Task};
 use futures::{Async, Future, Poll, Stream};
-use hyper::Chunk;
-use hyper::server::Http;
-use num_cpus;
-use proto::{ArcHandler, ArcService};
-use routing::Router;
+use futures::task::{self, Task};
 use std::io;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use tokio_core::net::{TcpListener, TcpStream};
+use hyper::Chunk;
+use hyper::server::Http;
 use tokio_core::reactor::Core;
+use tokio_core::net::{TcpListener, TcpStream};
+use routing::Router;
+use std::sync::{Arc, Mutex};
+use futures::prelude::{async, await};
+use std::thread;
+use num_cpus;
+use proto::{ArcHandler, ArcService};
+use super::rootservice::RootService;
 
-// A wrapper around a closure i can run forever on an event loop.
+// A wrapper around a closure I can run forever on an event loop.
 struct ReactorFuture<F>
 where
 	F: Fn(),
@@ -41,7 +41,7 @@ where
 
 type ReactorAlias = Arc<Mutex<Reactor>>;
 
-// Shared Mutable object to connected clients
+// Shared Mutable object to connected clients.
 // This struct is only shared by the main thread, and the another worker thread
 // at any point in time. As new clients are connected, The main thread will
 // lock the reactor and push the clients to `peers`. then the future running in
@@ -61,8 +61,8 @@ impl Reactor {
 	}
 }
 
-/// The main server, the ArcReactor is where you mount your routes, middlewares
-/// and initiate the server.
+/// The main server, the ArcReactor is where you mount your routes, middlewares and initiate the
+/// server.
 ///
 /// #Examples
 ///
@@ -71,8 +71,8 @@ impl Reactor {
 /// use arc_reactor::ArcReactor;
 ///
 /// fn main() {
-/// 	ArcReactor::new().routes(..).port(1234).initiate().unwrap()
-/// 	}
+///   ArcReactor::new().routes(..).port(1234).initiate().unwrap()
+/// }
 /// ```
 pub struct ArcReactor {
 	port: i16,
@@ -82,8 +82,8 @@ pub struct ArcReactor {
 impl ArcReactor {
 	/// Creates an instance of the server.
 	/// with a default port of `8080`
-	/// and *No* routes. Note that calling `initiate` on an `ArcReactor` without
-	/// routes will cause your program to panic.
+	/// and *No* routes. Note that calling `initiate` on an `ArcReactor` without routes
+	/// will cause your program to panic.
 	pub fn new() -> ArcReactor {
 		ArcReactor {
 			port: 8080,
@@ -91,42 +91,15 @@ impl ArcReactor {
 		}
 	}
 
-	/// sets the port for the server to listen on and returns the instance.
+	/// Sets the port for the server to listen on and returns the instance.
 	pub fn port(mut self, port: i16) -> Self {
 		self.port = port;
 
 		self
 	}
 
-	// 	/// Mount a global MiddleWare on the server, Note that it takes a type
-	// /// [`MiddleWare<Request>`](trait.MiddleWare.html#impl-MiddleWare<Request>)
-	// this is because, the /// middleware(s) supplied here are run before any
-	// other middleware or route handlers. 	///
-	// /// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to
-	// understand how middlewares 	/// work.
-	// 	pub fn before(mut self, before: Box<MiddleWare<Request>>) -> Self {
-	// 		if let Some(ref mut archandler) = self.handler {
-	// 			archandler.before = Some(Arc::new(before));
-	// 		}
-	//
-	// 		self
-	// 	}
 
-	// 	/// Mount a global MiddleWare on the server, Note that it takes a type
-	// /// [`MiddleWare<Response>`](trait.MiddleWare.
-	// html#impl-MiddleWare<Response>) this is because, /// the middleware(s)
-	// supplied here are run before any other middleware or route handlers. 	///
-	// /// read the [`MiddleWare<T>`](trait.MiddleWare.html) documentation to
-	// understand how middlewares 	/// work.
-	// 	pub fn after(mut self, after: Box<MiddleWare<Response>>) -> Self {
-	// 		if let Some(ref mut archandler) = self.handler {
-	// 			archandler.after = Some(Arc::new(after));
-	// 		}
-	//
-	// 		self
-	// 	}
-
-	/// mount the Router on the ArcReactor
+	/// Mounts the Router on the ArcReactor.
 	pub fn routes(mut self, routes: Router) -> Self {
 		let routes = Arc::new(box routes as Box<ArcService>);
 		if let Some(ref mut archandler) = self.handler {
@@ -142,8 +115,7 @@ impl ArcReactor {
 		self
 	}
 
-	/// Binds the listener and blocks the main thread while listening for
-	/// incoming connections.
+	/// Binds the listener and blocks the main thread while listening for incoming connections.
 	///
 	/// # Panics
 	///
