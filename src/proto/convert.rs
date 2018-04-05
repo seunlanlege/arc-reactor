@@ -84,9 +84,9 @@ impl From<QueryParseError> for Response {
 					.with_body(to_string(&json).unwrap())
 			}
 
-			QueryParseError::ParseError(_e) => {
+			QueryParseError::Err(err) => {
 				let json = json!({
-					"error": format!("{}", _e),
+					"error": format!("{}", err),
 				});
 				res()
 					.with_header(ContentType::json())

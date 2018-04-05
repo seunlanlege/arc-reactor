@@ -3,11 +3,10 @@ use std::{fmt, net};
 use tokio_core::reactor::Handle;
 use recognizer::Params;
 use anymap::AnyMap;
-use serde_json::{self, from_slice, from_value};
+use serde_json::{self, from_slice};
 use hyper::Chunk;
 use serde::de::DeserializeOwned;
-use contrib::query_parser::{self, parse};
-
+use serde_qs::{self, from_str};
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
 pub struct Request {
@@ -51,15 +50,13 @@ pub enum JsonError {
 /// fn UserService(req: Request, res: Response) {
 ///   let AccessToken { token } = req.query()?;
 ///   // will return an error response with the  json '{ "error": "query data was empty" }' if QueryParseError::None
-///   // or '{ "error": "{serde error}" }' if it failed to deserialize.
-///   // or '{ "error": "{parse error}" }' if it failed to parse.
+///   // or '{ "error": "{parse error}" }' if it failed to deserialize.
 /// }
 /// ```
 ///
 #[derive(Debug)]
 pub enum QueryParseError {
-	SerdeError(serde_json::Error),
-	ParseError(query_parser::ParseError),
+	Err(serde_qs::Error),
 	None,
 }
 
@@ -154,8 +151,7 @@ impl Request {
 			.uri
 			.query()
 			.ok_or(QueryParseError::None)
-			.and_then(|query| parse(query).map_err(QueryParseError::ParseError))
-			.and_then(|value| from_value::<T>(value).map_err(QueryParseError::SerdeError))
+			.and_then(|query| from_str::<T>(query).map_err(QueryParseError::Err))
 	}
 
 	/// Get the url params for the request.
