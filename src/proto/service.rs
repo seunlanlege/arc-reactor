@@ -18,12 +18,20 @@ pub struct ArcHandler {
 }
 
 impl ArcHandler {
-	pub fn new(h: Box<ArcService>) -> Self {
+	pub fn new<T: 'static + ArcService>(h: T) -> Self {
 		Self {
 			before: None,
-			handler: Arc::new(h),
+			handler: Arc::new(box h),
 			after: None,
 		}
+	}
+
+	pub fn before<T: 'static + MiddleWare<Request>>(&mut self, before: T) {
+		self.before = Some(Arc::new(box before));
+	}
+
+	pub fn after<T: 'static + MiddleWare<Response>>(&mut self, after: T) {
+		self.after = Some(Arc::new(box after));
 	}
 }
 
@@ -55,8 +63,8 @@ impl ArcService for ArcHandler {
 	}
 }
 
-///
-/// This macro exists for composing a route handler with middlewares in order to mount them on a router.
+/// This macro exists for composing a route handler with middlewares in order
+/// to mount them on a router.
 ///
 /// ```rust,ignore
 /// fn rootRoutes() -> Router {
@@ -67,43 +75,33 @@ impl ArcService for ArcHandler {
 ///     .get("/test", arc!(RequestMiddleware, RouteHandler)) // set only the request middleware and route handler
 ///     .get("/test2", arc!(_, RouteHandler, ResponseMiddlewares)) // set only the response middleware and routehandler
 /// }
-///```
+/// ```
 #[macro_export]
 macro_rules! arc {
 	($handler:expr) => {{
 		use std::sync::Arc;
 		use $crate::ArcHandler;
-		ArcHandler {
-			before: None,
-			handler: Arc::new(box $handler),
-			after: None
-		}
-	}};
+		ArcHandler::new(box $handler)
+		}};
 	($before:expr, $handler:expr) => {{
 		use std::sync::Arc;
 		use $crate::ArcHandler;
-		ArcHandler {
-			before: Some(Arc::new($before)),
-			handler: Arc::new(box $handler),
-			after: None
-		}
-	}};
+		let handler = ArcHandler::new(box $handler);
+		handler.before($before);
+		handler
+		}};
 	($before:expr, $handler:expr, $after:expr) => {{
 		use std::sync::Arc;
 		use $crate::ArcHandler;
-		ArcHandler {
-			before: Some(Arc::new($before)),
-			handler: Arc::new(box $handler),
-			after: Some(Arc::new($after))
-		}
-	}};
+		let handler = ArcHandler::new(box $handler);
+		handler.before($before);
+		handler.after($after);
+		handler
+		}};
 	(_, $handler:expr, $after:expr) => {{
 		use std::sync::Arc;
 		use $crate::ArcHandler;
-		ArcHandler {
-			before: None,
-			handler: Arc::new(box $handler),
-			after: Some(Arc::new($after))
-		}
-	}};
+		handler.after($before);
+		handler
+		}};
 }

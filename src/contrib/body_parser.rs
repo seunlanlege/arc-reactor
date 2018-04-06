@@ -9,7 +9,7 @@ use hyper::header::ContentType;
 ///! Note that if there are any errors in parsing the json
 ///! it will return an error response.
 #[middleware(Request)]
-pub fn body_parser(mut req: Request) {
+pub fn bodyParser(mut req: Request) {
 	let mut isJson = false;
 	{
 		if let Some(ct) = req.headers.get::<ContentType>() {

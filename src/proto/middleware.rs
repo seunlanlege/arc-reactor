@@ -100,7 +100,7 @@ type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 /// Instead you'll use the middleware proc_macro
 /// [`#[middleware]`](../impl_service/fn.middleware.html) to decorate your functions. The proc_macro
 /// makes `MiddleWare`'s aasynchronous by default. so you can `await!()` on futures.
-pub trait MiddleWare<T>: Sync + Send {
+pub trait MiddleWare<T: ?Sized>: Sync + Send {
 	fn call(&self, param: T) -> MiddleWareFuture<T>;
 }
 
@@ -136,6 +136,12 @@ impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
 	}
 }
 
+impl<T, M: MiddleWare<T> + ?Sized> MiddleWare<T> for Box<M> {
+    fn call(&self, request: T) -> MiddleWareFuture<T> {
+        (**self).call(request)
+    }
+}
+
 /// Set middlewares that should be executed on a request.
 ///
 /// # Example
@@ -160,6 +166,7 @@ impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
 macro_rules! mw {
 	($($middlewares:expr), +) => {{
 		use std::sync::Arc;
+		use $crate::MiddleWare;
 		let middleWares: Vec<Arc<Box<MiddleWare<_>>>> = vec![$(Arc::new(box $middlewares)), +];
      box middleWares as Box<MiddleWare<_>>
 	}};
