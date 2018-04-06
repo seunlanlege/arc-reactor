@@ -79,28 +79,25 @@ impl ArcService for ArcHandler {
 #[macro_export]
 macro_rules! arc {
 	($handler:expr) => {{
-		use std::sync::Arc;
 		use $crate::ArcHandler;
-		ArcHandler::new(box $handler)
+		ArcHandler::new($handler)
 		}};
 	($before:expr, $handler:expr) => {{
-		use std::sync::Arc;
 		use $crate::ArcHandler;
-		let handler = ArcHandler::new(box $handler);
+		let mut handler = ArcHandler::new($handler);
 		handler.before($before);
 		handler
 		}};
 	($before:expr, $handler:expr, $after:expr) => {{
-		use std::sync::Arc;
 		use $crate::ArcHandler;
-		let handler = ArcHandler::new(box $handler);
+		let mut handler = ArcHandler::new($handler);
 		handler.before($before);
 		handler.after($after);
 		handler
 		}};
 	(_, $handler:expr, $after:expr) => {{
-		use std::sync::Arc;
 		use $crate::ArcHandler;
+		let mut handler = ArcHandler::new($handler);
 		handler.after($before);
 		handler
 		}};
