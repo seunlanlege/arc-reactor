@@ -7,6 +7,7 @@ use serde_json::{self, from_slice};
 use hyper::Chunk;
 use serde::de::DeserializeOwned;
 use serde_qs::{self, from_str};
+use percent_encoding::percent_decode;
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
 pub struct Request {
@@ -151,7 +152,8 @@ impl Request {
 			.uri
 			.query()
 			.ok_or(QueryParseError::None)
-			.and_then(|query| from_str::<T>(query).map_err(QueryParseError::Err))
+			.and_then(|encoded| Ok(percent_decode(encoded.as_bytes()).decode_utf8_lossy()))
+			.and_then(|query| from_str::<T>(&query).map_err(QueryParseError::Err))
 	}
 
 	/// Get the url params for the request.
