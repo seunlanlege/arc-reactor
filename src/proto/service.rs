@@ -81,24 +81,24 @@ macro_rules! arc {
 	($handler:expr) => {{
 		use $crate::ArcHandler;
 		ArcHandler::new($handler)
-		}};
+	}};
 	($before:expr, $handler:expr) => {{
 		use $crate::ArcHandler;
 		let mut handler = ArcHandler::new($handler);
 		handler.before($before);
 		handler
-		}};
+	}};
 	($before:expr, $handler:expr, $after:expr) => {{
 		use $crate::ArcHandler;
 		let mut handler = ArcHandler::new($handler);
 		handler.before($before);
 		handler.after($after);
 		handler
-		}};
+	}};
 	(_, $handler:expr, $after:expr) => {{
 		use $crate::ArcHandler;
 		let mut handler = ArcHandler::new($handler);
 		handler.after($before);
 		handler
-		}};
+	}};
 }

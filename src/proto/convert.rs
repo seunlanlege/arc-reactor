@@ -18,7 +18,7 @@ fn toStatusCode(number: u16) -> StatusCode {
 impl<T: Serialize> From<(u16, T)> for Response {
 	fn from(tuple: (u16, T)) -> Response {
 		res()
-			.with_header(ContentType::plaintext())
+			.with_header(ContentType::json())
 			.with_status(toStatusCode(tuple.0))
 			.with_body(to_string(&tuple.1).unwrap())
 	}

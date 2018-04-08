@@ -82,6 +82,7 @@ extern crate impl_service;
 extern crate num_cpus;
 extern crate route_recognizer as recognizer;
 extern crate serde_qs;
+extern crate percent_encoding;
 
 extern crate serde;
 #[macro_use]
