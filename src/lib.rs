@@ -1,20 +1,27 @@
 //! # Arc-reactor
 //! <br><br>
-//! An **asynchronous**, **multi-threaded** and **minimal** web framework for Rust.
+//! An **asynchronous**, **multi-threaded** and **minimal** web framework for
+//! Rust.
 //!
 //! ![Crates.io](https://img.shields.io/crates/d/arc-reactor.svg)
 //!
 //! ## Features
-//! - **Asynchronous**. In arc reactor, route handlers are asynchronous by default.
+//! - **Asynchronous**. In arc reactor, route handlers are asynchronous by
+//! default.
 //!
-//! - **Integration With futures-await**. The `#[service]` proc macro not only derives the `ArcService` trait for your route handler, but also marks it as `#[async]` so you can await on futures in  your route handlers with no extra stress.
+//! - **Integration With futures-await**. The `#[service]` proc macro not only
+//! derives the `ArcService` trait for your route handler, but also marks it as
+//! `#[async]` so you can await on futures in  your route handlers with no
+//! extra stress.
 //!
-//! - **Intuitive Middleware System**. arc reactor exposes a middleware system that is easy to reason about.
+//! - **Intuitive Middleware System**. arc reactor exposes a middleware system
+//! that is easy to reason about.
 //!
-//! - **Minimalistic**. arc reactor is designed to be a very thin abstraction over tokio and hyper.
+//! - **Minimalistic**. arc reactor is designed to be a very thin abstraction
+//! over tokio and hyper.
 //!
-//! - **Nightly Rust**. arc reactor uses a lot of cool features, including `proc_macros` which are only available on
-//! the nightly channel.
+//! - **Nightly Rust**. arc reactor uses a lot of cool features, including
+//! `proc_macros` which are only available on the nightly channel.
 //!
 //! ## Installation
 //!
@@ -23,8 +30,8 @@
 //! arc-reactor = "0.1"
 //! ```
 //! ## Guides
-//! Check out the examples folder to get a feel for how `arc reactor`, it's well documented. and i'm terrible at
-//! explaining things without using code.
+//! Check out the examples folder to get a feel for how `arc reactor`, it's
+//! well documented. and i'm terrible at explaining things without using code.
 //!
 //! ## Demo
 //!
@@ -34,7 +41,7 @@
 //! #[macro_use]
 //! extern crate serde_json;
 //! use arc_reactor::prelude::*;
-//! use arc_reactor::{Router, ArcReactor, StatusCode};
+//! use arc_reactor::{ArcReactor, Router, StatusCode};
 //!
 //! fn main() {
 //! 	ArcReactor::new()
@@ -42,13 +49,11 @@
 //! 		.port(3000)
 //! 		.initiate()
 //! 		.unwrap()
-//! }
+//! 	}
 //!
 //! fn rootRoutes() -> Router {
-//! 	Router::new()
-//! 		.get("/", IndexRoute)
-//! }
-//!
+//! 	Router::new().get("/", IndexRoute)
+//! 	}
 //!
 //! #[service]
 //! fn IndexRoute(_req: Rrequest, res: Response) {
@@ -58,16 +63,15 @@
 //!       "data": "hello world"
 //!     });
 //!
-//! 		return Ok(payload.into()) // convert json to json response.
+//! 		return Ok(payload.into()); // convert json to json response.
 //! 	}
 //!
 //! 	res.with_status(StatusCode::UnAuthorized)
-//! }
+//! 	}
 //!
-//! fn fakeFuture() -> impl Future<Item=bool, Error=()> {
+//! fn fakeFuture() -> impl Future<Item = bool, Error = ()> {
 //! 	futures::future::ok(true)
-//! }
-//!
+//! 	}
 //! ```
 //!
 
@@ -80,9 +84,9 @@ pub extern crate futures_await as futures;
 pub extern crate hyper;
 extern crate impl_service;
 extern crate num_cpus;
+extern crate percent_encoding;
 extern crate route_recognizer as recognizer;
 extern crate serde_qs;
-extern crate percent_encoding;
 
 extern crate serde;
 #[macro_use]
@@ -109,5 +113,5 @@ pub mod prelude {
 	pub use proto::{ArcHandler, ArcService, MiddleWare};
 }
 
-pub use hyper::StatusCode;
 pub use hyper::header;
+pub use hyper::StatusCode;

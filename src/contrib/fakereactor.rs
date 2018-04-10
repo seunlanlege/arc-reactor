@@ -1,16 +1,16 @@
-use routing::Router;
-use core::{Request, Response};
-use proto::ArcService;
-use hyper::{Body, Headers, HttpVersion, Method, Uri};
-use serde::ser::Serialize;
 use anymap::AnyMap;
-use std::str::FromStr;
+use core::{Request, Response};
+use hyper::{Body, Headers, HttpVersion, Method, Uri};
+use proto::ArcService;
+use routing::Router;
+use serde::ser::Serialize;
 use serde_json::to_vec;
+use std::str::FromStr;
 use tokio_core::reactor::Core;
 
 /// Fake reactor allows for testing your application's endpoints.
 ///
-/// Do note that Ip addresses won't be present on the request struct 
+/// Do note that Ip addresses won't be present on the request struct
 /// when testing for obvious reasons.
 pub struct FakeReactor {
 	pub routes: Router,
@@ -76,7 +76,7 @@ impl FakeReactor {
 		self.build(Method::Delete, route, body, headers)
 	}
 
-	 fn build<T>(
+	fn build<T>(
 		&self,
 		method: Method,
 		route: &str,
@@ -120,14 +120,14 @@ impl FakeReactor {
 
 #[cfg(test)]
 mod tests {
-	use impl_service::*;
-	use hyper::StatusCode;
-	use futures::{Future, Stream};
-	use futures::prelude::async_block;
-	use proto::ArcService;
-	use core::{Request, Response};
-	use routing::*;
 	use super::*;
+	use core::{Request, Response};
+	use futures::prelude::async_block;
+	use futures::{Future, Stream};
+	use hyper::StatusCode;
+	use impl_service::*;
+	use proto::ArcService;
+	use routing::*;
 
 	#[service]
 	fn AsyncService(_req: Request, res: Response) {

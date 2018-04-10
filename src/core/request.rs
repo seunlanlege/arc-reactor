@@ -1,13 +1,13 @@
+use anymap::AnyMap;
+use hyper::Chunk;
 use hyper::{Body, Headers, HttpVersion, Method, Uri};
+use percent_encoding::percent_decode;
+use recognizer::Params;
+use serde::de::DeserializeOwned;
+use serde_json::{self, from_slice};
+use serde_qs::{self, from_str};
 use std::{fmt, net};
 use tokio_core::reactor::Handle;
-use recognizer::Params;
-use anymap::AnyMap;
-use serde_json::{self, from_slice};
-use hyper::Chunk;
-use serde::de::DeserializeOwned;
-use serde_qs::{self, from_str};
-use percent_encoding::percent_decode;
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
 pub struct Request {
@@ -30,9 +30,9 @@ pub struct Request {
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let User { name } = req.json()?;
-///   // will return an error response with the  json '{ "error": "Json was empty" }' if JsonError::None
-///   // or '{ "error": "{serde error}" }' if it failed to deserialize.
-/// }
+/// // will return an error response with the  json '{ "error": "Json was
+/// empty" }' if JsonError::None // or '{ "error": "{serde error}" }' if it
+/// failed to deserialize. }
 /// ```
 ///
 #[derive(Debug)]
@@ -50,9 +50,9 @@ pub enum JsonError {
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let AccessToken { token } = req.query()?;
-///   // will return an error response with the  json '{ "error": "query data was empty" }' if QueryParseError::None
-///   // or '{ "error": "{parse error}" }' if it failed to deserialize.
-/// }
+/// // will return an error response with the  json '{ "error": "query data
+/// was empty" }' if QueryParseError::None // or '{ "error": "{parse error}"
+/// }' if it failed to deserialize. }
 /// ```
 ///
 #[derive(Debug)]
@@ -98,7 +98,7 @@ impl Request {
 	}
 
 	/// Returns a reference to the request's method
-	/// 
+	///
 	/// The methods can be any of the following:
 	/// GET, HEAD, POST, PUT DELETE, CONNECT, OPTIONS, TRACE, PATCH.
 	#[inline]
@@ -119,7 +119,8 @@ impl Request {
 	}
 
 	/// Returns the IP of the connected client.
-	/// This should always be set, except in testing environments with `FakeReactor`.
+	/// This should always be set, except in testing environments with
+	/// `FakeReactor`.
 	#[inline]
 	pub fn remote_ip(&self) -> Option<net::SocketAddr> {
 		self.remote
@@ -171,8 +172,8 @@ impl Request {
 		self.anyMap.get::<Params>()
 	}
 
-	/// The request struct constains an `AnyMap` so that middlewares can append additional
-	/// information.
+	/// The request struct constains an `AnyMap` so that middlewares can append
+	/// additional information.
 	///
 	/// You can get values out of the `AnyMap` by using this method.
 	///
@@ -232,8 +233,8 @@ impl Request {
 
 	/// Serialize the request's json value into a struct.
 	///
-	/// Note that the json value needs to have been previously set on the request by a middleware;
-	/// otherwise this would return `Err(JsonError::None)`.
+	/// Note that the json value needs to have been previously set on the request
+	/// by a middleware; otherwise this would return `Err(JsonError::None)`.
 	pub fn json<T>(&self) -> Result<T, JsonError>
 	where
 		T: DeserializeOwned,

@@ -1,6 +1,6 @@
 use super::{Request, Response};
-use futures::Future;
 use futures::prelude::{async_block, await};
+use futures::Future;
 use hyper;
 use hyper::server::Service;
 use proto::{ArcHandler, ArcService};
@@ -28,14 +28,9 @@ impl Service for RootService {
 		request.remote = Some(self.remote_ip);
 		let responseFuture = ArcService::call(&*self.service, request, Response::new());
 
-		let future = async_block! {
-			let response = await!(responseFuture);
-			match response {
-				Ok(res) => Ok(res.into()),
-				Err(res) => Ok(res.into())
-			}
-		};
-
-		return box future;
+		return box responseFuture.then(|response| match response {
+			Ok(res) => Ok(res.into()),
+			Err(res) => Ok(res.into()),
+		});
 	}
 }

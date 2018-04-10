@@ -7,7 +7,8 @@ use serde_json::to_string;
 /// Converts a u16 value into equivalent status code of type ```StatusCode```.
 ///
 /// # Errors
-/// This will return a bad request if the provided argument is not within the range 100...599..
+/// This will return a bad request if the provided argument is not within the
+/// range 100...599..
 fn toStatusCode(number: u16) -> StatusCode {
 	match StatusCode::try_from(number) {
 		Ok(status) => status,
