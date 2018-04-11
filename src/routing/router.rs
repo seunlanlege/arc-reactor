@@ -31,7 +31,7 @@ impl Router {
 	/// It will apply the middlewares already mounted
 	/// on the `Router` to all the routes on the `RouteGroup`
 	///
-	/// ```
+	/// ```rust, ignore
 	///  let router = Router::new();
 	///  router.get("/users", UserService); // this will match "/users"
 	///

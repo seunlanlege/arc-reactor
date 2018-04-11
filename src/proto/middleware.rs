@@ -146,7 +146,7 @@ impl<T, M: MiddleWare<T> + ?Sized> MiddleWare<T> for Box<M> {
 ///
 /// # Example
 ///
-/// ```
+/// ```rust, ignore
 /// fn getMainRoutes() -> Router {
 /// 	let app_middlewares = mw![checkIfAuth];
 ///

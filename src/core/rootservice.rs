@@ -1,5 +1,4 @@
 use super::{Request, Response};
-use futures::prelude::{async_block, await};
 use futures::Future;
 use hyper;
 use hyper::server::Service;

@@ -19,7 +19,7 @@ pub struct RouteGroup {
 impl RouteGroup {
 	/// Create a new routegroup with the specified parent.
 	///
-	/// ```
+	/// ```rust, ignore
 	///   let routegroup = RouteGroup::new("api");
 	///   routegroup.get("/users", UserService); // this will match "/api/users"
 	/// ```
@@ -37,7 +37,7 @@ impl RouteGroup {
 	/// It will apply the middlewares already mounted
 	/// on the Parent `RouteGroup` to all the routes on the child `RouteGroup`.
 	///
-	/// ```
+	/// ```rust, ignore
 	///  let routegroup = RouteGroup::new("api");
 	///  routegroup.get("/users", UserService); // this will match "/api/users"
 	///

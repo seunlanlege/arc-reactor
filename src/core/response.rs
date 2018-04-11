@@ -40,7 +40,7 @@ impl Response {
 	///
 	/// # Example
 	///
-	/// ```
+	/// ```rust, ignore
 	/// use hyper::StatusCode;
 	///
 	/// pub fn get_profile(req: Request, _res: Response) {

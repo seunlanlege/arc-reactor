@@ -35,7 +35,7 @@
 //!
 //! ## Demo
 //!
-//! ```rust
+//! ```rust, ignore
 //! #![feature(conservative_impl_trait, proc_macro, generators, box_syntax)] // <== need to add this.
 //! extern crate arc_reactor;
 //! #[macro_use]

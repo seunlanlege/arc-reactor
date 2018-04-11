@@ -1,3 +1,6 @@
+//! Parses the request body as json if the content-type header is set.
+//! Note that if there are any errors in parsing the json
+//! it will return an error response.
 use core::{Request, Response};
 use futures::prelude::{async_block, await};
 use futures::{Future, Stream};
@@ -5,9 +8,6 @@ use hyper::header::ContentType;
 use impl_service::middleware;
 use proto::MiddleWare;
 
-/// ! Parses the request body as json if the content-type header is set.
-/// ! Note that if there are any errors in parsing the json
-/// ! it will return an error response.
 #[middleware(Request)]
 pub fn bodyParser(mut req: Request) {
 	let mut isJson = false;

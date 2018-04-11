@@ -26,7 +26,7 @@ pub struct Request {
 /// `From<JsonError>` is implemented for Response
 /// so you can use the `?` to unwrap or return an early response
 ///
-/// ```
+/// ```rust, ignore
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let User { name } = req.json()?;
@@ -46,7 +46,7 @@ pub enum JsonError {
 /// `From<QueryParseError>` is implemented for Response
 /// so you can use the `?` to unwrap or return an early response
 ///
-/// ```
+/// ```rust, ignore
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let AccessToken { token } = req.query()?;
@@ -81,6 +81,30 @@ impl Request {
 		}
 	}
 
+	/// get a handle to the underlying event loop executing this request.
+	/// useful for spawning additional work/futures on the event loop.
+	/// 
+	/// # Examples
+	/// ```rust, ignore
+	/// extern crate arc_reactor;
+	/// use arc_reactor::prelude::*;
+	/// 
+	/// #[service]
+	/// pub fn UsefulService(req: Request, res: Response) {
+	/// 	let handle = req.reactor_handle();
+	/// 
+	/// 	let future = async_block! {
+	/// 		println!("I'm doing some asynchronous work!");
+	/// 		Ok(()) // async_block must return a type-def of Result
+	/// 		// and the event loop requires a future of type `Future<Item = (), Error = ()>`
+	/// 	};
+	/// 
+	/// 	handle.spawn(future);
+	///  	return Ok(res)
+	/// }
+	/// 
+	/// ```
+	/// 
 	pub fn reactor_handle(&self) -> Handle {
 		self.handle.clone().unwrap()
 	}
