@@ -11,7 +11,7 @@ keywords = ["web", "framework", "asynchronous", "futures", "http"]
 categories = ["web-programming::http-server", "web-programming"]
 
 [dependencies]
-impl-service = { path = "impl-service", version="0.1" }
+impl-service = { path = "impl-service", version="0.1.1" }
 tokio-core = "0.1"
 serde_qs = "0.4"
 futures-await = "0.1"
