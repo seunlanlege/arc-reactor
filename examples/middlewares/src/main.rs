@@ -34,11 +34,11 @@ fn main() {
 ///
 #[service]
 fn IndexService(_req: Request, res: Response) {
-	println("Request Path => {}", req.path());
+	println!("Request Path => {}", _req.path());
 	Ok(res)
 }
 
-/// Middlewares must return Result<Request, Response>; 
+/// Middlewares must return Result<Request, Response>;
 /// If a request middleware returns Ok(request)
 /// the returned request is passed on to the next middleware in the chain (if
 /// there is one) or the route handler.
