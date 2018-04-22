@@ -1,9 +1,7 @@
 use super::rootservice::RootService;
-use futures::prelude::{async, await};
 use futures::task::{self, Task};
 use futures::{Async, Future, Poll, Stream};
-use hyper::server::Http;
-use hyper::Chunk;
+use hyper::{self, server::Http};
 use num_cpus;
 use proto::{ArcHandler, ArcService};
 use routing::Router;
@@ -119,8 +117,8 @@ impl ArcReactor {
 	///
 	/// # Panics
 	///
-	/// Calling this function will panic if: no routes are supplied, or it cannot
-	/// start the main event loop.
+	/// Calling this function will panic if: no routes are supplied, or it
+	/// cannot start the main event loop.
 
 	#[must_use]
 	pub fn initiate(self) -> io::Result<()> {
@@ -182,21 +180,20 @@ fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
 		thread::spawn(move || {
 			let mut core = Core::new().expect("Could not start event loop");
 			let handle = core.handle();
-			let http = Http::new();
+			let http: Http<hyper::Chunk> = Http::new();
 
 			let handler = || {
 				let mut reactor = reactor.lock().unwrap();
 				for (socket, remote_ip) in reactor.peers.drain(..) {
 					let service = routeService.clone();
-					let future = socketHandler(
+					let future = http.serve_connection(
 						socket,
-						http.clone(),
 						RootService {
 							service,
 							remote_ip,
 							handle: handle.clone(),
 						},
-					);
+					).then(|_| Ok(()));
 					handle.spawn(future);
 				}
 				reactor.taskHandle = Some(task::current());
@@ -209,14 +206,4 @@ fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
 	}
 
 	Ok(reactors)
-}
-
-#[async]
-fn socketHandler(
-	stream: TcpStream,
-	http: Http<Chunk>,
-	serviceHandler: RootService,
-) -> Result<(), ()> {
-	let _opaque = await!(http.serve_connection(stream, serviceHandler));
-	Ok(())
 }
