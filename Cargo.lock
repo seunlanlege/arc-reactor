@@ -5,7 +5,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "arc-reactor"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anymap 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-await 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
