@@ -137,8 +137,8 @@ impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
 }
 
 impl<T, M: MiddleWare<T> + ?Sized> MiddleWare<T> for Box<M> {
-    fn call(&self, request: T) -> MiddleWareFuture<T> {
-        (**self).call(request)
+    fn call(&self, item: T) -> MiddleWareFuture<T> {
+        (**self).call(item)
     }
 }
 

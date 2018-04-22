@@ -4,7 +4,7 @@ use hyper;
 use hyper::server::Service;
 use proto::{ArcHandler, ArcService};
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::{panic::AssertUnwindSafe, sync::Arc};
 use tokio_core::reactor::Handle;
 
 // The only reason this exists is so I can pass the
@@ -25,11 +25,14 @@ impl Service for RootService {
 		let mut request: Request = req.into();
 		request.handle = Some(self.handle.clone());
 		request.remote = Some(self.remote_ip);
-		let responseFuture = ArcService::call(&*self.service, request, Response::new());
+		let responseFuture = AssertUnwindSafe(ArcService::call(&*self.service, request, Response::new())).catch_unwind();
 
-		return box responseFuture.then(|response| match response {
-			Ok(res) => Ok(res.into()),
-			Err(res) => Ok(res.into()),
+		return box responseFuture.then(|result| match result {
+			Ok(response) => match response {
+				Ok(res) => Ok(res.into()),
+				Err(res) => Ok(res.into()),
+			},
+			Err(_) => Ok(hyper::Response::new().with_status(hyper::StatusCode::InternalServerError)),
 		});
 	}
 }
