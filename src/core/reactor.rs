@@ -1,63 +1,15 @@
 use super::rootservice::RootService;
-use futures::task::{self, Task};
-use futures::{Async, Future, Poll, Stream};
+use futures::{Future, Stream};
 use hyper::{self, server::Http};
 use num_cpus;
 use proto::{ArcHandler, ArcService};
 use routing::Router;
 use std::io;
-use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::net::{self, SocketAddr};
+use std::sync::Arc;
 use std::thread;
-use tokio_core::net::{TcpListener, TcpStream};
+use tokio_core::net::TcpListener;
 use tokio_core::reactor::Core;
-
-// A wrapper around a closure I can run forever on an event loop.
-struct ReactorFuture<F>
-where
-	F: Fn(),
-{
-	pub handler: F,
-}
-
-// The future never completes.
-// This is because it takes care of dispatching connected clients on the event
-// loop.
-impl<F> Future for ReactorFuture<F>
-where
-	F: Fn(),
-{
-	type Item = ();
-	type Error = ();
-
-	fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-		(self.handler)();
-
-		Ok(Async::NotReady)
-	}
-}
-
-type ReactorAlias = Arc<Mutex<Reactor>>;
-
-// Shared Mutable object to connected clients.
-// This struct is only shared by the main thread, and the another worker thread
-// at any point in time. As new clients are connected, The main thread will
-// lock the reactor and push the clients to `peers`. then the future running in
-// the thread is notified that there are new clients that need to be handled.
-struct Reactor {
-	pub(crate) peers: Vec<(TcpStream, SocketAddr)>,
-	pub(crate) taskHandle: Option<Task>,
-}
-
-// Creates a thread safe Mutable reactor.
-impl Reactor {
-	pub fn new() -> ReactorAlias {
-		Arc::new(Mutex::new(Reactor {
-			peers: Vec::new(),
-			taskHandle: None,
-		}))
-	}
-}
 
 /// The main server, the ArcReactor is where you mount your routes, middlewares
 /// and initiate the server.
@@ -122,20 +74,10 @@ impl ArcReactor {
 
 	#[must_use]
 	pub fn initiate(self) -> io::Result<()> {
-		println!("[arc-reactor]: Spawning threads!");
-		let reactors = spawn(self.handler.expect("This thing needs routes to work!"))?;
-		println!(
-			"[arc-reactor]: Starting main event loop!\n[arc-reactor]: Spawned {} threads",
-			reactors.len()
-		);
-		let mut core = Core::new()?;
-
-		println!("[arc-reactor]: Started Main event loop!");
-		let handle = core.handle();
-
 		let addr = format!("0.0.0.0:{}", self.port).parse().unwrap();
+
 		println!("[arc-reactor]: Binding to port {}", self.port);
-		let listener = match TcpListener::bind(&addr, &handle) {
+		let listener = match net::TcpListener::bind(&addr) {
 			Ok(listener) => listener,
 			Err(e) => {
 				eprintln!(
@@ -146,64 +88,47 @@ impl ArcReactor {
 			}
 		};
 
-		let mut counter = 0;
+		println!("[arc-reactor]: Spawning threads!");
+		let threads = num_cpus::get() * 2;
+		let routes = Arc::new(self.handler.expect("This thing needs routes to work!"));
 
-		println!("[arc-reactor]: Running Main Event loop");
-		core.run(listener.incoming().for_each(move |(socket, peerIp)| {
-			let mut reactor = reactors[counter].lock().unwrap();
-			reactor.peers.push((socket, peerIp));
+		for _ in 0..threads {
+			let listener = listener.try_clone().expect("Could not clone listener!");
+			let routes = routes.clone();
 
-			if let Some(ref task) = reactor.taskHandle {
-				task.notify();
-			}
+			thread::spawn(move || spawn(routes.clone(), listener, addr));
+		}
+		
+		println!(
+			"[arc-reactor]: Starting main event loop!\n[arc-reactor]: Spawned {} threads",
+			threads
+		);
 
-			counter += 1;
-			if counter == reactors.len() {
-				counter = 0
-			}
-			Ok(())
-		}))?;
-
+		spawn(routes, listener, addr);
 		Ok(())
 	}
 }
 
-fn spawn(RouteService: ArcHandler) -> io::Result<Vec<ReactorAlias>> {
-	let mut reactors = Vec::new();
-	let routeService = Arc::new(RouteService);
+fn spawn(routes: Arc<ArcHandler>, listener: net::TcpListener, addr: SocketAddr) {
+	let mut core = Core::new().expect("Could not start event loop");
+	let handle = core.handle();
+	let http: Http<hyper::Chunk> = Http::new();
+	let listener = TcpListener::from_listener(listener, &addr, &handle)
+		.expect("Could not convert TCPListener to async");
 
-	for _ in 0..num_cpus::get() * 2 {
-		let reactor = Reactor::new();
-		reactors.push(reactor.clone());
-		let routeService = routeService.clone();
+	let future = listener.incoming().for_each(|(socket, remote_ip)| {
+		let service = routes.clone();
+		let connection_future = http.serve_connection(
+			socket,
+			RootService {
+				service,
+				remote_ip,
+				handle: handle.clone(),
+			},
+		).then(|_| Ok(()));
+		handle.spawn(connection_future);
+		Ok(())
+	});
 
-		thread::spawn(move || {
-			let mut core = Core::new().expect("Could not start event loop");
-			let handle = core.handle();
-			let http: Http<hyper::Chunk> = Http::new();
-
-			let handler = || {
-				let mut reactor = reactor.lock().unwrap();
-				for (socket, remote_ip) in reactor.peers.drain(..) {
-					let service = routeService.clone();
-					let future = http.serve_connection(
-						socket,
-						RootService {
-							service,
-							remote_ip,
-							handle: handle.clone(),
-						},
-					).then(|_| Ok(()));
-					handle.spawn(future);
-				}
-				reactor.taskHandle = Some(task::current());
-			};
-
-			let future = ReactorFuture { handler };
-
-			core.run(future).expect("Error running reactor core!");
-		});
-	}
-
-	Ok(reactors)
+	core.run(future).expect("Error running reactor core!");
 }
