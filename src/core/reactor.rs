@@ -26,6 +26,7 @@ use tokio_core::reactor::Core;
 /// ```
 pub struct ArcReactor {
 	port: i16,
+	threads: usize,
 	handler: Option<ArcHandler>,
 }
 
@@ -38,12 +39,23 @@ impl ArcReactor {
 		ArcReactor {
 			port: 8080,
 			handler: None,
+			threads: num_cpus::get()
 		}
 	}
 
 	/// Sets the port for the server to listen on and returns the instance.
 	pub fn port(mut self, port: i16) -> Self {
 		self.port = port;
+
+		self
+	}
+
+	/// set the number of threads, for Arc-Reactor
+	/// to spawn reactors on.
+	/// 
+	/// Default is num_cpus::get()
+	pub fn threads(mut self, num: usize) -> Self {
+		self.threads = num;
 
 		self
 	}
@@ -89,10 +101,10 @@ impl ArcReactor {
 		};
 
 		println!("[arc-reactor]: Spawning threads!");
-		let threads = num_cpus::get() * 2;
+		
 		let routes = Arc::new(self.handler.expect("This thing needs routes to work!"));
 
-		for _ in 0..threads {
+		for _ in 0..self.threads {
 			let listener = listener.try_clone().expect("Could not clone listener!");
 			let routes = routes.clone();
 
@@ -101,7 +113,7 @@ impl ArcReactor {
 		
 		println!(
 			"[arc-reactor]: Starting main event loop!\n[arc-reactor]: Spawned {} threads",
-			threads
+			self.threads + 1
 		);
 
 		spawn(routes, listener, addr);

@@ -9,7 +9,7 @@ use arc_reactor::prelude::*;
 fn getMainRoutes() -> Router {
 	/// Setup and maps routes to actions.
 	return Router::new()
-		.get("/:username", arc!(mw![middleware1, middleware2], RequestHandler, box middleware3))
+		.get("/", RequestHandler)
 }
 
 fn main() {
@@ -17,34 +17,14 @@ fn main() {
 	ArcReactor::new()
 		.port(3000) // port to listen on
 		.routes(getMainRoutes())
+		.threads(2)
 		.initiate()
 		.unwrap()
 }
 
 #[service]
-fn RequestHandler(request: Request, mut res: Response) {
-	// You can unwrap here because this handler wouldn't be matched without the param.
-	let url = request.params().unwrap();
-	let body = format!("Hello {}", url["username"]);
-	res.set_body(body);
+fn RequestHandler(_request: Request, mut res: Response) {
+	res.set_body("hello world");
 
-	Ok(res)
-}
-
-#[middleware(Request)] // This is a request middleware,
-fn middleware1(req: Request) {
-	println!("[middleware1]");
-	Ok(req) // if this middleware returns an Err(response), middleware2 and RequestHandler, would never be called
-}
-
-#[middleware(Request)] // another middleware
-fn middleware2(req: Request) {
-	println!("[middleware2]");
-	Ok(req)
-}
-
-#[middleware(Response)] // and yet another middleware.
-fn middleware3(res: Response) {
-	println!("[middleware3]");
 	Ok(res)
 }
