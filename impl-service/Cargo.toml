@@ -1,6 +1,6 @@
 [package]
 name = "impl-service"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["seunlanlege <slanlege@c2gconsulting.com>"]
 license-file ="../LICENSE"
 description = "Proc Macro fo deriving the ArcService trait"
