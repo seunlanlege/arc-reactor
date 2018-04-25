@@ -18,11 +18,12 @@ fn main() {
 		.threads(3)
 		.initiate()
 		.unwrap()
+	// now visit https://localhost:3000 in your browser.
 }
 
 fn getMainRoutes() -> Router {
 	// Setup and maps routes to Services.
-	return Router::new()
+	Router::new()
 		.get("/", RequestHandler)
 }
 
