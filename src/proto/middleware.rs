@@ -1,7 +1,6 @@
 #![macro_use]
 use core::{Request, Response};
 use futures::future::{Future, IntoFuture};
-use routing::extend_lifetime;
 
 type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 
@@ -131,7 +130,10 @@ impl<T: 'static> Clone for Box<MiddleWare<T>> {
 ///
 impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
-		let extended = unsafe { extend_lifetime(self) };
+		let extended = unsafe {
+			&*(self as *const Vec<Box<MiddleWare<Request>>> as *const Vec<Box<MiddleWare<Request>>>)
+		};
+
 		extended
 			.iter()
 			.fold(box Ok(request).into_future(), |request, middleware| {
@@ -147,7 +149,10 @@ impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 ///
 impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
-		let extended = unsafe { extend_lifetime(self) };
+		let extended = unsafe {
+			&*(self as *const Vec<Box<MiddleWare<Response>>> as *const Vec<Box<MiddleWare<Response>>>)
+		};
+
 		extended
 			.iter()
 			.fold(box Ok(response).into_future(), |response, middleware| {

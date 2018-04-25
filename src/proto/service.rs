@@ -2,7 +2,6 @@
 use core::{Request, Response};
 use futures::Future;
 use proto::MiddleWare;
-use routing::extend_lifetime;
 
 /// This trait is automatically derived by the #[service] proc_macro.
 pub trait ArcService: ArcServiceClone + Send + Sync {
@@ -58,7 +57,7 @@ impl ArcHandler {
 impl ArcService for ArcHandler {
 	fn call(&self, req: Request, res: Response) -> FutureResponse {
 		let extended = unsafe {
-			extend_lifetime(self)
+			&*(self as *const ArcHandler as *const ArcHandler)
 		};
 		
 		if extended.before.is_some() && extended.after.is_none() {
