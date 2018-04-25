@@ -1,11 +1,13 @@
 # Arc-reactor
+
 ![Arc Reactor](https://preview.ibb.co/dFjdxH/Arc_reactor.png "Arc-Reactor: Asynchronous, multi-threaded & minimal web framework for Rust.")
-<br><br>
+<br/><br/>
 An **asynchronous**, **multi-threaded** and **minimal** web framework for Rust.
 
 ![Crates.io](https://img.shields.io/crates/d/arc-reactor.svg)
 
 ## Features
+
 - **Asynchronous**. In arc reactor, route handlers are asynchronous by default.
 
 - **Integration With futures-await**. The `#[service]` proc macro not only derives the `ArcService` trait for your route handler, but also marks it as `#[async]` so you can await on futures in  your route handlers with no extra stress.
@@ -14,11 +16,14 @@ An **asynchronous**, **multi-threaded** and **minimal** web framework for Rust.
 
 - **Minimalistic**. arc reactor is designed to be a very thin abstraction over tokio and hyper.
 
+- **TLS Support**. easy to add tls support.
+
 - **Nightly Rust**. arc reactor uses a lot of cool features, including `proc_macros` which are only available on the nightly channel.
 
 ## Installation
 
 Add this to your `cargo.toml`
+
 ```toml
 arc-reactor = "0.1"
 ```
@@ -54,10 +59,10 @@ fn IndexRoute(_req: Rrequest, res: Response) {
     let payload = json!({
       "data": "hello world"
     });
-      
+
     return Ok(payload.into()) // convert json to json response.
   }
-  
+
   res.with_status(StatusCode::UnAuthorized)
 }
 
@@ -68,12 +73,15 @@ fn fakeFuture() -> impl Future<Item=bool, Error=()> {
 ```
 
 ## Examples
+
 Check out the examples folder and the [api documentation](https://docs.rs/arc-reactor/~0.1) to get a feel for how `arc reactor` works.
 <br>
 It's well documented and should get you up and running in no time.
 
 ## Contributions
+
 If you feel something is missing, feel free to submit a PR.
 
 ## License
+
 Refer to [License](https://github.com/SeunLanLege/arc-reactor/blob/master/LICENSE).

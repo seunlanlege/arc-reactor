@@ -1,6 +1,7 @@
 use super::rootservice::RootService;
 use futures::{Future, Stream};
 use hyper::{self, server::Http};
+use native_tls::TlsAcceptor;
 use num_cpus;
 use proto::{ArcHandler, ArcService};
 use routing::Router;
@@ -10,6 +11,7 @@ use std::sync::Arc;
 use std::thread;
 use tokio_core::net::TcpListener;
 use tokio_core::reactor::Core;
+use tokio_tls::TlsAcceptorExt;
 
 /// The main server, the ArcReactor is where you mount your routes, middlewares
 /// and initiate the server.
@@ -28,6 +30,7 @@ pub struct ArcReactor {
 	port: i16,
 	threads: usize,
 	handler: Option<ArcHandler>,
+	tls_acceptor: Option<Arc<TlsAcceptor>>,
 }
 
 impl ArcReactor {
@@ -39,7 +42,8 @@ impl ArcReactor {
 		ArcReactor {
 			port: 8080,
 			handler: None,
-			threads: num_cpus::get()
+			tls_acceptor: None,
+			threads: num_cpus::get(),
 		}
 	}
 
@@ -52,10 +56,18 @@ impl ArcReactor {
 
 	/// set the number of threads, for Arc-Reactor
 	/// to spawn reactors on.
-	/// 
+	///
 	/// Default is num_cpus::get()
 	pub fn threads(mut self, num: usize) -> Self {
 		self.threads = num;
+
+		self
+	}
+
+	/// set the TlsAcceptor
+	/// check the `examples` folder for more info.
+	pub fn tls(mut self, acceptor: TlsAcceptor) -> Self {
+		self.tls_acceptor = Some(Arc::new(acceptor));
 
 		self
 	}
@@ -101,29 +113,37 @@ impl ArcReactor {
 		};
 
 		println!("[arc-reactor]: Spawning threads!");
-		
+
 		let routes = Arc::new(self.handler.expect("This thing needs routes to work!"));
 		let http = Http::new();
+		let acceptor = self.tls_acceptor.clone();
 
 		for _ in 0..self.threads {
 			let listener = listener.try_clone().expect("Could not clone listener!");
 			let routes = routes.clone();
 			let http = http.clone();
+			let acceptor = acceptor.clone();
 
-			thread::spawn(move || spawn(routes, listener, addr, http));
+			thread::spawn(move || spawn(routes, listener, addr, http, acceptor.clone()));
 		}
-		
+
 		println!(
 			"[arc-reactor]: Starting main event loop!\n[arc-reactor]: Spawned {} threads",
 			self.threads + 1
 		);
 
-		spawn(routes, listener, addr, http);
+		spawn(routes, listener, addr, http, acceptor);
 		Ok(())
 	}
 }
 
-fn spawn(routes: Arc<ArcHandler>, listener: net::TcpListener, addr: SocketAddr, http: Http<hyper::Chunk>) {
+fn spawn(
+	routes: Arc<ArcHandler>,
+	listener: net::TcpListener,
+	addr: SocketAddr,
+	http: Http<hyper::Chunk>,
+	acceptor: Option<Arc<TlsAcceptor>>,
+) {
 	let mut core = Core::new().expect("Could not start event loop");
 	let handle = core.handle();
 	let listener = TcpListener::from_listener(listener, &addr, &handle)
@@ -131,6 +151,35 @@ fn spawn(routes: Arc<ArcHandler>, listener: net::TcpListener, addr: SocketAddr, 
 
 	let future = listener.incoming().for_each(|(socket, remote_ip)| {
 		let service = routes.clone();
+		// user has configured a tls acceptor
+		if let Some(ref acceptor) = acceptor {
+			let http_clone = http.clone();
+			let handle_clone = handle.clone();
+			let connection_future = acceptor
+				.accept_async(socket)
+				.map_err(|err| {
+					// could not complete tls handshake
+					println!("[arc-reactor] Handshake Error {:?}", err);
+					Err(())
+				})
+				.and_then(move |socket| {
+					// handshake successful
+					let service = RootService {
+						service,
+						remote_ip,
+						handle: handle_clone,
+					};
+					let conn_future = http_clone
+						.serve_connection(socket, service)
+						.then(|_| Ok(()));
+					conn_future
+				})
+				.then(|_: Result<(), Result<(), ()>>| Ok(()));
+			handle.spawn(connection_future);
+			return Ok(());
+		}
+
+		// default to http
 		let connection_future = http.serve_connection(
 			socket,
 			RootService {
@@ -140,6 +189,7 @@ fn spawn(routes: Arc<ArcHandler>, listener: net::TcpListener, addr: SocketAddr, 
 			},
 		).then(|_| Ok(()));
 		handle.spawn(connection_future);
+
 		Ok(())
 	});
 

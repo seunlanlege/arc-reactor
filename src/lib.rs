@@ -49,11 +49,11 @@
 //! 		.port(3000)
 //! 		.initiate()
 //! 		.unwrap()
-//! }
+//! 	}
 //!
 //! fn rootRoutes() -> Router {
 //! 	Router::new().get("/", IndexRoute)
-//! }
+//! 	}
 //!
 //! #[service]
 //! fn IndexRoute(_req: Request, mut res: Response) {
@@ -64,15 +64,15 @@
 //!     });
 //!
 //! 		return Ok(payload.into()); // convert json to json response.
-//! 	}
+//! 		}
 //!
 //! 	res.set_status(StatusCode::Unauthorized);
 //! 	Err(res)
-//! }
+//! 	}
 //!
 //! fn fakeFuture() -> impl Future<Item = bool, Error = ()> {
 //! 	futures::future::ok(true)
-//! }
+//! 	}
 //! ```
 //!
 
@@ -84,10 +84,12 @@ extern crate anymap;
 pub extern crate futures_await as futures;
 pub extern crate hyper;
 extern crate impl_service;
+pub extern crate native_tls;
 extern crate num_cpus;
 extern crate percent_encoding;
 extern crate route_recognizer as recognizer;
 extern crate serde_qs;
+extern crate tokio_tls;
 
 extern crate serde;
 #[macro_use]

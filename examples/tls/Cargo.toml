@@ -1,0 +1,7 @@
+[package]
+name = "tls"
+version = "0.1.0"
+authors = ["Seun LanLege <seunlanlege@gmail.com>"]
+
+[dependencies]
+arc-reactor = { path="../../", version="*" }
