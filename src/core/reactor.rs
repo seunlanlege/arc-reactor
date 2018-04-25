@@ -103,12 +103,14 @@ impl ArcReactor {
 		println!("[arc-reactor]: Spawning threads!");
 		
 		let routes = Arc::new(self.handler.expect("This thing needs routes to work!"));
+		let http = Http::new();
 
 		for _ in 0..self.threads {
 			let listener = listener.try_clone().expect("Could not clone listener!");
 			let routes = routes.clone();
+			let http = http.clone();
 
-			thread::spawn(move || spawn(routes.clone(), listener, addr));
+			thread::spawn(move || spawn(routes, listener, addr, http));
 		}
 		
 		println!(
@@ -116,15 +118,14 @@ impl ArcReactor {
 			self.threads + 1
 		);
 
-		spawn(routes, listener, addr);
+		spawn(routes, listener, addr, http);
 		Ok(())
 	}
 }
 
-fn spawn(routes: Arc<ArcHandler>, listener: net::TcpListener, addr: SocketAddr) {
+fn spawn(routes: Arc<ArcHandler>, listener: net::TcpListener, addr: SocketAddr, http: Http<hyper::Chunk>) {
 	let mut core = Core::new().expect("Could not start event loop");
 	let handle = core.handle();
-	let http: Http<hyper::Chunk> = Http::new();
 	let listener = TcpListener::from_listener(listener, &addr, &handle)
 		.expect("Could not convert TCPListener to async");
 
