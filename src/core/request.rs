@@ -29,25 +29,26 @@ pub struct Request {
 /// ```rust
 /// extern crate arc_reactor;
 /// use arc_reactor::prelude::*;
-/// 
+///
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
-///   let User { name } = req.json()?;
-///   // will return an error response with the  
-///   // json '{ "error": "Json was empty" }' if JsonError::None
-///   // or '{ "error": "{serde error}" }' if it failed to deserialize. 
-/// }
+/// 	let User { name } = req.json()?;
+/// 	// will return an error response with the
+/// 	// json '{ "error": "Json was empty" }' if JsonError::None
+/// 	// or '{ "error": "{serde error}" }' if it failed to deserialize.
+/// 	}
 /// ```
 ///
 #[derive(Debug)]
 pub enum JsonError {
 	/// This error can occur if
-	/// 1. The client, didn't include "content-type: application/json" in the request headers
-	/// 2. The body parser wasn't mounted as a middleware on this route, directly or indirectly.
+	/// 1. The client, didn't include "content-type: application/json" in the
+	/// request headers 2. The body parser wasn't mounted as a middleware on
+	/// this route, directly or indirectly.
 	None,
-	/// The error reported by serde, when deserialization of the 
-	/// request body fails. 
-	/// 
+	/// The error reported by serde, when deserialization of the
+	/// request body fails.
+	///
 	Err(serde_json::Error),
 }
 
@@ -59,11 +60,11 @@ pub enum JsonError {
 /// ```rust, ignore
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
-///   let AccessToken { token } = req.query()?;
-///   // will return an error response with the  
-///   // json '{ "error": "query data was empty" }' if QueryParseError::None
-///   // or '{ "error": "{parse error}" }' if it failed to deserialize. 
-/// }
+/// 	let AccessToken { token } = req.query()?;
+/// 	// will return an error response with the
+/// 	// json '{ "error": "query data was empty" }' if QueryParseError::None
+/// 	// or '{ "error": "{parse error}" }' if it failed to deserialize.
+/// 	}
 /// ```
 ///
 #[derive(Debug)]
@@ -96,28 +97,27 @@ impl Request {
 
 	/// get a handle to the underlying event loop executing this request.
 	/// useful for spawning additional work/futures on the event loop.
-	/// 
+	///
 	/// # Examples
 	/// ```rust
 	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
-	/// 
+	///
 	/// #[service]
 	/// pub fn UsefulService(req: Request, res: Response) {
 	/// 	let handle = req.reactor_handle();
-	/// 
+	///
 	/// 	let future = async_block! {
 	/// 		println!("I'm doing some asynchronous work!");
 	/// 		Ok(()) // async_block must return a type-def of Result
 	/// 		// and the event loop requires a future of type `Future<Item = (), Error = ()>`
-	/// 	};
-	/// 
+	/// 		};
+	///
 	/// 	handle.spawn(future);
-	///  	return Ok(res)
-	/// }
-	/// 
+	/// 	return Ok(res);
+	/// 	}
 	/// ```
-	/// 
+	///
 	pub fn reactor_handle(&self) -> Handle {
 		self.handle.clone().unwrap()
 	}
@@ -170,18 +170,18 @@ impl Request {
 	/// ```rust
 	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
-	/// 
+	///
 	/// #[derive(Serialize, Deserialize)]
 	/// struct AccessToken {
 	/// 	token: String,
-	/// }
+	/// 	}
 	///
 	/// #[service]
 	/// pub fn login(req: Request, _res: Response) {
 	/// 	if let Ok(AccessToken { token }) = req.query() {
 	/// 		// do something with the token here.
+	/// 		}
 	/// 	}
-	/// }
 	/// ```
 	///
 	#[inline]
@@ -189,8 +189,7 @@ impl Request {
 	where
 		T: DeserializeOwned,
 	{
-		self
-			.uri
+		self.uri
 			.query()
 			.ok_or(QueryParseError::None)
 			.and_then(|encoded| Ok(percent_decode(encoded.as_bytes()).decode_utf8_lossy()))
@@ -204,7 +203,7 @@ impl Request {
 	/// ```rust
 	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
-	/// 
+	///
 	/// [service]
 	/// pub fn ProfileService(req: Request, res: Response) {
 	/// 	let profileId = req.params().unwrap()["id"];
@@ -223,16 +222,16 @@ impl Request {
 	/// # Examples
 	///
 	/// ```rust
-	///	extern crate arc_reactor;
+	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
 	/// #[derive(Serialize, Deserialize)]
 	/// struct AccessToken {
 	/// 	token: String,
-	/// }
+	/// 	}
 	///
 	/// struct User {
 	/// 	name: String,
-	/// }
+	/// 	}
 	///
 	/// #[middleware(Request)]
 	/// pub fn AssertAuth(req: Request) {
@@ -241,15 +240,15 @@ impl Request {
 	/// 		req.set::<User>(user); // Set the user
 	/// 	} else {
 	/// 		return Err((401, "Unauthorized!").into());
+	/// 		}
 	/// 	}
-	/// }
 	///
 	/// #[service]
 	/// pub fn ProfileService(req: Request, res: Response) {
 	/// 	let user = req.get::<User>().unwrap();
 	/// 	// Its safe to unwrap here, because if user isn't set this service will never
 	/// 	// be called.
-	/// }
+	/// 	}
 	/// ```
 	pub fn get<T: 'static>(&self) -> Option<&T> {
 		self.anyMap.get::<T>()
@@ -274,8 +273,9 @@ impl Request {
 
 	/// Serialize the request's json value into a struct.
 	///
-	/// Note that the json value needs to have been previously set on the request
-	/// by a middleware; otherwise this would return `Err(JsonError::None)`.
+	/// Note that the json value needs to have been previously set on the
+	/// request by a middleware; otherwise this would return
+	/// `Err(JsonError::None)`.
 	pub fn json<T>(&self) -> Result<T, JsonError>
 	where
 		T: DeserializeOwned,

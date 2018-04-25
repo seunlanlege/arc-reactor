@@ -46,9 +46,9 @@ impl Response {
 	/// pub fn get_profile(req: Request, _res: Response) {
 	/// 	// performed task on request
 	///
-	///   // return an Ok response
+	/// 	// return an Ok response
 	/// 	_res.set_status(StatusCode::Unauthorized);
-	/// }
+	/// 	}
 	/// ```
 	///
 	#[inline]
@@ -114,8 +114,7 @@ impl Response {
 	pub fn redirect(self, url: &'static str) -> Response {
 		let mut headers = Headers::new();
 		headers.set(Location::new(url));
-		self
-			.with_status(StatusCode::MovedPermanently)
+		self.with_status(StatusCode::MovedPermanently)
 			.with_headers(headers)
 	}
 

@@ -25,14 +25,18 @@ impl Service for RootService {
 		let mut request: Request = req.into();
 		request.handle = Some(self.handle.clone());
 		request.remote = Some(self.remote_ip);
-		let responseFuture = AssertUnwindSafe(ArcService::call(&*self.service, request, Response::new())).catch_unwind();
+		let responseFuture =
+			AssertUnwindSafe(ArcService::call(&*self.service, request, Response::new()))
+				.catch_unwind();
 
 		return box responseFuture.then(|result| match result {
 			Ok(response) => match response {
 				Ok(res) => Ok(res.into()),
 				Err(res) => Ok(res.into()),
 			},
-			Err(_) => Ok(hyper::Response::new().with_status(hyper::StatusCode::InternalServerError)),
+			Err(_) => {
+				Ok(hyper::Response::new().with_status(hyper::StatusCode::InternalServerError))
+			}
 		});
 	}
 }

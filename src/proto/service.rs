@@ -12,10 +12,10 @@ pub trait ArcServiceClone {
 	fn clone_service(&self) -> Box<ArcService>;
 }
 
-impl<T> ArcServiceClone for T 
-	where T: 'static + ArcService + Clone 
-	{
-	
+impl<T> ArcServiceClone for T
+where
+	T: 'static + ArcService + Clone,
+{
 	fn clone_service(&self) -> Box<ArcService> {
 		box self.clone()
 	}
@@ -56,34 +56,37 @@ impl ArcHandler {
 
 impl ArcService for ArcHandler {
 	fn call(&self, req: Request, res: Response) -> FutureResponse {
-		let extended = unsafe {
-			&*(self as *const ArcHandler as *const ArcHandler)
-		};
-		
+		let extended = unsafe { &*(self as *const ArcHandler) };
+
 		if extended.before.is_some() && extended.after.is_none() {
 			let before = match extended.before {
 				Some(ref before) => before,
-				_ => unreachable!()
+				_ => unreachable!(),
 			};
-			return box before.call(req).and_then(move |req| extended.handler.call(req, res));
+			return box before
+				.call(req)
+				.and_then(move |req| extended.handler.call(req, res));
 		}
 
 		if extended.before.is_none() && extended.after.is_some() {
 			let after = match extended.after {
 				Some(ref after) => after,
-				_ => unreachable!()
+				_ => unreachable!(),
 			};
-			return box extended.handler.call(req, res).and_then(move |res| after.call(res));
+			return box extended
+				.handler
+				.call(req, res)
+				.and_then(move |res| after.call(res));
 		}
 
 		if extended.before.is_some() && extended.after.is_some() {
-			let before =  match extended.before {
+			let before = match extended.before {
 				Some(ref before) => before,
-				_ => unreachable!()
+				_ => unreachable!(),
 			};
-			let after =  match extended.after {
+			let after = match extended.after {
 				Some(ref after) => after,
-				_ => unreachable!()
+				_ => unreachable!(),
 			};
 			return box before
 				.call(req)
@@ -113,24 +116,24 @@ macro_rules! arc {
 	($handler:expr) => {{
 		use $crate::ArcHandler;
 		ArcHandler::new($handler)
-	}};
+		}};
 	($before:expr, $handler:expr) => {{
 		use $crate::ArcHandler;
 		let mut handler = ArcHandler::new($handler);
 		handler.before($before);
 		handler
-	}};
+		}};
 	($before:expr, $handler:expr, $after:expr) => {{
 		use $crate::ArcHandler;
 		let mut handler = ArcHandler::new($handler);
 		handler.before($before);
 		handler.after($after);
 		handler
-	}};
+		}};
 	(_, $handler:expr, $after:expr) => {{
 		use $crate::ArcHandler;
 		let mut handler = ArcHandler::new($handler);
 		handler.after($before);
 		handler
-	}};
+		}};
 }

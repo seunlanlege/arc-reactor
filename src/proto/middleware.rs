@@ -131,7 +131,7 @@ impl<T: 'static> Clone for Box<MiddleWare<T>> {
 impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
 		let extended = unsafe {
-			&*(self as *const Vec<Box<MiddleWare<Request>>> as *const Vec<Box<MiddleWare<Request>>>)
+			&*(self as *const Vec<Box<MiddleWare<Request>>>)
 		};
 
 		extended
@@ -150,7 +150,7 @@ impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
 		let extended = unsafe {
-			&*(self as *const Vec<Box<MiddleWare<Response>>> as *const Vec<Box<MiddleWare<Response>>>)
+			&*(self as *const Vec<Box<MiddleWare<Response>>>)
 		};
 
 		extended
