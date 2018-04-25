@@ -104,6 +104,7 @@ pub trait MiddleWare<T: Sized>: MiddleWareClone<T> + Sync + Send {
 	fn call(&self, param: T) -> MiddleWareFuture<T>;
 }
 
+#[doc(hidden)]
 pub trait MiddleWareClone<D> {
 	fn clone_middleware(&self) -> Box<MiddleWare<D>>;
 }

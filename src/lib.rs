@@ -35,8 +35,8 @@
 //!
 //! ## Demo
 //!
-//! ```rust, ignore
-//! #![feature(conservative_impl_trait, proc_macro, generators, box_syntax)] // <== need to add this.
+//! ```rust,
+//! #![feature(proc_macro, generators, box_syntax)] // <== need to add this.
 //! extern crate arc_reactor;
 //! #[macro_use]
 //! extern crate serde_json;
@@ -49,15 +49,15 @@
 //! 		.port(3000)
 //! 		.initiate()
 //! 		.unwrap()
-//! 	}
+//! }
 //!
 //! fn rootRoutes() -> Router {
 //! 	Router::new().get("/", IndexRoute)
-//! 	}
+//! }
 //!
 //! #[service]
-//! fn IndexRoute(_req: Rrequest, res: Response) {
-//! 	let isAuth = await!(fakeFuture());
+//! fn IndexRoute(_req: Request, mut res: Response) {
+//! 	let isAuth = await!(fakeFuture()).unwrap();
 //! 	if isAuth {
 //! 		let payload = json!({
 //!       "data": "hello world"
@@ -66,12 +66,13 @@
 //! 		return Ok(payload.into()); // convert json to json response.
 //! 	}
 //!
-//! 	res.with_status(StatusCode::UnAuthorized)
-//! 	}
+//! 	res.set_status(StatusCode::Unauthorized);
+//! 	Err(res)
+//! }
 //!
 //! fn fakeFuture() -> impl Future<Item = bool, Error = ()> {
 //! 	futures::future::ok(true)
-//! 	}
+//! }
 //! ```
 //!
 

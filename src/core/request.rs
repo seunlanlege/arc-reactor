@@ -26,18 +26,28 @@ pub struct Request {
 /// `From<JsonError>` is implemented for Response
 /// so you can use the `?` to unwrap or return an early response
 ///
-/// ```rust, ignore
+/// ```rust
+/// extern crate arc_reactor;
+/// use arc_reactor::prelude::*;
+/// 
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let User { name } = req.json()?;
-/// // will return an error response with the  json '{ "error": "Json was
-/// empty" }' if JsonError::None // or '{ "error": "{serde error}" }' if it
-/// failed to deserialize. }
+///   // will return an error response with the  
+///   // json '{ "error": "Json was empty" }' if JsonError::None
+///   // or '{ "error": "{serde error}" }' if it failed to deserialize. 
+/// }
 /// ```
 ///
 #[derive(Debug)]
 pub enum JsonError {
+	/// This error can occur if
+	/// 1. The client, didn't include "content-type: application/json" in the request headers
+	/// 2. The body parser wasn't mounted as a middleware on this route, directly or indirectly.
 	None,
+	/// The error reported by serde, when deserialization of the 
+	/// request body fails. 
+	/// 
 	Err(serde_json::Error),
 }
 
@@ -50,14 +60,17 @@ pub enum JsonError {
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
 ///   let AccessToken { token } = req.query()?;
-/// // will return an error response with the  json '{ "error": "query data
-/// was empty" }' if QueryParseError::None // or '{ "error": "{parse error}"
-/// }' if it failed to deserialize. }
+///   // will return an error response with the  
+///   // json '{ "error": "query data was empty" }' if QueryParseError::None
+///   // or '{ "error": "{parse error}" }' if it failed to deserialize. 
+/// }
 /// ```
 ///
 #[derive(Debug)]
 pub enum QueryParseError {
+	/// This error occurs when deserialization fails for the query
 	Err(serde_qs::Error),
+	/// this error occurs when there is no query data in the uri
 	None,
 }
 
@@ -85,7 +98,7 @@ impl Request {
 	/// useful for spawning additional work/futures on the event loop.
 	/// 
 	/// # Examples
-	/// ```rust, ignore
+	/// ```rust
 	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
 	/// 
@@ -154,8 +167,11 @@ impl Request {
 	///
 	///  # Examples
 	///
-	/// ```rust,ignore
-	/// [derive(Serialize, Deserialize)]
+	/// ```rust
+	/// extern crate arc_reactor;
+	/// use arc_reactor::prelude::*;
+	/// 
+	/// #[derive(Serialize, Deserialize)]
 	/// struct AccessToken {
 	/// 	token: String,
 	/// }
@@ -185,7 +201,10 @@ impl Request {
 	///
 	/// e.g `/profile/:id`
 	///
-	/// ```rust,ignore
+	/// ```rust
+	/// extern crate arc_reactor;
+	/// use arc_reactor::prelude::*;
+	/// 
 	/// [service]
 	/// pub fn ProfileService(req: Request, res: Response) {
 	/// 	let profileId = req.params().unwrap()["id"];
@@ -203,8 +222,10 @@ impl Request {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
-	/// [derive(Serialize, Deserialize)]
+	/// ```rust
+	///	extern crate arc_reactor;
+	/// use arc_reactor::prelude::*;
+	/// #[derive(Serialize, Deserialize)]
 	/// struct AccessToken {
 	/// 	token: String,
 	/// }
@@ -213,21 +234,17 @@ impl Request {
 	/// 	name: String,
 	/// }
 	///
-	/// [middleware(Request)]
+	/// #[middleware(Request)]
 	/// pub fn AssertAuth(req: Request) {
 	/// 	if let AccessToken { token } = req.query::<AccessToken>() {
-	/// 		if let user = db::fetchUser::<User>(token) {
-	/// 			// pseudo code
-	/// 			req.set::<User>(user); // Set the user
-	/// 		} else {
-	/// 			return Err((404, "User Not Found!").into());
-	/// 		}
+	/// 		let user = User { name: "Seun" };
+	/// 		req.set::<User>(user); // Set the user
 	/// 	} else {
 	/// 		return Err((401, "Unauthorized!").into());
 	/// 	}
 	/// }
 	///
-	/// [service]
+	/// #[service]
 	/// pub fn ProfileService(req: Request, res: Response) {
 	/// 	let user = req.get::<User>().unwrap();
 	/// 	// Its safe to unwrap here, because if user isn't set this service will never
