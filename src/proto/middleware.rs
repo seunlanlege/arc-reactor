@@ -1,7 +1,7 @@
 #![macro_use]
 use core::{Request, Response};
-use std::sync::Arc;
 use futures::future::{Future, IntoFuture};
+use routing::extend_lifetime;
 
 type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 
@@ -100,8 +100,27 @@ type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 /// Instead you'll use the middleware proc_macro
 /// [`#[middleware]`](../impl_service/fn.middleware.html) to decorate your functions. The proc_macro
 /// makes `MiddleWare`'s aasynchronous by default. so you can `await!()` on futures.
-pub trait MiddleWare<T: ?Sized>: Sync + Send {
+pub trait MiddleWare<T: Sized>: MiddleWareClone<T> + Sync + Send {
 	fn call(&self, param: T) -> MiddleWareFuture<T>;
+}
+
+pub trait MiddleWareClone<D> {
+	fn clone_middleware(&self) -> Box<MiddleWare<D>>;
+}
+
+impl<T, D> MiddleWareClone<D> for T 
+	where T: 'static + MiddleWare<D> + Clone 
+	{
+	
+	fn clone_middleware(&self) -> Box<MiddleWare<D>> {
+		box self.clone()
+	}
+}
+
+impl<T: 'static> Clone for Box<MiddleWare<T>> {
+	fn clone(&self) -> Self {
+		self.clone_middleware()
+	}
 }
 
 /// This enables a vector of `MiddleWare<Request>` to behave like a single `MiddleWare<Request>`
@@ -109,13 +128,13 @@ pub trait MiddleWare<T: ?Sized>: Sync + Send {
 /// middlewares to be skipped. Note that there's a conveinience macro `mw` that allows you not
 /// write boxes everywhere.
 ///
-impl MiddleWare<Request> for Vec<Arc<Box<MiddleWare<Request>>>> {
+impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
-		self
+		let extended = unsafe { extend_lifetime(self) };
+		extended
 			.iter()
 			.fold(box Ok(request).into_future(), |request, middleware| {
-				let clone = middleware.clone();
-				box request.and_then(move |req| clone.call(req))
+				box request.and_then(move |req| middleware.call(req))
 			})
 	}
 }
@@ -125,18 +144,20 @@ impl MiddleWare<Request> for Vec<Arc<Box<MiddleWare<Request>>>> {
 /// middlewares to be skipped. Note that there's a conveinient macro `mw` that allows you not write
 /// boxes everywhere.
 ///
-impl MiddleWare<Response> for Vec<Arc<Box<MiddleWare<Response>>>> {
+impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
-		self
+		let extended = unsafe { extend_lifetime(self) };
+		extended
 			.iter()
 			.fold(box Ok(response).into_future(), |response, middleware| {
-				let clone = middleware.clone();
-				box response.and_then(move |res| clone.call(res))
+				box response.and_then(move |res| middleware.call(res))
 			})
 	}
 }
 
-impl<T, M: MiddleWare<T> + ?Sized> MiddleWare<T> for Box<M> {
+impl<T, M> MiddleWare<T> for Box<M> 
+	where M: 'static + MiddleWare<T> + ?Sized + Clone
+	{
     fn call(&self, item: T) -> MiddleWareFuture<T> {
         (**self).call(item)
     }
@@ -167,7 +188,7 @@ macro_rules! mw {
 	($($middlewares:expr), +) => {{
 		use std::sync::Arc;
 		use $crate::MiddleWare;
-		let middleWares: Vec<Arc<Box<MiddleWare<_>>>> = vec![$(Arc::new(box $middlewares)), +];
+		let middleWares: Vec<Box<MiddleWare<_>>> = vec![$(box $middlewares), +];
      box middleWares as Box<MiddleWare<_>>
 	}};
 }

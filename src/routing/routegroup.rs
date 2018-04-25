@@ -1,5 +1,4 @@
 use routing::stripTrailingSlash;
-use std::sync::Arc;
 #[macro_use]
 use proto::{ArcHandler, ArcService, MiddleWare};
 use core::{Request, Response};
@@ -11,8 +10,8 @@ use std::collections::HashMap;
 /// and applying group middlewares for protected routes.
 pub struct RouteGroup {
 	pub(crate) parent: String,
-	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
-	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
+	pub(crate) before: Option<Box<MiddleWare<Request>>>,
+	pub(crate) after: Option<Box<MiddleWare<Response>>>,
 	pub(crate) routes: HashMap<Method, HashMap<String, ArcHandler>>,
 }
 
@@ -60,7 +59,7 @@ impl RouteGroup {
 				let fullPath = format!("/{}{}", parent, path);
 				let mut handler = ArcHandler {
 					before: self.before.clone(),
-					handler: Arc::new(box handler),
+					handler: box handler,
 					after: self.after.clone(),
 				};
 				self
@@ -79,7 +78,7 @@ impl RouteGroup {
 	/// Ensure that the request middleware is added before any routes on the route group.
 	/// The middleware only applies to the routes that are added after it has been mounted.
 	pub fn before<T: 'static + MiddleWare<Request>>(mut self, before: T) -> Self {
-		self.before = Some(Arc::new(box before));
+		self.before = Some(box before);
 		
 		self
 	}
@@ -89,7 +88,7 @@ impl RouteGroup {
 	/// Ensure that the response middleware is added before any routes on the route group.
 	/// The middleware only applies to the routes that are added after it has been mounted.
 	pub fn after<T: 'static + MiddleWare<Response>>(mut self, after: T) -> Self {
-		self.after = Some(Arc::new(box after));
+		self.after = Some(box after);
 
 		self
 	}
@@ -159,7 +158,7 @@ impl RouteGroup {
 
 		let handler = ArcHandler {
 			before: self.before.clone(),
-			handler: Arc::new(box routehandler),
+			handler: box routehandler,
 			after: self.after.clone(),
 		};
 		

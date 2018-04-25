@@ -8,3 +8,7 @@ pub fn stripTrailingSlash(string: &str) -> &str {
 
 	return string;
 }
+
+pub unsafe fn extend_lifetime<'l, T>(pointer: &'l T) -> &'static T {
+	::std::mem::transmute::<&'l T, &'static T>(pointer)
+}

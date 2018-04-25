@@ -5,13 +5,14 @@ use recognizer::{Match, Router as Recognizer};
 use proto::{ArcHandler, ArcService, MiddleWare};
 use routing::{RouteGroup, stripTrailingSlash};
 use core::{Request, Response};
-use std::sync::Arc;
 
 /// The main router of you application that is supplied to the ArcReactor.
+/// 
+#[derive(Clone)]
 pub struct Router {
 	pub(crate) routes: HashMap<Method, Recognizer<ArcHandler>>,
-	pub(crate) before: Option<Arc<Box<MiddleWare<Request>>>>,
-	pub(crate) after: Option<Arc<Box<MiddleWare<Response>>>>,
+	pub(crate) before: Option<Box<MiddleWare<Request>>>,
+	pub(crate) after: Option<Box<MiddleWare<Response>>>,
 	pub(crate) notFound: Option<Box<ArcService>>,
 }
 
@@ -48,7 +49,7 @@ impl Router {
 				for (path, routehandler) in map {
 					let handler = ArcHandler {
 						before: self.before.clone(),
-						handler: Arc::new(box routehandler),
+						handler: box routehandler,
 						after: self.after.clone(),
 					};
 
@@ -69,7 +70,7 @@ impl Router {
 	/// Ensure that the request middleware is added before any routes on the router.
 	/// The middleware only applies to the routes that are added after it has been mounted.
 	pub fn before<T: 'static + MiddleWare<Request>>(mut self, before: T) -> Self {
-		self.before = Some(Arc::new(box before));
+		self.before = Some(box before);
 
 		self
 	}
@@ -79,7 +80,7 @@ impl Router {
 	/// Ensure that the request middleware is added before any routes on the router.
 	/// The middleware only applies to the routes that are added after it has been mounted.
 	pub fn after<T: 'static + MiddleWare<Response>>(mut self, after: T) -> Self {
-		self.after = Some(Arc::new(box after));
+		self.after = Some(box after);
 
 		self
 	}
@@ -141,7 +142,7 @@ impl Router {
 		{
 			let handler = ArcHandler {
 				before: self.before.clone(),
-				handler: Arc::new(box routehandler),
+				handler: box routehandler,
 				after: self.after.clone(),
 			};
 			self

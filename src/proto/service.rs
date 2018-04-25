@@ -2,64 +2,97 @@
 use core::{Request, Response};
 use futures::Future;
 use proto::MiddleWare;
-use std::sync::Arc;
+use routing::extend_lifetime;
 
 /// This trait is automatically derived by the #[service] proc_macro.
-pub trait ArcService: Send + Sync {
+pub trait ArcService: ArcServiceClone + Send + Sync {
 	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Response>>;
+}
+
+pub trait ArcServiceClone {
+	fn clone_service(&self) -> Box<ArcService>;
+}
+
+impl<T> ArcServiceClone for T 
+	where T: 'static + ArcService + Clone 
+	{
+	
+	fn clone_service(&self) -> Box<ArcService> {
+		box self.clone()
+	}
+}
+
+impl Clone for Box<ArcService> {
+	fn clone(&self) -> Self {
+		self.clone_service()
+	}
 }
 
 pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
 
+#[derive(Clone)]
 pub struct ArcHandler {
-	pub before: Option<Arc<Box<MiddleWare<Request>>>>,
-	pub handler: Arc<Box<ArcService>>,
-	pub after: Option<Arc<Box<MiddleWare<Response>>>>,
+	pub before: Option<Box<MiddleWare<Request>>>,
+	pub handler: Box<ArcService>,
+	pub after: Option<Box<MiddleWare<Response>>>,
 }
 
 impl ArcHandler {
 	pub fn new<T: 'static + ArcService>(h: T) -> Self {
 		Self {
 			before: None,
-			handler: Arc::new(box h),
+			handler: box h,
 			after: None,
 		}
 	}
 
 	pub fn before<T: 'static + MiddleWare<Request>>(&mut self, before: T) {
-		self.before = Some(Arc::new(box before));
+		self.before = Some(box before);
 	}
 
 	pub fn after<T: 'static + MiddleWare<Response>>(&mut self, after: T) {
-		self.after = Some(Arc::new(box after));
+		self.after = Some(box after);
 	}
 }
 
 impl ArcService for ArcHandler {
 	fn call(&self, req: Request, res: Response) -> FutureResponse {
-		if self.before.is_some() && self.after.is_none() {
-			let before = self.before.clone().unwrap();
-			let handler = self.handler.clone();
-			return box before.call(req).and_then(move |req| handler.call(req, res));
+		let extended = unsafe {
+			extend_lifetime(self)
+		};
+		
+		if extended.before.is_some() && extended.after.is_none() {
+			let before = match extended.before {
+				Some(ref before) => before,
+				_ => unreachable!()
+			};
+			return box before.call(req).and_then(move |req| extended.handler.call(req, res));
 		}
 
-		if self.before.is_none() && self.after.is_some() {
-			let after = self.after.clone().unwrap();
-			let handler = self.handler.clone();
-			return box handler.call(req, res).and_then(move |res| after.call(res));
+		if extended.before.is_none() && extended.after.is_some() {
+			let after = match extended.after {
+				Some(ref after) => after,
+				_ => unreachable!()
+			};
+			return box extended.handler.call(req, res).and_then(move |res| after.call(res));
 		}
 
-		if self.before.is_some() && self.after.is_some() {
-			let before = self.before.clone().unwrap();
-			let handler = self.handler.clone();
-			let after = self.after.clone().unwrap();
+		if extended.before.is_some() && extended.after.is_some() {
+			let before =  match extended.before {
+				Some(ref before) => before,
+				_ => unreachable!()
+			};
+			let after =  match extended.after {
+				Some(ref after) => after,
+				_ => unreachable!()
+			};
 			return box before
 				.call(req)
-				.and_then(move |req| handler.call(req, res))
+				.and_then(move |req| extended.handler.call(req, res))
 				.and_then(move |res| after.call(res));
 		}
 
-		return box self.handler.call(req, res);
+		return box extended.handler.call(req, res);
 	}
 }
 
