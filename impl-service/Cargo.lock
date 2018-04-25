@@ -1,6 +1,6 @@
 [[package]]
 name = "impl-service"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "proc-macro2 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",

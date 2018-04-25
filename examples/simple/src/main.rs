@@ -7,7 +7,7 @@ use arc_reactor::{ArcReactor, Router};
 use arc_reactor::prelude::*;
 
 fn getMainRoutes() -> Router {
-	/// Setup and maps routes to actions.
+	// Setup and maps routes to Services.
 	return Router::new()
 		.get("/", RequestHandler)
 }
