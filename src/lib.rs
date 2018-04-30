@@ -76,7 +76,7 @@
 //! ```
 //!
 
-#![feature(proc_macro, box_syntax, generators, fn_must_use, specialization)]
+#![feature(proc_macro, box_syntax, generators, fn_must_use, specialization, proc_macro_non_items)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 

@@ -115,8 +115,9 @@ impl ArcReactor {
 		println!("[arc-reactor]: Spawning threads!");
 
 		let routes = Arc::new(self.handler.expect("This thing needs routes to work!"));
-		let http = Http::new();
-		let acceptor = self.tls_acceptor.clone();
+		let mut http = Http::new();
+		http.sleep_on_errors(true);
+		let acceptor = self.tls_acceptor;
 
 		for _ in 0..self.threads {
 			let listener = listener.try_clone().expect("Could not clone listener!");
@@ -124,7 +125,7 @@ impl ArcReactor {
 			let http = http.clone();
 			let acceptor = acceptor.clone();
 
-			thread::spawn(move || spawn(routes, listener, addr, http, acceptor.clone()));
+			thread::spawn(move || spawn(routes, listener, addr, http, acceptor));
 		}
 
 		println!(

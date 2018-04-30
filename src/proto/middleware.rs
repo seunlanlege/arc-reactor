@@ -192,9 +192,8 @@ impl<T, M> MiddleWare<T> for Box<M>
 #[macro_export]
 macro_rules! mw {
 	($($middlewares:expr), +) => {{
-		use std::sync::Arc;
 		use $crate::MiddleWare;
 		let middleWares: Vec<Box<MiddleWare<_>>> = vec![$(box $middlewares), +];
-     box middleWares as Box<MiddleWare<_>>
+		middleWares
 	}};
 }
