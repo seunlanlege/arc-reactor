@@ -1,26 +1,25 @@
-mod router;
 mod routegroup;
+mod router;
 mod util;
 
 pub use self::routegroup::*;
 pub use self::router::*;
-pub use self::util::*;
+pub(crate) use self::util::*;
 
 #[cfg(test)]
 mod tests {
-	use impl_service::*;
-	use hyper::{Method, StatusCode};
-	use futures::Future;
-	use futures::prelude::async_block;
-	use proto::ArcService;
 	use core::{Request, Response};
+	use futures::prelude::async_block;
+	use futures::Future;
+	use hyper::{Method, StatusCode};
+	use impl_service::*;
+	use proto::ArcService;
 
 	use super::*;
 
 	#[service]
 	fn AsyncService(_req: Request, res: Response) {
-		let res = res
-			.with_status(StatusCode::Ok)
+		let res = res.with_status(StatusCode::Ok)
 			.with_body("Hello World".as_bytes());
 		Result::Ok(res)
 	}
@@ -78,11 +77,30 @@ mod tests {
 
 		let router = Router::new().group(routegroup);
 
-
 		let shouldExist = router.matchRoute("/admin/roles/", &Method::Get);
 		let shouldExist1 = router.matchRoute("/admin/users/profile/", &Method::Get);
 
 		assert!(shouldExist.is_some());
 		assert!(shouldExist1.is_some());
+	}
+
+	#[test]
+	fn it_matches_wildcards() {
+		let subrouter = RouteGroup::new("users").get("/profile", AsyncService);
+
+		let routegroup = RouteGroup::new("admin")
+			.get("/roles", AsyncService)
+			.any("/", AsyncService)
+			.group(subrouter);
+
+		let router = Router::new().group(routegroup);
+
+		let shouldExist = router.matchRoute("/admin/roles/", &Method::Get);
+		let shouldExist1 = router.matchRoute("/admin/users/profile/", &Method::Get);
+		let shouldExist2 = router.matchRoute("/admin/sdkjbksjdjds", &Method::Get);
+
+		assert!(shouldExist.is_some());
+		assert!(shouldExist1.is_some());
+		// assert!(shouldExist2.is_some());
 	}
 }

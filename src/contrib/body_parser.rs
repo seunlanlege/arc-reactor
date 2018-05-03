@@ -4,9 +4,21 @@
 use core::{Request, Response};
 use futures::prelude::{async_block, await};
 use futures::{Future, Stream};
+use hyper;
 use hyper::header::ContentType;
 use impl_service::middleware;
 use proto::MiddleWare;
+use std::ops::Deref;
+
+pub(crate) struct Json(hyper::Chunk);
+
+impl Deref for Json {
+	type Target = hyper::Chunk;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
 
 #[middleware(Request)]
 pub fn bodyParser(mut req: Request) {
@@ -21,8 +33,17 @@ pub fn bodyParser(mut req: Request) {
 		// this unwrap is safe. check request.rs: line 50
 		let body = req.body.take().unwrap();
 
-		let chunk = match await!(body.concat2()) {
-			Ok(chunk) => chunk,
+		let json = match await!(body.concat2()) {
+			Ok(chunk) => {
+				// assert that the chunk length is > 0
+				// otherwise bad request.
+				if chunk.len() == 0 {
+					let error = json!({ "error": "Empty request body" });
+					return Err((400, error).into());
+				}
+
+				Json(chunk)
+			}
 			Err(_) => {
 				let error = json!({
 					"error": "Could not read request payload"
@@ -32,14 +53,7 @@ pub fn bodyParser(mut req: Request) {
 			}
 		};
 
-		// assert that the chunk length is > 0
-		// otherwise bad request.
-		if chunk.len() == 0 {
-			let error = json!({ "error": "Empty request body" });
-			return Err((400, error).into());
-		}
-
-		req.set(chunk);
+		req.set(json);
 	}
 
 	Ok(req)

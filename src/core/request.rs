@@ -1,5 +1,4 @@
 use anymap::AnyMap;
-use hyper::Chunk;
 use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use percent_encoding::percent_decode;
 use recognizer::Params;
@@ -7,6 +6,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
 use std::{fmt, net};
+use contrib::Json;
 use tokio_core::reactor::Handle;
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
@@ -280,7 +280,7 @@ impl Request {
 	where
 		T: DeserializeOwned,
 	{
-		match self.get::<Chunk>() {
+		match self.get::<Json>() {
 			Some(ref slice) => from_slice::<T>(slice).map_err(JsonError::Err),
 			_ => Err(JsonError::None),
 		}

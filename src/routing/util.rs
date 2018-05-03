@@ -1,5 +1,5 @@
 /// Removes any '/' that may exist as the last character in a string.
-pub fn stripTrailingSlash(string: &str) -> &str {
+pub(crate) fn stripTrailingSlash(string: &str) -> &str {
 	let len = string.chars().count();
 	let lastChar = string.get((len - 1)..).unwrap(); // this unwrap makes me uncomfortable
 	if lastChar == "/" {

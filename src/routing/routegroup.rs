@@ -1,7 +1,6 @@
-use routing::stripTrailingSlash;
-#[macro_use]
-use proto::{ArcHandler, ArcService, MiddleWare};
 use core::{Request, Response};
+use proto::{ArcHandler, ArcService, MiddleWare};
+use routing::stripTrailingSlash;
 
 use hyper::Method;
 use std::collections::HashMap;
@@ -13,14 +12,15 @@ pub struct RouteGroup {
 	pub(crate) before: Option<Box<MiddleWare<Request>>>,
 	pub(crate) after: Option<Box<MiddleWare<Response>>>,
 	pub(crate) routes: HashMap<Method, HashMap<String, ArcHandler>>,
+	pub(crate) wildcards: HashMap<String, ArcHandler>,
 }
 
 impl RouteGroup {
 	/// Create a new routegroup with the specified parent.
 	///
 	/// ```rust, ignore
-	///   let routegroup = RouteGroup::new("api");
-	///   routegroup.get("/users", UserService); // this will match "/api/users"
+	/// let routegroup = RouteGroup::new("api");
+	/// routegroup.get("/users", UserService); // this will match "/api/users"
 	/// ```
 	///
 	pub fn new<T: ToString>(parent: T) -> Self {
@@ -29,6 +29,7 @@ impl RouteGroup {
 			routes: HashMap::new(),
 			before: None,
 			after: None,
+			wildcards: HashMap::new(),
 		}
 	}
 
@@ -47,7 +48,9 @@ impl RouteGroup {
 	///  routegroup.group(nestedgroup);
 	/// ```
 	pub fn group(mut self, group: RouteGroup) -> Self {
-		let RouteGroup { routes, .. } = group;
+		let RouteGroup {
+			routes, wildcards, ..
+		} = group;
 		let mut parent = self.parent.clone();
 
 		if parent.starts_with("/") {
@@ -59,15 +62,24 @@ impl RouteGroup {
 				let fullPath = format!("/{}{}", parent, path);
 				let mut handler = ArcHandler {
 					before: self.before.clone(),
-					handler: box handler,
+					handler: Box::new(handler),
 					after: self.after.clone(),
 				};
-				self
-					.routes
+				self.routes
 					.entry(method.clone())
 					.or_insert(HashMap::new())
 					.insert(fullPath, handler);
 			}
+		}
+
+		for (route, handler) in wildcards.into_iter() {
+			let fullPath = format!("/{}{}", parent, route);
+			let mut handler = ArcHandler {
+				before: self.before.clone(),
+				handler: Box::new(handler),
+				after: self.after.clone(),
+			};
+			self.wildcards.insert(fullPath, handler);
 		}
 
 		self
@@ -75,59 +87,316 @@ impl RouteGroup {
 
 	/// Mount a request middleware on this routegroup.
 	///
-	/// Ensure that the request middleware is added before any routes on the route group.
-	/// The middleware only applies to the routes that are added after it has been mounted.
+	/// Ensure that the request middleware is added before any routes on the
+	/// route group. The middleware only applies to the routes that are added
+	/// after it has been mounted.
 	pub fn before<T: 'static + MiddleWare<Request>>(mut self, before: T) -> Self {
-		self.before = Some(box before);
-		
+		self.before = Some(Box::new(before));
+
 		self
 	}
 
 	/// Mount a response middleware on this routegroup.
 	///
-	/// Ensure that the response middleware is added before any routes on the route group.
-	/// The middleware only applies to the routes that are added after it has been mounted.
+	/// Ensure that the response middleware is added before any routes on the
+	/// route group. The middleware only applies to the routes that are added
+	/// after it has been mounted.
 	pub fn after<T: 'static + MiddleWare<Response>>(mut self, after: T) -> Self {
-		self.after = Some(box after);
+		self.after = Some(Box::new(after));
 
 		self
 	}
 
 	/// Add a route and a ServiceHandler for a GET request.
-	pub fn get<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+	pub fn get<S>(self, route: &'static str, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+	{
 		self.route(Method::Get, route, handler)
 	}
 
-	/// Add a route and a ServiceHandler for a POST request.
-	pub fn post<S: ArcService + 'static + Send + Sync>(
+	pub fn get2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Request> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: None,
+		};
+		self.route(Method::Get, route, handler)
+	}
+
+	pub fn get3<S, ReqMW, ResMW>(
 		self,
 		route: &'static str,
+		before: ReqMW,
 		handler: S,
-	) -> Self {
+		after: ResMW,
+	) -> Self
+	where
+		S: ArcService + 'static,
+		ReqMW: MiddleWare<Request> + 'static,
+		ResMW: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
+		self.route(Method::Get, route, handler)
+	}
+
+	pub fn get4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: None,
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
+		self.route(Method::Get, route, handler)
+	}
+
+	/// Add a route and a Service for a POST request.
+	pub fn post<S>(self, route: &'static str, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+	{
 		self.route(Method::Post, route, handler)
 	}
 
-	/// Add a route and a ServiceHandler for a PUT request.
-	pub fn put<S: ArcService + 'static + Send + Sync>(self, route: &'static str, handler: S) -> Self {
+	/// mount a Service as well as a MiddleWare<Request>
+	/// for a POST request
+	pub fn post2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Request> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: None,
+		};
+		self.route(Method::Post, route, handler)
+	}
+
+	/// mount a Service as well as a MiddleWare<Request> and
+	/// MiddleWare<Response> for a POST request
+	pub fn post3<S, ReqMW, ResMW>(
+		self,
+		route: &'static str,
+		before: ReqMW,
+		handler: S,
+		after: ResMW,
+	) -> Self
+	where
+		S: ArcService + 'static,
+		ReqMW: MiddleWare<Request> + 'static,
+		ResMW: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
+		self.route(Method::Post, route, handler)
+	}
+
+	/// mount a Service as well as a MiddleWare<Response>
+	/// for a POST request
+	pub fn post4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: None,
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
+		self.route(Method::Get, route, handler)
+	}
+
+	/// add a route and a ServiceHandler for a put request
+	pub fn put<S>(self, route: &'static str, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+	{
+		self.route(Method::Put, route, handler)
+	}
+
+	pub fn put2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Request> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: None,
+		};
+		self.route(Method::Put, route, handler)
+	}
+
+	pub fn put3<S, ReqMW, ResMW>(
+		self,
+		route: &'static str,
+		before: ReqMW,
+		handler: S,
+		after: ResMW,
+	) -> Self
+	where
+		S: ArcService + 'static,
+		ReqMW: MiddleWare<Request> + 'static,
+		ResMW: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
+		self.route(Method::Put, route, handler)
+	}
+
+	pub fn put4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: None,
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
 		self.route(Method::Put, route, handler)
 	}
 
 	/// Add a route and a ServiceHandler for a PATCH request.
-	pub fn patch<S: ArcService + 'static + Send + Sync>(
-		self,
-		route: &'static str,
-		handler: S,
-	) -> Self {
+	pub fn patch<S>(self, route: &'static str, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+	{
 		self.route(Method::Patch, route, handler)
 	}
 
-	/// Add a route and a ServiceHandler for a DELETE request.
-	pub fn delete<S: ArcService + 'static + Send + Sync>(
+	pub fn patch2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Request> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: None,
+		};
+		self.route(Method::Patch, route, handler)
+	}
+
+	pub fn patch3<S, ReqMW, ResMW>(
 		self,
 		route: &'static str,
+		before: ReqMW,
 		handler: S,
-	) -> Self {
+		after: ResMW,
+	) -> Self
+	where
+		S: ArcService + 'static,
+		ReqMW: MiddleWare<Request> + 'static,
+		ResMW: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
+		self.route(Method::Patch, route, handler)
+	}
+
+	pub fn patch4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: None,
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
+		self.route(Method::Patch, route, handler)
+	}
+
+	/// Add a route and a ServiceHandler for DELETE request.
+	pub fn delete<S>(self, route: &'static str, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+	{
 		self.route(Method::Delete, route, handler)
+	}
+
+	pub fn delete2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Request> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: None,
+		};
+		self.route(Method::Delete, route, handler)
+	}
+
+	pub fn delete3<S, ReqMW, ResMW>(
+		self,
+		route: &'static str,
+		before: ReqMW,
+		handler: S,
+		after: ResMW,
+	) -> Self
+	where
+		S: ArcService + 'static,
+		ReqMW: MiddleWare<Request> + 'static,
+		ResMW: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: Some(Box::new(before)),
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
+		self.route(Method::Delete, route, handler)
+	}
+
+	pub fn delete4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
+	where
+		S: ArcService + 'static,
+		M: MiddleWare<Response> + 'static,
+	{
+		let handler = ArcHandler {
+			before: None,
+			handler: Box::new(handler),
+			after: Some(Box::new(after)),
+		};
+		self.route(Method::Delete, route, handler)
+	}
+
+	pub fn any<S, R>(mut self, route: R, handler: S) -> Self
+	where
+		S: ArcService + 'static + Send + Sync,
+		R: ToString,
+	{
+		let route = route.to_string();
+		let handler = ArcHandler {
+			before: self.before.clone(),
+			handler: Box::new(handler),
+			after: self.after.clone(),
+		};
+
+		self.wildcards.insert(route, handler);
+		self
 	}
 
 	fn route<T: ToString, S: ArcService + 'static + Send + Sync>(
@@ -153,17 +422,16 @@ impl RouteGroup {
 		path = stripTrailingSlash(&path).to_owned();
 		if !path.starts_with("/") && path.len() > 1 {
 			path.insert(0, '/');
-		} 
+		}
 		let fullPath = format!("{}{}", &parent, path);
 
 		let handler = ArcHandler {
 			before: self.before.clone(),
-			handler: box routehandler,
+			handler: Box::new(routehandler),
 			after: self.after.clone(),
 		};
-		
-		self
-			.routes
+
+		self.routes
 			.entry(method)
 			.or_insert(HashMap::new())
 			.insert(fullPath, handler);

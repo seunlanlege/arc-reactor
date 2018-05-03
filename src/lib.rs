@@ -76,7 +76,7 @@
 //! ```
 //!
 
-#![feature(proc_macro, box_syntax, generators, fn_must_use, specialization, proc_macro_non_items)]
+#![feature(proc_macro, generators, fn_must_use, specialization, proc_macro_non_items)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
@@ -104,14 +104,14 @@ pub(crate) mod routing;
 
 pub use contrib::*;
 pub use core::{ArcReactor, JsonError, QueryParseError};
-pub use proto::{ArcHandler, ArcService, MiddleWare};
+pub use proto::{ArcHandler, ArcService, MiddleWare, FutureResponse};
 pub use routing::{RouteGroup, Router};
 
 pub mod prelude {
 	pub use core::{Request, Response};
 	pub use futures;
 	pub use futures::prelude::{async_block, await};
-	pub use futures::{Future, Stream};
+	pub use futures::{Future, Stream, IntoFuture};
 	pub use impl_service::{middleware, service};
 	pub use proto::{ArcHandler, ArcService, MiddleWare};
 }

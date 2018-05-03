@@ -29,7 +29,7 @@ impl Service for RootService {
 			AssertUnwindSafe(ArcService::call(&*self.service, request, Response::new()))
 				.catch_unwind();
 
-		return box responseFuture.then(|result| match result {
+		let responseFuture = responseFuture.then(|result| match result {
 			Ok(response) => match response {
 				Ok(res) => Ok(res.into()),
 				Err(res) => Ok(res.into()),
@@ -38,5 +38,7 @@ impl Service for RootService {
 				Ok(hyper::Response::new().with_status(hyper::StatusCode::InternalServerError))
 			}
 		});
+
+		return Box::new(responseFuture)
 	}
 }

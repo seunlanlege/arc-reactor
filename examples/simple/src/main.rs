@@ -3,13 +3,12 @@
 
 #[macro_use]
 extern crate arc_reactor;
-use arc_reactor::{ArcReactor, Router};
 use arc_reactor::prelude::*;
+use arc_reactor::{ArcReactor, FutureResponse, Router};
 
 fn getMainRoutes() -> Router {
 	// Setup and maps routes to Services.
-	return Router::new()
-		.get("/", RequestHandler)
+	return Router::new().get("/", RequestHandler);
 }
 
 fn main() {
@@ -22,9 +21,12 @@ fn main() {
 		.unwrap()
 }
 
-#[service]
-fn RequestHandler(_request: Request, mut res: Response) {
+// #[service]
+fn RequestHandler(
+	_request: Request,
+	mut res: Response,
+) -> FutureResponse {
 	res.set_body("hello world");
 
-	Ok(res)
+	box Ok(res).into_future()
 }

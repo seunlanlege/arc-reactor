@@ -37,7 +37,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 		
 		impl ArcService for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item = Response, Error = Response>> {
-				box async_block! (#(#block)*)
+				Box::new(async_block! (#(#block)*))
 			}
 		}
 	};
@@ -76,7 +76,7 @@ pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream 
 
 		impl MiddleWare<#attribute> for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item=#attribute, Error=Response>> {
-				box async_block!(#(#block)*)
+				Box::new(async_block!(#(#block)*))
 			}
 		}
 	};

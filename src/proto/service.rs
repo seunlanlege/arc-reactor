@@ -1,11 +1,21 @@
-#![macro_use]
 use core::{Request, Response};
 use futures::Future;
 use proto::MiddleWare;
 
+pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
+
 /// This trait is automatically derived by the #[service] proc_macro.
 pub trait ArcService: ArcServiceClone + Send + Sync {
-	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Response>>;
+	fn call(&self, req: Request, res: Response) -> FutureResponse;
+}
+
+impl<T> ArcService for T
+where
+	T: Fn(Request, Response) -> FutureResponse + Send + Sync + Clone + 'static,
+{
+	fn call(&self, req: Request, res: Response) -> FutureResponse {
+		(self)(req, res)
+	}
 }
 
 pub trait ArcServiceClone {
@@ -17,7 +27,7 @@ where
 	T: 'static + ArcService + Clone,
 {
 	fn clone_service(&self) -> Box<ArcService> {
-		box self.clone()
+		Box::new(self.clone())
 	}
 }
 
@@ -26,8 +36,6 @@ impl Clone for Box<ArcService> {
 		self.clone_service()
 	}
 }
-
-pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
 
 #[derive(Clone)]
 pub struct ArcHandler {
@@ -40,17 +48,17 @@ impl ArcHandler {
 	pub fn new<T: 'static + ArcService>(h: T) -> Self {
 		Self {
 			before: None,
-			handler: box h,
+			handler: Box::new(h),
 			after: None,
 		}
 	}
 
 	pub fn before<T: 'static + MiddleWare<Request>>(&mut self, before: T) {
-		self.before = Some(box before);
+		self.before = Some(Box::new(before));
 	}
 
 	pub fn after<T: 'static + MiddleWare<Response>>(&mut self, after: T) {
-		self.after = Some(box after);
+		self.after = Some(Box::new(after));
 	}
 }
 
@@ -63,9 +71,10 @@ impl ArcService for ArcHandler {
 				Some(ref before) => before,
 				_ => unreachable!(),
 			};
-			return box before
+			let responsefuture = before
 				.call(req)
 				.and_then(move |req| extended.handler.call(req, res));
+			return Box::new(responsefuture);
 		}
 
 		if extended.before.is_none() && extended.after.is_some() {
@@ -73,10 +82,11 @@ impl ArcService for ArcHandler {
 				Some(ref after) => after,
 				_ => unreachable!(),
 			};
-			return box extended
+			let responsefuture = extended
 				.handler
 				.call(req, res)
 				.and_then(move |res| after.call(res));
+			return Box::new(responsefuture);
 		}
 
 		if extended.before.is_some() && extended.after.is_some() {
@@ -88,52 +98,13 @@ impl ArcService for ArcHandler {
 				Some(ref after) => after,
 				_ => unreachable!(),
 			};
-			return box before
+			let responsefuture = before
 				.call(req)
 				.and_then(move |req| extended.handler.call(req, res))
 				.and_then(move |res| after.call(res));
+			return Box::new(responsefuture);
 		}
 
-		return box extended.handler.call(req, res);
+		return extended.handler.call(req, res);
 	}
-}
-
-/// This macro exists for composing a route handler with middlewares in order
-/// to mount them on a router.
-///
-/// ```rust,ignore
-/// fn rootRoutes() -> Router {
-///   let RequestMiddlewares = mw![middleware1, middleware2];
-///   let ResponseMiddlewares = mw![middleware3, middleware4];
-///   Router::new()
-///     .get("/", arc!(RequestMiddlewares, RouteHandler, ResponseMiddlewares)) // set both middlewares and Routehandler
-///     .get("/test", arc!(RequestMiddleware, RouteHandler)) // set only the request middleware and route handler
-///     .get("/test2", arc!(_, RouteHandler, ResponseMiddlewares)) // set only the response middleware and routehandler
-/// }
-/// ```
-#[macro_export]
-macro_rules! arc {
-	($handler:expr) => {{
-		use $crate::ArcHandler;
-		ArcHandler::new($handler)
-		}};
-	($before:expr, $handler:expr) => {{
-		use $crate::ArcHandler;
-		let mut handler = ArcHandler::new($handler);
-		handler.before($before);
-		handler
-		}};
-	($before:expr, $handler:expr, $after:expr) => {{
-		use $crate::ArcHandler;
-		let mut handler = ArcHandler::new($handler);
-		handler.before($before);
-		handler.after($after);
-		handler
-		}};
-	(_, $handler:expr, $after:expr) => {{
-		use $crate::ArcHandler;
-		let mut handler = ArcHandler::new($handler);
-		handler.after($before);
-		handler
-		}};
 }

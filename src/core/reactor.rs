@@ -74,7 +74,7 @@ impl ArcReactor {
 
 	/// Mounts the Router on the ArcReactor.
 	pub fn routes(mut self, routes: Router) -> Self {
-		let routes = box routes as Box<ArcService>;
+		let routes = Box::new(routes) as Box<ArcService>;
 		if let Some(ref mut archandler) = self.handler {
 			archandler.handler = routes;
 		} else {

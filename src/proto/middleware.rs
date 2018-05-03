@@ -103,6 +103,22 @@ pub trait MiddleWare<T: Sized>: MiddleWareClone<T> + Sync + Send {
 	fn call(&self, param: T) -> MiddleWareFuture<T>;
 }
 
+impl<T> MiddleWare<Request> for T
+where T: Fn(Request) -> MiddleWareFuture<Request> + Send + Sync + Clone + 'static
+{
+	fn call(&self, req: Request) -> MiddleWareFuture<Request> {
+		(self)(req)
+	}
+}
+
+impl<T> MiddleWare<Response> for T
+where T: Fn(Response) -> MiddleWareFuture<Response> + Send + Sync + Clone + 'static
+{
+	fn call(&self, res: Response) -> MiddleWareFuture<Response> {
+		(self)(res)
+	}
+}
+
 #[doc(hidden)]
 pub trait MiddleWareClone<D> {
 	fn clone_middleware(&self) -> Box<MiddleWare<D>>;
@@ -113,7 +129,7 @@ impl<T, D> MiddleWareClone<D> for T
 	{
 	
 	fn clone_middleware(&self) -> Box<MiddleWare<D>> {
-		box self.clone()
+		Box::new(self.clone())
 	}
 }
 
@@ -136,8 +152,8 @@ impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 
 		extended
 			.iter()
-			.fold(box Ok(request).into_future(), |request, middleware| {
-				box request.and_then(move |req| middleware.call(req))
+			.fold(Box::new(Ok(request).into_future()), |request, middleware| {
+				Box::new(request.and_then(move |req| middleware.call(req)))
 			})
 	}
 }
@@ -155,16 +171,20 @@ impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 
 		extended
 			.iter()
-			.fold(box Ok(response).into_future(), |response, middleware| {
-				box response.and_then(move |res| middleware.call(res))
+			.fold(Box::new(Ok(response).into_future()), |response, middleware| {
+				Box::new(response.and_then(move |res| middleware.call(res)))
 			})
 	}
 }
 
-impl<T, M> MiddleWare<T> for Box<M> 
-	where M: 'static + MiddleWare<T> + ?Sized + Clone
-	{
-    fn call(&self, item: T) -> MiddleWareFuture<T> {
+impl MiddleWare<Request> for Box<MiddleWare<Request>> {
+    fn call(&self, item: Request) -> MiddleWareFuture<Request> {
+        (**self).call(item)
+    }
+}
+
+impl MiddleWare<Response> for Box<MiddleWare<Response>> {
+    fn call(&self, item: Response) -> MiddleWareFuture<Response> {
         (**self).call(item)
     }
 }
@@ -193,7 +213,7 @@ impl<T, M> MiddleWare<T> for Box<M>
 macro_rules! mw {
 	($($middlewares:expr), +) => {{
 		use $crate::MiddleWare;
-		let middleWares: Vec<Box<MiddleWare<_>>> = vec![$(box $middlewares), +];
+		let middleWares: Vec<Box<MiddleWare<_>>> = vec![$(Box::new($middlewares)), +];
 		middleWares
 	}};
 }
