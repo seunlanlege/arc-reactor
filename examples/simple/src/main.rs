@@ -16,7 +16,7 @@ fn main() {
 	ArcReactor::new()
 		.port(3000) // port to listen on
 		.routes(getMainRoutes())
-		.threads(3)
+		.threads(7)
 		.initiate()
 		.unwrap()
 }

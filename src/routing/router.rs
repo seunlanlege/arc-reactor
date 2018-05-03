@@ -431,7 +431,6 @@ impl Router {
 
 	pub(crate) fn match_wildcard(&self, route: &str) -> Option<&ArcHandler> {
 		for (path, handler) in self.wildcards.iter() {
-			println!("PATH {}, ROUTE {}", path, route);
 			if route.contains(path) {
 				return Some(handler);
 			}
@@ -443,7 +442,6 @@ impl Router {
 impl ArcService for Router {
 	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Response>> {
 		let wildcard = self.match_wildcard(req.path());
-		println!("Match Route ");
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
 			let mut request: Request = req.into();
 			request.set(routeMatch.params);
