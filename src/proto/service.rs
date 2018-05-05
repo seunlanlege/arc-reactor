@@ -64,7 +64,8 @@ impl ArcHandler {
 
 impl ArcService for ArcHandler {
 	fn call(&self, req: Request, res: Response) -> FutureResponse {
-		let extended = unsafe { &*(self as *const ArcHandler) };
+		let ptr = self as *const ArcHandler;
+		let extended = unsafe { &*ptr };
 
 		if extended.before.is_some() && extended.after.is_none() {
 			let before = match extended.before {
@@ -74,7 +75,11 @@ impl ArcService for ArcHandler {
 			let responsefuture = before
 				.call(req)
 				.and_then(move |req| extended.handler.call(req, res));
-			return Box::new(responsefuture);
+			return Box::new(responsefuture.then(move |res| {
+				drop(ptr);
+				drop(extended);
+				res
+			}));
 		}
 
 		if extended.before.is_none() && extended.after.is_some() {
@@ -86,7 +91,11 @@ impl ArcService for ArcHandler {
 				.handler
 				.call(req, res)
 				.and_then(move |res| after.call(res));
-			return Box::new(responsefuture);
+			return Box::new(responsefuture.then(move |res| {
+				drop(ptr);
+				drop(extended);
+				res
+			}));
 		}
 
 		if extended.before.is_some() && extended.after.is_some() {
@@ -102,9 +111,17 @@ impl ArcService for ArcHandler {
 				.call(req)
 				.and_then(move |req| extended.handler.call(req, res))
 				.and_then(move |res| after.call(res));
-			return Box::new(responsefuture);
+			return Box::new(responsefuture.then(move |res| {
+				drop(ptr);
+				drop(extended);
+				res
+			}));
 		}
 
-		return extended.handler.call(req, res);
+		return Box::new(extended.handler.call(req, res).then(move |res| {
+			drop(ptr);
+			drop(extended);
+			res
+		}));
 	}
 }

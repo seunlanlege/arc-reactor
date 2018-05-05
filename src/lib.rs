@@ -97,23 +97,18 @@ extern crate serde_json;
 pub extern crate tokio_core;
 
 #[macro_use]
-pub(crate) mod proto;
-pub(crate) mod contrib;
-pub(crate) mod core;
-pub(crate) mod routing;
-
-pub use contrib::*;
-pub use core::{ArcReactor, JsonError, QueryParseError};
-pub use proto::{ArcHandler, ArcService, MiddleWare, FutureResponse};
-pub use routing::{RouteGroup, Router};
+pub mod proto;
+pub mod contrib;
+pub mod core;
+pub mod routing;
 
 pub mod prelude {
 	pub use core::{Request, Response};
 	pub use futures;
 	pub use futures::prelude::{async_block, await};
-	pub use futures::{Future, Stream, IntoFuture};
+	pub use futures::{Future, IntoFuture, Stream};
 	pub use impl_service::{middleware, service};
-	pub use proto::{ArcHandler, ArcService, MiddleWare};
+	pub use proto::{ArcHandler, ArcService, MiddleWare, FutureResponse};
 }
 
 pub use hyper::header;

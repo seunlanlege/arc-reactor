@@ -104,7 +104,7 @@ pub trait MiddleWare<T: Sized>: MiddleWareClone<T> + Sync + Send {
 }
 
 impl<T> MiddleWare<Request> for T
-where T: Fn(Request) -> MiddleWareFuture<Request> + Send + Sync + Clone + 'static
+	where T: Fn(Request) -> MiddleWareFuture<Request> + Send + Sync + Clone + 'static
 {
 	fn call(&self, req: Request) -> MiddleWareFuture<Request> {
 		(self)(req)
@@ -112,7 +112,7 @@ where T: Fn(Request) -> MiddleWareFuture<Request> + Send + Sync + Clone + 'stati
 }
 
 impl<T> MiddleWare<Response> for T
-where T: Fn(Response) -> MiddleWareFuture<Response> + Send + Sync + Clone + 'static
+	where T: Fn(Response) -> MiddleWareFuture<Response> + Send + Sync + Clone + 'static
 {
 	fn call(&self, res: Response) -> MiddleWareFuture<Response> {
 		(self)(res)
@@ -126,7 +126,7 @@ pub trait MiddleWareClone<D> {
 
 impl<T, D> MiddleWareClone<D> for T 
 	where T: 'static + MiddleWare<D> + Clone 
-	{
+{
 	
 	fn clone_middleware(&self) -> Box<MiddleWare<D>> {
 		Box::new(self.clone())
@@ -146,15 +146,25 @@ impl<T: 'static> Clone for Box<MiddleWare<T>> {
 ///
 impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
-		let extended = unsafe {
-			&*(self as *const Vec<Box<MiddleWare<Request>>>)
-		};
+		let ptr = self as *const Vec<Box<MiddleWare<Request>>>;
+		let extended = unsafe { &*ptr };
 
 		extended
 			.iter()
 			.fold(Box::new(Ok(request).into_future()), |request, middleware| {
-				Box::new(request.and_then(move |req| middleware.call(req)))
-			})
+				Box::new(
+					request.and_then(
+						move |req| middleware.call(req).then(
+							move |req| {
+								drop(ptr);
+								drop(extended);
+								req
+							}
+						)
+					)
+				)
+			}
+		)
 	}
 }
 
@@ -165,15 +175,25 @@ impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 ///
 impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
-		let extended = unsafe {
-			&*(self as *const Vec<Box<MiddleWare<Response>>>)
-		};
+		let ptr = self as *const Vec<Box<MiddleWare<Response>>>;
+		let extended = unsafe { &*ptr };
 
 		extended
 			.iter()
 			.fold(Box::new(Ok(response).into_future()), |response, middleware| {
-				Box::new(response.and_then(move |res| middleware.call(res)))
-			})
+				Box::new(
+					response.and_then(
+						move |res| middleware.call(res).then(
+							move |res| {
+								drop(ptr);
+								drop(extended);
+								res
+							}
+						)
+					)
+				)
+			}
+		)
 	}
 }
 

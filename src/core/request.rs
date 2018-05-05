@@ -1,4 +1,5 @@
 use anymap::AnyMap;
+use contrib::Json;
 use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use percent_encoding::percent_decode;
 use recognizer::Params;
@@ -6,7 +7,6 @@ use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
 use std::{fmt, net};
-use contrib::Json;
 use tokio_core::reactor::Handle;
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
@@ -108,9 +108,9 @@ impl Request {
 	/// 	let handle = req.reactor_handle();
 	///
 	/// 	let future = async_block! {
-	/// 		println!("I'm doing some asynchronous work!");
-	/// 		Ok(()) // async_block must return a type-def of Result
-	/// 		// and the event loop requires a future of type `Future<Item = (), Error = ()>`
+	/// 	println!("I'm doing some asynchronous work!");
+	/// 	Ok(()) // async_block must return a type-def of Result
+	/// 	// and the event loop requires a future of type `Future<Item = (), Error = ()>`
 	/// 		};
 	///
 	/// 	handle.spawn(future);

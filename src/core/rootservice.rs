@@ -39,6 +39,6 @@ impl Service for RootService {
 			}
 		});
 
-		return Box::new(responseFuture)
+		return Box::new(responseFuture);
 	}
 }
