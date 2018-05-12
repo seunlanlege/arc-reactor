@@ -149,8 +149,7 @@ impl ArcReactor {
 
 		let future = listener.incoming().for_each(|stream| {
 			match receivers[count].unbounded_send(stream) {
-				Ok(_) => {}
-				Err(_) => println!("Lol, Error "),
+				_ => {}
 			};
 			count += 1;
 

@@ -1,7 +1,6 @@
 #![feature(proc_macro, box_syntax, generators)]
 #![allow(non_camel_case_types, non_snake_case)]
 
-#[macro_use]
 extern crate arc_reactor;
 use arc_reactor::prelude::*;
 use arc_reactor::{core::ArcReactor, proto::FutureResponse, routing::Router};
