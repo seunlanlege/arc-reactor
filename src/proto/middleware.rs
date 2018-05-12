@@ -2,7 +2,7 @@
 use core::{Request, Response};
 use futures::future::{Future, IntoFuture};
 
-type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
+pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 
 /// The middleware Trait.
 /// In arc-reactor the middleware system is designed to be as intuitive and as simple as possible.
@@ -232,7 +232,7 @@ impl MiddleWare<Response> for Box<MiddleWare<Response>> {
 #[macro_export]
 macro_rules! mw {
 	($($middlewares:expr), +) => {{
-		use $crate::MiddleWare;
+		use $crate::proto::MiddleWare;
 		let middleWares: Vec<Box<MiddleWare<_>>> = vec![$(Box::new($middlewares)), +];
 		middleWares
 	}};

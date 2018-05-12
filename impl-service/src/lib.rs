@@ -32,7 +32,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let span = Span::call_site();
 
 	let output = quote_spanned! {span=>
-		#[derive(Clone)]
+		#[derive(Clone, Debug)]
 		pub struct #ident;
 		
 		impl ArcService for #ident {
@@ -71,7 +71,7 @@ pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream 
 	let span = Span::call_site();
 
 	let output = quote_spanned! {span=>
-		#[derive(Clone)]
+		#[derive(Clone, Debug)]
 		pub struct #ident;
 
 		impl MiddleWare<#attribute> for #ident {

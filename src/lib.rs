@@ -83,6 +83,7 @@
 extern crate anymap;
 pub extern crate futures_await as futures;
 pub extern crate hyper;
+#[cfg(not(feature = "stable"))]
 extern crate impl_service;
 pub extern crate native_tls;
 extern crate num_cpus;
@@ -107,8 +108,9 @@ pub mod prelude {
 	pub use futures;
 	pub use futures::prelude::{async_block, await};
 	pub use futures::{Future, IntoFuture, Stream};
+	#[cfg(not(feature = "stable"))]
 	pub use impl_service::{middleware, service};
-	pub use proto::{ArcHandler, ArcService, MiddleWare, FutureResponse};
+	pub use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare};
 }
 
 pub use hyper::header;
