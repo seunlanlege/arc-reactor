@@ -1,9 +1,9 @@
-#![feature(proc_macro, box_syntax, generators)]
-#![allow(non_camel_case_types, non_snake_case)]
+#![feature(proc_macro, box_syntax, generators, proc_macro_non_items)]
+#![allow(non_camel_case_types, non_snake_case, )]
 
 extern crate arc_reactor;
 use arc_reactor::prelude::*;
-use arc_reactor::{core::ArcReactor, proto::FutureResponse, routing::Router};
+use arc_reactor::{core::ArcReactor, proto::FutureResponse, routing::Router, contrib::StaticFileServer};
 
 fn getMainRoutes() -> Router {
 	// Setup and maps routes to Services.
@@ -15,13 +15,14 @@ fn main() {
 	ArcReactor::new()
 		.port(3000) // port to listen on
 		.routes(getMainRoutes())
+		.before(StaticFileServer { root: "public" })		
 		.initiate()
 		.unwrap()
 }
 
-// #[service]
+#[service]
 fn RequestHandler(_request: Request, mut res: Response) -> FutureResponse {
 	res.set_body("hello world");
 
-	box Ok(res).into_future()
+	Ok(res)
 }

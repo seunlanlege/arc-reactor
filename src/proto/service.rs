@@ -1,18 +1,19 @@
 use core::{Request, Response};
 use futures::Future;
 use proto::MiddleWare;
+use std::fmt;
 
 pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
 
 /// This trait is automatically derived by the #[service] proc_macro.
-pub trait ArcService: ArcServiceClone + Send + Sync {
+pub trait ArcService: ArcServiceClone + Send + Sync + fmt::Debug {
 	fn call(&self, req: Request, res: Response) -> FutureResponse;
 }
 
 #[cfg(feature = "stable")]
 impl<T> ArcService for T
 where
-	T: Fn(Request, Response) -> FutureResponse + Send + Sync + Clone + 'static,
+	T: Fn(Request, Response) -> FutureResponse + Send + Sync + Clone + fmt::Debug + 'static,
 {
 	fn call(&self, req: Request, res: Response) -> FutureResponse {
 		(self)(req, res)
@@ -25,7 +26,7 @@ pub trait ArcServiceClone {
 
 impl<T> ArcServiceClone for T
 where
-	T: 'static + ArcService + Clone,
+	T: 'static + ArcService + fmt::Debug + Clone,
 {
 	fn clone_service(&self) -> Box<ArcService> {
 		Box::new(self.clone())
@@ -43,6 +44,16 @@ pub struct ArcHandler {
 	pub before: Option<Box<MiddleWare<Request>>>,
 	pub handler: Box<ArcService>,
 	pub after: Option<Box<MiddleWare<Response>>>,
+}
+
+impl fmt::Debug for ArcHandler {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ArcHandler")
+            .field("before", &self.before)
+            .field("handler", &self.handler)
+            .field("after", &self.after)
+            .finish()
+    }
 }
 
 impl ArcHandler {
@@ -65,6 +76,7 @@ impl ArcHandler {
 
 impl ArcService for ArcHandler {
 	fn call(&self, req: Request, res: Response) -> FutureResponse {
+		println!("{:#?}", self);
 		let ptr = self as *const ArcHandler;
 		let extended = unsafe { &*ptr };
 

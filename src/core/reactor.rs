@@ -1,10 +1,12 @@
 use super::rootservice::RootService;
+use super::{Request, Response};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver};
 use futures::{Future, Stream};
-use hyper::server::Http;
 use hyper;
+use hyper::server::Http;
 use native_tls::TlsAcceptor;
 use num_cpus;
+use proto::MiddleWare;
 use proto::{ArcHandler, ArcService};
 use routing::Router;
 use std::io;
@@ -90,6 +92,28 @@ impl ArcReactor {
 		self
 	}
 
+	pub fn before<M>(mut self, before: M) -> Self
+	where
+		M: MiddleWare<Request> + 'static,
+	{
+		if let Some(ref mut archandler) = self.handler {
+			archandler.before = Some(Box::new(before));
+		}
+
+		self
+	}
+
+	pub fn after<M>(mut self, after: M) -> Self
+	where
+		M: MiddleWare<Response> + 'static,
+	{
+		if let Some(ref mut archandler) = self.handler {
+			archandler.after = Some(Box::new(after));
+		}
+
+		self
+	}
+
 	/// Binds the listener and blocks the main thread while listening for
 	/// incoming connections.
 	///
@@ -131,11 +155,10 @@ impl ArcReactor {
 		for i in 0..threads {
 			let (tx, rx) = unbounded::<(TcpStream, SocketAddr)>();
 			receivers.push(tx);
-			let acceptor = acceptor.clone();			
-			let handler = handler.clone();			
+			let acceptor = acceptor.clone();
+			let handler = handler.clone();
 
-			let reactor = thread::Builder::new()
-                  .name(format!("Reactor {}", i));
+			let reactor = thread::Builder::new().name(format!("Reactor {}", i));
 
 			reactor.spawn(move || spawn(handler, rx, acceptor)).unwrap();
 		}

@@ -88,9 +88,9 @@ extern crate impl_service;
 pub extern crate native_tls;
 extern crate num_cpus;
 extern crate percent_encoding;
-extern crate route_recognizer as recognizer;
 extern crate serde_qs;
 extern crate tokio_tls;
+extern crate tokio;
 
 extern crate serde;
 #[macro_use]

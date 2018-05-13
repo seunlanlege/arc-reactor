@@ -2,7 +2,7 @@ use anymap::AnyMap;
 use contrib::Json;
 use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use percent_encoding::percent_decode;
-use recognizer::Params;
+use routing::recognizer::Params;
 use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};

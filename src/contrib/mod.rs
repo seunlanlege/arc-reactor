@@ -1,7 +1,9 @@
 //! Utilities that make working with arc reactor easier.
 
-mod body_parser;
-mod fakereactor;
+mod bodyParser;
+mod fakeReactor;
+mod staticFileServer;
 
-pub use self::body_parser::*;
-pub use self::fakereactor::*;
+pub use self::bodyParser::*;
+pub use self::fakeReactor::*;
+pub use self::staticFileServer::*;

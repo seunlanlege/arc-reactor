@@ -24,6 +24,7 @@ serde = "1.0"
 percent-encoding = "1.0.1"
 tokio-tls = "0.1"
 native-tls = "0.1"
+tokio="0.1"
 
 [features]
 default = ["impl-service"]

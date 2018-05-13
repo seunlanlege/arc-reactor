@@ -1,6 +1,7 @@
 mod routegroup;
 mod router;
 mod util;
+pub mod recognizer;
 
 pub use self::routegroup::*;
 pub use self::router::*;

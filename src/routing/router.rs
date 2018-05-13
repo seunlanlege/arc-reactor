@@ -2,9 +2,10 @@ use core::{Request, Response};
 use futures::{Future, IntoFuture};
 use hyper::{Method, StatusCode};
 use proto::{ArcHandler, ArcService, MiddleWare};
-use recognizer::{Match, Router as Recognizer};
+use super::recognizer::{Match, Router as Recognizer};
 use routing::{stripTrailingSlash, RouteGroup};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
+
 
 /// The main router of you application that is supplied to the ArcReactor.
 ///
@@ -16,6 +17,17 @@ pub struct Router {
 	pub(crate) notFound: Option<Box<ArcService>>,
 	pub(crate) wildcards: HashMap<String, ArcHandler>,
 }
+
+impl fmt::Debug for Router {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Router")
+            .field("before", &self.before)
+            .field("handler", &self.routes)
+            .field("after", &self.after)
+            .finish()
+    }
+}
+
 
 impl Router {
 	/// Construct a new Router.
