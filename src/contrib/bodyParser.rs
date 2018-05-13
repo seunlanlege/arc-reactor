@@ -2,10 +2,11 @@
 //! Note that if there are any errors in parsing the json
 //! it will return an error response.
 use core::Request;
-use futures::prelude::{async_block, await};
-use futures::Stream;
-use hyper;
-use hyper::header::ContentType;
+use futures::{
+	prelude::{async_block, await},
+	Stream,
+};
+use hyper::{self, header::ContentType};
 use proto::{MiddleWare, MiddleWareFuture};
 use std::ops::Deref;
 

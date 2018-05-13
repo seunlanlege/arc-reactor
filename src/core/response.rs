@@ -1,6 +1,10 @@
-use hyper;
-use hyper::header::{Header, Headers, Location};
-use hyper::{Body, HttpVersion, StatusCode};
+use hyper::{
+	self,
+	header::{Header, Headers, Location},
+	Body,
+	HttpVersion,
+	StatusCode,
+};
 
 #[derive(Debug)]
 pub struct Response {

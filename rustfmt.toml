@@ -3,3 +3,7 @@ tab_spaces = 4
 use_field_init_shorthand = true
 wrap_comments = true
 normalize_comments = true
+imports_indent = "block"
+imports_layout = "HorizontalVertical"
+merge_imports = true
+force_multiline_blocks = true

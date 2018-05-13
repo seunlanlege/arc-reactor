@@ -40,8 +40,7 @@
 //! extern crate arc_reactor;
 //! #[macro_use]
 //! extern crate serde_json;
-//! use arc_reactor::prelude::*;
-//! use arc_reactor::{ArcReactor, Router, StatusCode};
+//! use arc_reactor::{prelude::*, ArcReactor, Router, StatusCode};
 //!
 //! fn main() {
 //! 	ArcReactor::new()
@@ -81,6 +80,7 @@
 #![allow(non_snake_case)]
 
 extern crate anymap;
+#[macro_use]
 pub extern crate futures_await as futures;
 pub extern crate hyper;
 #[cfg(not(feature = "stable"))]
@@ -89,9 +89,10 @@ pub extern crate native_tls;
 extern crate num_cpus;
 extern crate percent_encoding;
 extern crate serde_qs;
-extern crate tokio_tls;
 extern crate tokio;
-
+extern crate tokio_tls;
+#[macro_use]
+extern crate lazy_static;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -105,13 +106,16 @@ pub mod routing;
 
 pub mod prelude {
 	pub use core::{Request, Response};
-	pub use futures;
-	pub use futures::prelude::{async_block, await};
-	pub use futures::{Future, IntoFuture, Stream};
+	pub use futures::{
+		self,
+		prelude::{async_block, await},
+		Future,
+		IntoFuture,
+		Stream,
+	};
 	#[cfg(not(feature = "stable"))]
 	pub use impl_service::{middleware, service};
 	pub use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare};
 }
 
-pub use hyper::header;
-pub use hyper::StatusCode;
+pub use hyper::{header, StatusCode};

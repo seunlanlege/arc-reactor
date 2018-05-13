@@ -1,12 +1,9 @@
 use super::{Request, Response};
 use futures::Future;
-use hyper;
-use hyper::server::Service;
-use proto::ArcService;
-use std::net::SocketAddr;
-use std::{panic::AssertUnwindSafe};
+use hyper::{self, server::Service};
+use proto::{ArcHandler, ArcService};
+use std::{net::SocketAddr, panic::AssertUnwindSafe};
 use tokio_core::reactor::Handle;
-use proto::ArcHandler;
 // The only reason this exists is so I can pass the
 // clientIp to the ArcService.
 pub(crate) struct RootService {
@@ -28,15 +25,18 @@ impl Service for RootService {
 		let responseFuture =
 			AssertUnwindSafe(self.service.call(request, Response::new())).catch_unwind();
 
-		let responseFuture = responseFuture.then(|result| match result {
-			Ok(response) => match response {
-				Ok(res) => Ok(res.into()),
-				Err(res) => Ok(res.into()),
-			},
-			Err(_) => {
-				Ok(hyper::Response::new().with_status(hyper::StatusCode::InternalServerError))
-			}
-		});
+		let responseFuture =
+			responseFuture.then(|result| {
+				match result {
+					Ok(response) => {
+						match response {
+							Ok(res) => Ok(res.into()),
+							Err(res) => Ok(res.into()),
+						}
+					}
+					Err(_) => Ok(hyper::Response::new().with_status(hyper::StatusCode::InternalServerError)),
+				}
+			});
 
 		return Box::new(responseFuture);
 	}

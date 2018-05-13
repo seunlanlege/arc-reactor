@@ -24,8 +24,8 @@ serde = "1.0"
 percent-encoding = "1.0.1"
 tokio-tls = "0.1"
 native-tls = "0.1"
-tokio="0.1"
-
+tokio="0.1.6"
+lazy_static = "1.0"
 [features]
 default = ["impl-service"]
 stable = []

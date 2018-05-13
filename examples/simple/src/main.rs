@@ -3,7 +3,8 @@
 
 extern crate arc_reactor;
 use arc_reactor::prelude::*;
-use arc_reactor::{core::ArcReactor, proto::FutureResponse, routing::Router, contrib::StaticFileServer};
+use std::path::PathBuf;
+use arc_reactor::{core::ArcReactor, routing::Router, contrib::StaticFileServer};
 
 fn getMainRoutes() -> Router {
 	// Setup and maps routes to Services.
@@ -12,10 +13,12 @@ fn getMainRoutes() -> Router {
 
 fn main() {
 	// Start the reactor and try visiting localhost:3000/your-name
+	let mut public = PathBuf::new();
+	public.push("/home/seun/Documents");
 	ArcReactor::new()
 		.port(3000) // port to listen on
 		.routes(getMainRoutes())
-		.before(StaticFileServer { root: "public" })		
+		.before(StaticFileServer::new("public", public))		
 		.initiate()
 		.unwrap()
 }

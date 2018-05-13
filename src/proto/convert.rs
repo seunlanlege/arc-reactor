@@ -1,6 +1,5 @@
 use core::{res, JsonError, QueryParseError, Request, Response};
-use hyper::header::ContentType;
-use hyper::{self, StatusCode};
+use hyper::{self, header::ContentType, StatusCode};
 use serde::ser::Serialize;
 use serde_json::to_string;
 

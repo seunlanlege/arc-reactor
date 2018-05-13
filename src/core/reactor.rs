@@ -1,20 +1,19 @@
-use super::rootservice::RootService;
-use super::{Request, Response};
-use futures::sync::mpsc::{unbounded, UnboundedReceiver};
-use futures::{Future, Stream};
-use hyper;
-use hyper::server::Http;
+use super::{rootservice::RootService, Request, Response};
+use futures::{
+	sync::mpsc::{unbounded, UnboundedReceiver},
+	Future,
+	Stream,
+};
+use hyper::{self, server::Http};
 use native_tls::TlsAcceptor;
 use num_cpus;
-use proto::MiddleWare;
-use proto::{ArcHandler, ArcService};
+use proto::{ArcHandler, ArcService, MiddleWare};
 use routing::Router;
-use std::io;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::thread;
-use tokio_core::net::{TcpListener, TcpStream};
-use tokio_core::reactor::Core;
+use std::{io, net::SocketAddr, sync::Arc, thread};
+use tokio_core::{
+	net::{TcpListener, TcpStream},
+	reactor::Core,
+};
 use tokio_tls::TlsAcceptorExt;
 
 /// The main server, the ArcReactor is where you mount your routes, middlewares

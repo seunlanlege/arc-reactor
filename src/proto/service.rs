@@ -76,7 +76,6 @@ impl ArcHandler {
 
 impl ArcService for ArcHandler {
 	fn call(&self, req: Request, res: Response) -> FutureResponse {
-		println!("{:#?}", self);
 		let ptr = self as *const ArcHandler;
 		let extended = unsafe { &*ptr };
 

@@ -121,8 +121,7 @@ impl FakeReactor {
 mod tests {
 	use super::*;
 	use core::{Request, Response};
-	use futures::prelude::async_block;
-	use futures::{Future, Stream};
+	use futures::{prelude::async_block, Future, Stream};
 	use hyper::StatusCode;
 	use impl_service::*;
 	use proto::ArcService;
