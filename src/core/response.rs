@@ -1,14 +1,28 @@
+use core::{FileMeta, FileStream};
+use futures::{future::lazy, prelude::*, sync::oneshot::channel};
 use hyper::{
 	self,
-	header::{Header, Headers, Location},
+	header::{ContentLength, ContentType, Header, Headers, Location, ContentEncoding, Encoding},
 	Body,
 	HttpVersion,
 	StatusCode,
 };
+use std::path::Path;
+use tokio::{fs::File, io::ErrorKind};
+use tokio_core::reactor::Handle;
+use POOL;
 
 #[derive(Debug)]
 pub struct Response {
 	pub(crate) inner: hyper::Response,
+	pub(crate) handle: Option<Handle>,
+}
+
+#[derive(Debug)]
+pub enum State {
+	Len(u64),
+	NotFound,
+	__Exhaustive
 }
 
 impl Response {
@@ -38,6 +52,16 @@ impl Response {
 	#[inline]
 	pub fn status(&self) -> StatusCode {
 		self.inner.status()
+	}
+
+	pub fn reactor_handle(&self) -> Handle {
+		self.handle.clone().unwrap()
+	}
+
+	pub fn with_handle(mut self, handle: Handle) -> Self {
+		self.handle = Some(handle);
+
+		self
 	}
 
 	/// Set the `StatusCode` for this response.
@@ -89,8 +113,85 @@ impl Response {
 
 	/// Set the body.
 	#[inline]
-	pub fn set_body<T: Into<Body>>(&mut self, body: T) {
+	pub fn text<T: Into<String>>(&mut self, body: T) {
+		let body = body.into();
+		self.inner
+			.headers_mut()
+			.set(ContentLength(body.len() as u64));
 		self.inner.set_body(body);
+		self.inner.headers_mut().set(ContentType::plaintext());
+	}
+
+	#[inline]
+	pub fn with_text<T: Into<String>>(mut self, body: T) -> Self {
+		self.text(body);
+
+		self
+	}
+
+	pub fn with_file<P>(mut self, pathbuf: P) -> impl Future<Item = Response, Error = Response>
+	where
+		P: AsRef<Path> + Send + 'static,
+	{
+		let (sender, recv) = Body::pair();
+		let (snd, rec) = channel::<State>();
+
+		// this future is spawned on the tokio ThreadPool executor
+		let future = lazy(|| {
+			File::open(pathbuf)
+				.and_then(FileMeta)
+				.then(|result| {
+					match result {
+						Ok((file, meta)) => {
+							snd.send(State::Len(meta.len())).unwrap();
+							let stream = FileStream::new(file);
+							let future = stream
+								.map(Ok)
+								.map_err(|err| println!("whoops filestream error occured {}", err))
+								.forward(sender.sink_map_err(|err| {
+									println!("whoops filestream error occured {}", err)
+								}))
+								.then(|_| Ok(()));
+
+							Ok(future)
+						}
+						Err(err) => {
+							println!("Aha! Error! {}", err);
+							match err.kind() {
+								ErrorKind::NotFound => snd.send(State::NotFound).unwrap(),
+								_ => snd.send(State::__Exhaustive).unwrap()
+							};
+							Err(())
+						}
+					}
+				})
+				.and_then(|f| f)
+		});
+
+		// attempt to spawn future on tokio threadpool
+		POOL.sender().spawn(future).unwrap();
+		rec.then(move |len| {
+			match len {
+				Ok(state) => {
+					match state {
+						State::Len(len) => {
+							self.headers_mut().set(ContentLength(len));
+							// self.headers_mut().set(ContentEncoding(vec![Encoding::Gzip]));
+							self.set_body(recv);
+						}
+						State::NotFound => {
+							self.set_status(StatusCode::NotFound);
+						}
+						State::__Exhaustive => {
+							self.set_status(StatusCode::InternalServerError)
+						}
+					}
+				}
+				_ => {}
+			}
+
+			Ok(self)
+		})
 	}
 
 	/// Set the body and move the Response.
@@ -100,6 +201,11 @@ impl Response {
 	pub fn with_body<T: Into<Body>>(mut self, body: T) -> Self {
 		self.inner = self.inner.with_body(body);
 		self
+	}
+
+	#[inline]
+	pub fn set_body<T: Into<Body>>(&mut self, body: T) {
+		self.inner.set_body(body);
 	}
 
 	/// Read the body.
@@ -172,6 +278,7 @@ impl Default for Response {
 	fn default() -> Response {
 		Response {
 			inner: hyper::Response::default(),
+			handle: None,
 		}
 	}
 }

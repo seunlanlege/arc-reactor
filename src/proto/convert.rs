@@ -1,7 +1,11 @@
 use core::{res, JsonError, QueryParseError, Request, Response};
-use hyper::{self, header::ContentType, StatusCode};
+use hyper::{
+	self,
+	header::{ContentLength, ContentType},
+	StatusCode,
+};
 use serde::ser::Serialize;
-use serde_json::to_string;
+use serde_json::to_vec;
 
 /// Converts a u16 value into equivalent status code of type ```StatusCode```.
 ///
@@ -17,19 +21,23 @@ fn toStatusCode(number: u16) -> StatusCode {
 
 impl<T: Serialize> From<(u16, T)> for Response {
 	fn from(tuple: (u16, T)) -> Response {
+		let body = to_vec(&tuple.1).unwrap();
 		res()
+			.with_header(ContentLength(body.len() as u64))
 			.with_header(ContentType::json())
 			.with_status(toStatusCode(tuple.0))
-			.with_body(to_string(&tuple.1).unwrap())
+			.with_body(body)
 	}
 }
 
 impl<T: Serialize> From<T> for Response {
 	default fn from(json: T) -> Response {
+		let body = to_vec(&json).unwrap();
 		res()
+			.with_header(ContentLength(body.len() as u64))
 			.with_header(ContentType::json())
 			.with_status(toStatusCode(200))
-			.with_body(to_string(&json).unwrap())
+			.with_body(body)
 	}
 }
 
@@ -56,17 +64,23 @@ impl From<JsonError> for Response {
 				let json = json!({
 					"error": "Json was empty",
 				});
+				let body = to_vec(&json).unwrap();
+
 				res()
+					.with_header(ContentLength(body.len() as u64))
 					.with_header(ContentType::json())
-					.with_body(to_string(&json).unwrap())
+					.with_body(body)
 			}
 			JsonError::Err(e) => {
 				let json = json!({
 					"error": format!("{}", e),
 				});
+				let body = to_vec(&json).unwrap();
+
 				res()
+					.with_header(ContentLength(body.len() as u64))
 					.with_header(ContentType::json())
-					.with_body(to_string(&json).unwrap())
+					.with_body(body)
 			}
 		}
 	}
@@ -79,18 +93,24 @@ impl From<QueryParseError> for Response {
 				let json = json!({
 					"error": "query data was empty",
 				});
+				let body = to_vec(&json).unwrap();
+
 				res()
+					.with_header(ContentLength(body.len() as u64))
 					.with_header(ContentType::json())
-					.with_body(to_string(&json).unwrap())
+					.with_body(body)
 			}
 
 			QueryParseError::Err(err) => {
 				let json = json!({
 					"error": format!("{}", err),
 				});
+				let body = to_vec(&json).unwrap();
+
 				res()
+					.with_header(ContentLength(body.len() as u64))
 					.with_header(ContentType::json())
-					.with_body(to_string(&json).unwrap())
+					.with_body(body)
 			}
 		}
 	}

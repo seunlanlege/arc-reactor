@@ -25,7 +25,8 @@ fn main() {
 
 #[service]
 fn RequestHandler(_request: Request, mut res: Response) -> FutureResponse {
-	res.set_body("hello world");
+	res.text("hello world");
+	
 
 	Ok(res)
 }

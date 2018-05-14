@@ -25,6 +25,7 @@ percent-encoding = "1.0.1"
 tokio-tls = "0.1"
 native-tls = "0.1"
 tokio="0.1.6"
+flate2="1.0"
 lazy_static = "1.0"
 [features]
 default = ["impl-service"]

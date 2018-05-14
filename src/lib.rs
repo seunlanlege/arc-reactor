@@ -96,6 +96,7 @@ extern crate lazy_static;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
+extern crate flate2;
 pub extern crate tokio_core;
 
 #[macro_use]
@@ -103,6 +104,11 @@ pub mod proto;
 pub mod contrib;
 pub mod core;
 pub mod routing;
+
+use tokio::executor::thread_pool::ThreadPool;
+lazy_static! {
+	pub static ref POOL: ThreadPool = { ThreadPool::new() };
+}
 
 pub mod prelude {
 	pub use core::{Request, Response};
