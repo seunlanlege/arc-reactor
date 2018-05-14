@@ -2,7 +2,7 @@ use core::{FileMeta, FileStream};
 use futures::{future::lazy, prelude::*, sync::oneshot::channel};
 use hyper::{
 	self,
-	header::{ContentLength, ContentType, Header, Headers, Location, ContentEncoding, Encoding},
+	header::{ContentLength, ContentType, Header, Headers, Location},
 	Body,
 	HttpVersion,
 	StatusCode,

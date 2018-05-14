@@ -1,11 +1,10 @@
 use std::collections::HashSet;
 use std::u64;
 use self::CharacterClass::{Ascii, ValidChars, InvalidChars};
-use std::fmt;
 #[cfg(test)] use test;
 #[cfg(test)] use std::collections::BTreeSet;
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct CharSet {
     low_mask: u64,
     high_mask: u64,
@@ -46,7 +45,7 @@ impl CharSet {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum CharacterClass {
     Ascii(u64, u64, bool),
     ValidChars(CharSet),
@@ -151,8 +150,8 @@ impl Thread {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct State<T: fmt::Debug> {
+#[derive(Clone)]
+pub struct State<T> {
     pub index: usize,
     pub chars: CharacterClass,
     pub next_states: Vec<usize>,
@@ -162,13 +161,13 @@ pub struct State<T: fmt::Debug> {
     pub metadata: Option<T>
 }
 
-impl<T: fmt::Debug> PartialEq for State<T> {
+impl<T> PartialEq for State<T> {
     fn eq(&self, other: &State<T>) -> bool {
         self.index == other.index
     }
 }
 
-impl<T: fmt::Debug> State<T> {
+impl<T> State<T> {
     pub fn new(index: usize, chars: CharacterClass) -> State<T> {
         State {
             index: index,
@@ -193,15 +192,15 @@ impl<'a> Match<'a> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct NFA<T: fmt::Debug> {
+#[derive(Clone)]
+pub struct NFA<T> {
     states: Vec<State<T>>,
     start_capture: Vec<bool>,
     end_capture: Vec<bool>,
     acceptance: Vec<bool>,
 }
 
-impl<T: fmt::Debug> NFA<T> {
+impl<T> NFA<T> {
     pub fn new() -> NFA<T> {
         let root = State::new(0, CharacterClass::any());
         NFA {
@@ -361,14 +360,14 @@ impl<T: fmt::Debug> NFA<T> {
 }
 
 #[inline]
-fn fork_thread<T: fmt::Debug>(thread: &Thread, state: &State<T>) -> Thread {
+fn fork_thread<T>(thread: &Thread, state: &State<T>) -> Thread {
     let mut new_trace = thread.clone();
     new_trace.state = state.index;
     new_trace
 }
 
 #[inline]
-fn capture<T: fmt::Debug>(nfa: &NFA<T>, thread: &mut Thread, current_state: usize,
+fn capture<T>(nfa: &NFA<T>, thread: &mut Thread, current_state: usize,
               next_state: usize, pos: usize) {
     if thread.capture_begin == None && nfa.start_capture[next_state] {
         thread.start_capture(pos);

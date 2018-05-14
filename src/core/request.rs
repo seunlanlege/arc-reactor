@@ -267,8 +267,11 @@ impl Request {
 	/// Move the request body. note that this takes ownership of `self`, use
 	/// wisely.
 	#[inline]
-	pub fn body(self) -> Body {
-		self.body.unwrap_or_default()
+	pub fn body(&mut self) -> Body {
+		match self.body.take() {
+			Some(body) => body,
+			None => Default::default()
+		}
 	}
 
 	/// Serialize the request's json value into a struct.

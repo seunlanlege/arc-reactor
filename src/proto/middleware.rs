@@ -1,6 +1,5 @@
 #![macro_use]
 use core::{Request, Response};
-use std::fmt;
 use futures::future::{Future, IntoFuture};
 
 pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
@@ -100,12 +99,12 @@ pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 /// Instead you'll use the middleware proc_macro
 /// [`#[middleware]`](../impl_service/fn.middleware.html) to decorate your functions. The proc_macro
 /// makes `MiddleWare`'s aasynchronous by default. so you can `await!()` on futures.
-pub trait MiddleWare<T: Sized>: MiddleWareClone<T> + Sync + Send + fmt::Debug {
+pub trait MiddleWare<T: Sized>: MiddleWareClone<T> + Sync + Send {
 	fn call(&self, param: T) -> MiddleWareFuture<T>;
 }
 
 impl<T> MiddleWare<Request> for T
-	where T: Fn(Request) -> MiddleWareFuture<Request> + Send + Sync + Clone + fmt::Debug + 'static
+	where T: Fn(Request) -> MiddleWareFuture<Request> + Send + Sync + Clone + 'static
 {
 	fn call(&self, req: Request) -> MiddleWareFuture<Request> {
 		(self)(req)
@@ -113,7 +112,7 @@ impl<T> MiddleWare<Request> for T
 }
 
 impl<T> MiddleWare<Response> for T
-	where T: Fn(Response) -> MiddleWareFuture<Response> + Send + Sync + Clone + fmt::Debug + 'static
+	where T: Fn(Response) -> MiddleWareFuture<Response> + Send + Sync + Clone + 'static
 {
 	fn call(&self, res: Response) -> MiddleWareFuture<Response> {
 		(self)(res)
@@ -158,7 +157,6 @@ impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 						move |req| middleware.call(req).then(
 							move |req| {
 								drop(ptr);
-								drop(extended);
 								req
 							}
 						)
@@ -187,7 +185,6 @@ impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 						move |res| middleware.call(res).then(
 							move |res| {
 								drop(ptr);
-								drop(extended);
 								res
 							}
 						)

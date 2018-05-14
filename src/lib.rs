@@ -79,8 +79,9 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-extern crate anymap;
+pub extern crate anymap;
 #[macro_use]
+#[macro_export]
 pub extern crate futures_await as futures;
 pub extern crate hyper;
 #[cfg(not(feature = "stable"))]
@@ -89,7 +90,7 @@ pub extern crate native_tls;
 extern crate num_cpus;
 extern crate percent_encoding;
 extern crate serde_qs;
-extern crate tokio;
+pub extern crate tokio;
 extern crate tokio_tls;
 #[macro_use]
 extern crate lazy_static;
@@ -97,6 +98,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_json;
 extern crate flate2;
+pub extern crate bytes;
 pub extern crate tokio_core;
 
 #[macro_use]
@@ -109,6 +111,8 @@ use tokio::executor::thread_pool::ThreadPool;
 lazy_static! {
 	pub static ref POOL: ThreadPool = { ThreadPool::new() };
 }
+
+pub use futures::*;
 
 pub mod prelude {
 	pub use core::{Request, Response};

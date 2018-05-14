@@ -4,7 +4,7 @@ use hyper::{Method, StatusCode};
 use proto::{ArcHandler, ArcService, MiddleWare};
 use super::recognizer::{Match, Router as Recognizer};
 use routing::{stripTrailingSlash, RouteGroup};
-use std::{collections::HashMap, fmt};
+use std::{collections::HashMap};
 
 
 /// The main router of you application that is supplied to the ArcReactor.
@@ -15,19 +15,7 @@ pub struct Router {
 	pub(crate) before: Option<Box<MiddleWare<Request>>>,
 	pub(crate) after: Option<Box<MiddleWare<Response>>>,
 	pub(crate) notFound: Option<Box<ArcService>>,
-	pub(crate) wildcards: HashMap<String, ArcHandler>,
 }
-
-impl fmt::Debug for Router {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Router")
-            .field("before", &self.before)
-            .field("handler", &self.routes)
-            .field("after", &self.after)
-            .finish()
-    }
-}
-
 
 impl Router {
 	/// Construct a new Router.
@@ -37,7 +25,6 @@ impl Router {
 			routes: HashMap::new(),
 			after: None,
 			notFound: None,
-			wildcards: HashMap::new(),
 		}
 	}
 
@@ -57,7 +44,7 @@ impl Router {
 	/// ```
 	pub fn group(mut self, group: RouteGroup) -> Self {
 		let RouteGroup {
-			routes, wildcards, ..
+			routes, ..
 		} = group;
 		{
 			for (method, map) in routes.into_iter() {
@@ -73,15 +60,6 @@ impl Router {
 						.or_insert(Recognizer::new())
 						.add(path.as_str(), handler)
 				}
-			}
-
-			for (route, handler) in wildcards.into_iter() {
-				let mut handler = ArcHandler {
-					before: self.before.clone(),
-					handler: Box::new(handler),
-					after: self.after.clone(),
-				};
-				self.wildcards.insert(route, handler);
 			}
 		}
 
@@ -396,21 +374,6 @@ impl Router {
 		self
 	}
 
-	pub fn any<S, R>(mut self, route: R, handler: S) -> Self
-	where
-		S: ArcService + 'static,
-		R: ToString,
-	{
-		let route = route.to_string();
-		let handler = ArcHandler {
-			before: self.before.clone(),
-			handler: Box::new(handler),
-			after: self.after.clone(),
-		};
-
-		self.wildcards.insert(route, handler);
-		self
-	}
 
 	fn route<S>(mut self, method: Method, path: &'static str, handler: S) -> Self
 	where
@@ -440,26 +403,14 @@ impl Router {
 			.get(method)
 			.and_then(|recognizer| recognizer.recognize(route).ok())
 	}
-
-	pub(crate) fn match_wildcard(&self, route: &str) -> Option<&ArcHandler> {
-		for (path, handler) in self.wildcards.iter() {
-			if route.contains(path) {
-				return Some(handler);
-			}
-		}
-		None
-	}
 }
 
 impl ArcService for Router {
 	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Response>> {
-		let wildcard = self.match_wildcard(req.path());
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
 			let mut request: Request = req.into();
 			request.set(routeMatch.params);
 			return ArcService::call(&*routeMatch.handler, request, res);
-		} else if wildcard.is_some() {
-			return ArcService::call(wildcard.unwrap(), req.into(), res);
 		} else {
 			if let Some(ref notFound) = self.notFound {
 				return notFound.call(req, res);

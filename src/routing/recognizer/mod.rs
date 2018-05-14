@@ -8,11 +8,10 @@ use std::collections::BTreeMap;
 use std::collections::btree_map;
 use std::cmp::Ordering;
 use std::ops::Index;
-use std::fmt;
 
 pub mod nfa;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct Metadata {
     statics: u32,
     dynamics: u32,
@@ -60,7 +59,7 @@ impl PartialEq for Metadata {
 
 impl Eq for Metadata {}
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone)]
 pub struct Params {
     map: BTreeMap<String, String>
 }
@@ -117,36 +116,26 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
-#[derive(Debug)]
-pub struct Match<T: fmt::Debug> {
+pub struct Match<T> {
     pub handler: T,
     pub params: Params
 }
 
-impl<T> Match<T> 
-where T: fmt::Debug{
+impl<T> Match<T> {
     pub fn new(handler: T, params: Params) -> Match<T> {
         Match{ handler: handler, params: params }
     }
 }
 
 #[derive(Clone)]
-pub struct Router<T: fmt::Debug> {
+pub struct Router<T> {
     nfa: NFA<Metadata>,
     handlers: BTreeMap<usize, T>
 }
 
-impl<T: fmt::Debug> fmt::Debug for Router<T> {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Router")
-            .field("handlers", &self.handlers.iter().map(|(_, t)| t).collect::<Vec<&T>>())
-            .finish()
-    }
-}
 
 
-
-impl<T: fmt::Debug> Router<T> {
+impl<T> Router<T> {
     pub fn new() -> Router<T> {
         Router{ nfa: NFA::new(), handlers: BTreeMap::new() }
     }
@@ -209,7 +198,7 @@ impl<T: fmt::Debug> Router<T> {
     }
 }
 
-fn process_static_segment<T: fmt::Debug>(segment: &str, nfa: &mut NFA<T>, mut state: usize) -> usize {
+fn process_static_segment<T>(segment: &str, nfa: &mut NFA<T>, mut state: usize) -> usize {
     for char in segment.chars() {
         state = nfa.put(state, CharacterClass::valid_char(char));
     }
@@ -217,7 +206,7 @@ fn process_static_segment<T: fmt::Debug>(segment: &str, nfa: &mut NFA<T>, mut st
     state
 }
 
-fn process_dynamic_segment<T: fmt::Debug>(nfa: &mut NFA<T>, mut state: usize) -> usize {
+fn process_dynamic_segment<T>(nfa: &mut NFA<T>, mut state: usize) -> usize {
     state = nfa.put(state, CharacterClass::invalid_char('/'));
     nfa.put_state(state, state);
     nfa.start_capture(state);
@@ -226,7 +215,7 @@ fn process_dynamic_segment<T: fmt::Debug>(nfa: &mut NFA<T>, mut state: usize) ->
     state
 }
 
-fn process_star_state<T: fmt::Debug>(nfa: &mut NFA<T>, mut state: usize) -> usize {
+fn process_star_state<T>(nfa: &mut NFA<T>, mut state: usize) -> usize {
     state = nfa.put(state, CharacterClass::any());
     nfa.put_state(state, state);
     nfa.start_capture(state);

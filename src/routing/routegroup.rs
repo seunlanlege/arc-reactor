@@ -12,7 +12,6 @@ pub struct RouteGroup {
 	pub(crate) before: Option<Box<MiddleWare<Request>>>,
 	pub(crate) after: Option<Box<MiddleWare<Response>>>,
 	pub(crate) routes: HashMap<Method, HashMap<String, ArcHandler>>,
-	pub(crate) wildcards: HashMap<String, ArcHandler>,
 }
 
 impl RouteGroup {
@@ -29,7 +28,6 @@ impl RouteGroup {
 			routes: HashMap::new(),
 			before: None,
 			after: None,
-			wildcards: HashMap::new(),
 		}
 	}
 
@@ -49,7 +47,7 @@ impl RouteGroup {
 	/// ```
 	pub fn group(mut self, group: RouteGroup) -> Self {
 		let RouteGroup {
-			routes, wildcards, ..
+			routes, ..
 		} = group;
 		let mut parent = self.parent.clone();
 
@@ -70,16 +68,6 @@ impl RouteGroup {
 					.or_insert(HashMap::new())
 					.insert(fullPath, handler);
 			}
-		}
-
-		for (route, handler) in wildcards.into_iter() {
-			let fullPath = format!("/{}{}", parent, route);
-			let mut handler = ArcHandler {
-				before: self.before.clone(),
-				handler: Box::new(handler),
-				after: self.after.clone(),
-			};
-			self.wildcards.insert(fullPath, handler);
 		}
 
 		self
@@ -381,22 +369,6 @@ impl RouteGroup {
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::Delete, route, handler)
-	}
-
-	pub fn any<S, R>(mut self, route: R, handler: S) -> Self
-	where
-		S: ArcService + 'static + Send + Sync,
-		R: ToString,
-	{
-		let route = route.to_string();
-		let handler = ArcHandler {
-			before: self.before.clone(),
-			handler: Box::new(handler),
-			after: self.after.clone(),
-		};
-
-		self.wildcards.insert(route, handler);
-		self
 	}
 
 	fn route<T: ToString, S: ArcService + 'static + Send + Sync>(
