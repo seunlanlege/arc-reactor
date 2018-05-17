@@ -2,11 +2,12 @@
 #![allow(non_camel_case_types, non_snake_case)]
 #[macro_use]
 extern crate arc_reactor;
+extern crate regex;
 use arc_reactor::{
 	anymap::AnyMap,
-	bytes::{BufMut, BytesMut},
+	bytes::BytesMut,
 	contrib::StaticFileServer,
-	core::ArcReactor,
+	core::{ArcReactor, Request},
 	futures::{
 		future::lazy,
 		prelude::*,
@@ -15,14 +16,15 @@ use arc_reactor::{
 	header::{ContentDisposition, ContentType, DispositionParam, DispositionType, Header},
 	hyper::{Body, Error},
 	prelude::*,
+	proto::{MiddleWare, MiddleWareFuture},
 	routing::Router,
 	tokio::{
 		fs::{file::CreateFuture, File},
 		io::AsyncWrite,
-		prelude,
 	},
 	POOL,
 };
+use regex::bytes::Regex;
 use std::path::PathBuf;
 // use arc_reactor::futures::future::poll_fn;
 
@@ -30,7 +32,7 @@ fn getMainRoutes() -> Router {
 	// Setup and maps routes to Services.
 	return Router::new()
 		.get("/", RequestHandler)
-		.post("/", RequestHandler);
+		.post2("/", Multipart, RequestHandler);
 }
 
 fn main() {
@@ -46,52 +48,79 @@ fn main() {
 }
 
 #[service]
-fn RequestHandler(mut req: Request, mut res: Response) {
+fn RequestHandler(req: Request, mut res: Response) {
+	println!("Handler!");
 	res.text("hello world");
-	let body = { req.body() };
-
-	let boundary = {
-		req.headers()
-			.get::<ContentType>()
-			.and_then(|contentType| contentType.get_param("boundary"))
-			.and_then(|val| Some(String::from(val.as_str())))
-			.unwrap()
-	};
-	let (snd, rec) = channel::<u64>();
-	let future = lazy(|| MultiPart::new(body, boundary, snd).then(|res| Ok(println!("{:?}", res))));
-
-	POOL.sender().spawn(future).unwrap();
-	let data = await!(rec);
-
-	println!("data! {:?}", data);
 
 	Ok(res)
 }
 
-use std::collections::HashMap;
+#[derive(Clone)]
+struct Multipart;
 
-struct MultiPart {
-	body: Body,
-	state: DecodeState,
-	boundary: String,
-	map: HashMap<String, Vec<u8>>,
-	files: Option<Vec<File>>,
-	buf: BytesMut,
-	create: Option<CreateFuture<PathBuf>>,
-	sender: Option<Sender<u64>>,
+impl MiddleWare<Request> for Multipart {
+	fn call(&self, mut req: Request) -> MiddleWareFuture<Request> {
+		let body = { req.body() };
+
+		let boundary = {
+			req.headers()
+				.get::<ContentType>()
+				.and_then(|contentType| contentType.get_param("boundary"))
+				.and_then(|val| Some(String::from(val.as_str())))
+				.unwrap()
+		};
+
+		// we need to stream the body to a file using tokio::fs
+		// but we need to do so in the context of a tokio executor
+		// therefore, we spawn the Parser(that will poll the body, parse it and stream
+		// to a file) Future on the tokio executor
+		// but we need a way to return the output of the parsing back to the Middleware
+		// so we use a oneshot channel.
+		let (snd, rcv) = channel::<bool>();
+
+		let future = lazy(|| {
+			MultiPartParser::new(body, boundary, snd)
+				.map_err(|err| println!("[MultiPartParser][Error] {:?}", err))
+		});
+
+		POOL.sender().spawn(future).unwrap();
+
+		return Box::new(rcv.then(|_| Ok(req)));
+	}
 }
 
-impl MultiPart {
-	pub fn new(body: Body, boundary: String, sender: Sender<u64>) -> Self {
+use std::collections::HashMap;
+
+struct MultiPartParser {
+	body: Body,
+	state: DecodeState,
+	map: HashMap<String, String>,
+	files: Option<Vec<File>>,
+	wr_buf: BytesMut,
+	create: Option<CreateFuture<PathBuf>>,
+	sender: Option<Sender<bool>>,
+	boundary_regex: Regex,
+	crlf_regex: Regex,
+	done: bool
+}
+
+impl MultiPartParser {
+	pub fn new(body: Body, boundary: String, sender: Sender<bool>) -> Self {
+		let boundary = format!("--{}", boundary);
+		let re = format!("{}*", boundary);
+		let boundary_regex = Regex::new(&re).unwrap();
+		let crlf_regex = Regex::new(r"\r\n").unwrap();
 		Self {
 			body,
-			boundary,
 			state: DecodeState::Boundary,
 			files: None,
 			create: None,
-			buf: BytesMut::with_capacity(8196),
-			sender: Some(sender),
+			wr_buf: BytesMut::new(),
 			map: HashMap::new(),
+			sender: Some(sender),
+			boundary_regex,
+			crlf_regex,
+			done: false
 		}
 	}
 }
@@ -99,39 +128,27 @@ impl MultiPart {
 #[derive(Debug, PartialEq)]
 enum DecodeState {
 	Boundary,
-	End,
-	Header(ContentDisposition),
-	File,
-}
-struct FileName(String);
-struct ParamName(String);
-
-impl DecodeState {
-	fn header(&self) -> ContentDisposition {
-		match *self {
-			DecodeState::Header(ref contentDispostion) => contentDispostion.clone(),
-			_ => unreachable!(),
-		}
-	}
+	Header,
+	Read,
 }
 
-impl Drop for MultiPart {
+impl Drop for MultiPartParser {
 	fn drop(&mut self) {
 		println!("dropeed");
 	}
 }
 
-impl Future for MultiPart {
+// polls a stream of [u8] and parses them
+// as multipart/form-data
+impl Future for MultiPartParser {
 	type Item = ();
 	type Error = Error;
 
 	fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-		let mut map = AnyMap::new();
-
 		loop {
-			println!("looped");
+			// is there a pending file to be created?
 			if let Some(mut f_create) = self.create.take() {
-				println!("if let Some(mut f_create) = self.create.take() {{");
+				println!("if let Some(mut f_create) = self.create.take()");
 				let file = match f_create.poll() {
 					Ok(Async::Ready(f)) => f,
 					Ok(Async::NotReady) => {
@@ -148,106 +165,116 @@ impl Future for MultiPart {
 					println!("pushed file!");
 					files.push(file)
 				} else {
+					println!("created file!");
 					self.files = Some(vec![file]);
 				}
 			}
 
+			// we've created a new file,
+			// let's write whats in our buffer to it.self
 			if let Some(ref mut files) = self.files {
-				if self.buf.len() > 0 {
+				if self.wr_buf.len() > 0 && !self.done {
 					let len = { files.len() };
 					let file = &mut files[len - 1];
-					let frozen = self.buf.take().freeze();
-					println!("frozen.len() {}", frozen.len());
-					let n_bytes = try_ready!(file.poll_write(&frozen));
-					println!("wrote {} bytes", n_bytes);
+					let buf = self.wr_buf.take();
+					let n_bytes = try_ready!(file.poll_write(&buf));
+					println!("wrote {}bytes", n_bytes);
 				}
 			}
 
 			let chunk = match try_ready!(self.body.poll()) {
-				Some(chunk) => chunk,
+				Some(c) => c,
 				None => {
-					println!("stream returned none!");
+					// stream has ended
+					// send the params back to the middleware.
+					self.sender.take().unwrap().send(true).unwrap();
 					return Ok(Async::Ready(()));
 				}
 			};
-			let buf = String::from_utf8_lossy(&chunk).to_owned();
-			let buffer = buf.split("\r\n").collect::<Vec<&str>>();
 
-			for mut bytes in buffer {
-				if bytes.len() <= 1 {
-					continue;
-				}
+			let matches = self.boundary_regex.split(&chunk).collect::<Vec<_>>();
+			if matches.len() == 1 && matches[0].len() == chunk.len() {
+				// non UTF-8 bytes.
+				self.wr_buf.extend_from_slice(&chunk);
+				self.done = false;
+				continue;
+			}
 
-				println!("{:?}", bytes);
+			for matched in matches {
+				let split = self.crlf_regex.split(matched).collect::<Vec<_>>();
 
-				if bytes == format!("--{}", self.boundary) {
-					self.state = DecodeState::Boundary;
-				}
-
-				if bytes == format!("--{}--", self.boundary) {
-					self.state = DecodeState::End;
-				}
-
-				if let Ok(c_disp) = ContentDisposition::parse_header(&bytes.as_bytes().into()) {
-					if let DispositionType::Ext(ref contentType) = c_disp.disposition {
-						if contentType.to_lowercase().contains("content-type") {
-							println!("content type! {:?}", contentType);
-							continue;
-						}
+				for parts in split {
+					if parts.len() == 0 {
+						match self.state {
+							DecodeState::Header => {
+								self.state = DecodeState::Read;
+								continue;
+							}
+							DecodeState::Read => {
+								self.state = DecodeState::Header;
+								self.done = true;
+								continue;
+							}
+							DecodeState::Boundary => continue,
+						};
 					}
 
-					self.state = DecodeState::Header(c_disp);
-				}
-
-				match self.state {
-					DecodeState::Boundary => {
-						continue;
-					}
-					DecodeState::Header(_) => {
-						for param in self.state.header().parameters {
-							match param {
-								DispositionParam::Ext(_, name) => {
-									map.insert(ParamName(name));
+					match self.state {
+						DecodeState::Header | DecodeState::Boundary => {
+							if let Ok(disp) =
+								ContentDisposition::parse_header(&parts.to_vec().into())
+							{
+								println!("{:?}", disp);
+								if let DispositionType::Ext(ref contentType) = disp.disposition {
+									if contentType.to_lowercase().contains("content-type") {
+										let mime = contentType
+											.get(13..)
+											.unwrap()
+											.to_string();
+										// TODO: abort this future if the content-type is invalid.
+										self.map.insert("content-type".into(), mime);
+									}
 								}
-								DispositionParam::Filename(_, _, filename) => {
-									let filename = String::from_utf8(filename).unwrap();
-									map.insert(FileName(filename));
-									self.state = DecodeState::File;
+
+								for param in disp.parameters {
+									match param {
+										DispositionParam::Ext(_, name) => {
+											self.map.insert("param".into(), name);
+										}
+										DispositionParam::Filename(_, _, filename) => {
+											let filename = String::from_utf8(filename).unwrap();
+											self.map.insert("file".into(), filename);
+										}
+									}
 								}
 							}
+							self.state = DecodeState::Header;
 						}
-						continue;
-					}
 
-					DecodeState::File => {
-						println!("added {} bytes", bytes.len());
-						self.buf.reserve(bytes.len());
-						self.buf.put(&bytes.as_bytes());
+						DecodeState::Read => {
+							match (self.map.remove("file"), self.map.remove("param")) {
+								(Some(filename), Some(_)) => {
+									let mut path = PathBuf::new();
+									path.push("./");
+									path.push(filename);
+									self.create = Some(File::create(path));
+									println!("self.create = Some(File::create(path));");
+								}
+								(None, Some(param)) => {
+									self.map
+										.insert(param, String::from_utf8_lossy(parts).into_owned());
+									continue;
+								}
+								_ => {}
+							};
+							
+							if &parts[..] != b"--" {
+								self.done = false;
+								self.wr_buf.extend_from_slice(parts);
+							}
+						}
 					}
-
-					DecodeState::End => {}
 				}
-
-				match (map.remove::<FileName>(), map.remove::<ParamName>()) {
-					(Some(FileName(filename)), Some(ParamName(_))) => {
-						let mut path = PathBuf::new();
-						path.push("./");
-						path.push(filename);
-						self.create = Some(File::create(path));
-						println!("self.create = Some(File::create(path));");
-					}
-					(None, Some(ParamName(param))) => {
-						println!(
-							"\n  {} \n",
-							&param,
-						);
-						self.map.insert(param, bytes.as_bytes().to_vec());
-					}
-					(Some(filename), None) => {
-						map.insert(filename);
-					}
-					_ => {}
-				};
 			}
 		}
 	}
