@@ -87,19 +87,21 @@ pub extern crate hyper;
 #[cfg(not(feature = "stable"))]
 extern crate impl_service;
 pub extern crate native_tls;
-extern crate num_cpus;
+pub extern crate num_cpus;
 extern crate percent_encoding;
 extern crate serde_qs;
 pub extern crate tokio;
-extern crate tokio_tls;
+pub extern crate tokio_tls;
 #[macro_use]
-extern crate lazy_static;
-extern crate serde;
+pub extern crate lazy_static;
+pub extern crate serde;
 #[macro_use]
-extern crate serde_json;
-extern crate flate2;
+pub extern crate serde_json;
+// extern crate flate2;
 pub extern crate bytes;
+pub extern crate regex;
 pub extern crate tokio_core;
+pub extern crate mime;
 
 #[macro_use]
 pub mod proto;

@@ -3,5 +3,6 @@
 mod bodyParser;
 mod fakeReactor;
 mod staticFileServer;
+mod multipart;
 
-pub use self::{bodyParser::*, fakeReactor::*, staticFileServer::*};
+pub use self::{bodyParser::*, fakeReactor::*, staticFileServer::*, multipart::*};

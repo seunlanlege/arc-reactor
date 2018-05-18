@@ -1,12 +1,12 @@
 use anymap::AnyMap;
-use contrib::Json;
+use contrib::{Json, MultiPartMap};
 use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use percent_encoding::percent_decode;
 use routing::recognizer::Params;
 use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
-use std::{fmt, net};
+use std::{fmt, net, collections::HashMap};
 use tokio_core::reactor::Handle;
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
@@ -270,7 +270,7 @@ impl Request {
 	pub fn body(&mut self) -> Body {
 		match self.body.take() {
 			Some(body) => body,
-			None => Default::default()
+			None => Default::default(),
 		}
 	}
 
@@ -285,6 +285,13 @@ impl Request {
 	{
 		match self.get::<Json>() {
 			Some(ref slice) => from_slice::<T>(slice).map_err(JsonError::Err),
+			_ => Err(JsonError::None),
+		}
+	}
+
+	pub fn form(&self) -> Result<HashMap<String, String>, JsonError> {
+		match self.get::<MultiPartMap>() {
+			Some(ref map) => Ok(map.0.clone()),
 			_ => Err(JsonError::None),
 		}
 	}

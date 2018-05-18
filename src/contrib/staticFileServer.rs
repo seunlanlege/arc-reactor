@@ -20,31 +20,36 @@ impl StaticFileServer {
 impl MiddleWare<Request> for StaticFileServer {
 	fn call(&self, req: Request) -> MiddleWareFuture<Request> {
 		// supported http-methods
-		if *req.method() != Method::Get && *req.method() != Method::Head {
+		let method = { req.method().clone() };
+		if method != Method::Get && method != Method::Head {
 			return Box::new(Ok(req).into_future());
 		}
 
-		{
-			let prefix = req.path().get(1..=self.root.len());
+		match method {
+			Method::Get => {
+				let prefix = req.path().get(1..=self.root.len());
 
-			if prefix == Some(self.root) {
-				let mut pathbuf = self.public.clone();
+				if prefix == Some(self.root) {
+					let mut pathbuf = self.public.clone();
 
-				pathbuf.push(req.path().get(2 + self.root.len()..).unwrap());
+					pathbuf.push(req.path().get(2 + self.root.len()..).unwrap());
 
-				// if a MiddleWare<T> returns Err(Response)
-				// that reponse is forwarded directly to the client.
-				return Box::new(
-					Response::new()
-						.with_handle(req.reactor_handle())
-						.with_file(pathbuf)
-						.then(|res| {
-							match res {
-								Ok(res) | Err(res) => Err(res)
-							}
-						})
-				);
+					// if a MiddleWare<T> returns Err(Response)
+					// that reponse is forwarded directly to the client.
+					return Box::new(
+						Response::new()
+							.with_handle(req.reactor_handle())
+							.with_file(pathbuf)
+							.then(|res| {
+								match res {
+									Ok(res) | Err(res) => Err(res),
+								}
+							}),
+					);
+				}
 			}
+			Method::Head => {}
+			_ => {}
 		}
 
 		Box::new(Ok(req).into_future())
