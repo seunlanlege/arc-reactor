@@ -1,6 +1,12 @@
 use core::{file, Request, Response, State};
 use futures::{future::lazy, prelude::*, sync::oneshot::channel};
-use hyper::{header::{ContentLength}, Method, StatusCode};
+use hyper::{
+	header::{ContentLength, ContentType},
+	Method,
+	StatusCode,
+};
+use mime_guess::guess_mime_type;
+use percent_encoding::percent_decode;
 use proto::{MiddleWare, MiddleWareFuture};
 use std::{fmt, path::PathBuf};
 use tokio::{fs::File, io::ErrorKind};
@@ -21,14 +27,32 @@ impl StaticFileServer {
 
 impl MiddleWare<Request> for StaticFileServer {
 	fn call(&self, req: Request) -> MiddleWareFuture<Request> {
-		let prefix = {
+		let path = {
 			req.path()
-				.get(1..=self.root.len())
-				.clone()
-				.map(String::from)
+				.get(1..)
+				.and_then(|path| {
+					Some(
+						percent_decode(path.as_ref())
+							.decode_utf8_lossy()
+							.into_owned(),
+					)
+				})
+				.and_then(|path| {
+					if path.contains("../") {
+						None
+					} else {
+						Some(path)
+					}
+				})
 		};
 
-		if prefix == Some(self.root.to_string()) {
+		let prefix = match path {
+			Some(ref r) => r.get(..self.root.len()),
+			None => None,
+		};
+
+
+		if prefix == Some(self.root) {
 			// supported http-methods
 			let method = { req.method().clone() };
 			if method != Method::Get && method != Method::Head {
@@ -36,7 +60,16 @@ impl MiddleWare<Request> for StaticFileServer {
 			}
 
 			let mut pathbuf = self.public.clone();
-			pathbuf.push(req.path().get(2 + self.root.len()..).unwrap());
+			if let Some(ref path) = path {
+				if let Some(ref path) = path.get(self.root.len() + 1..) {
+					pathbuf.push(path);
+				}
+			}
+			if pathbuf.is_dir() {
+				pathbuf.push("index.html");
+			}
+
+			let path_clone = pathbuf.clone();
 
 			match method {
 				Method::Get => {
@@ -55,23 +88,27 @@ impl MiddleWare<Request> for StaticFileServer {
 				}
 				Method::Head => {
 					let (snd, rec) = channel::<State>();
-					let future = lazy(move || {
-						File::open(pathbuf.clone()).and_then(file::metadata).then(|result| {
-							match result {
-								Ok((_, meta)) => {
-									snd.send(State::Len(meta.len())).unwrap();
-									Ok(())
+					let future = lazy(|| {
+						File::open(path_clone)
+							.and_then(file::metadata)
+							.then(|result| {
+								match result {
+									Ok((_, meta)) => {
+										snd.send(State::Len(meta.len())).unwrap();
+										Ok(())
+									}
+									Err(err) => {
+										println!("Aha! Error! {}", err);
+										match err.kind() {
+											ErrorKind::NotFound => {
+												snd.send(State::NotFound).unwrap()
+											}
+											_ => snd.send(State::__Exhaustive).unwrap(),
+										};
+										Err(())
+									}
 								}
-								Err(err) => {
-									println!("Aha! Error! {}", err);
-									match err.kind() {
-										ErrorKind::NotFound => snd.send(State::NotFound).unwrap(),
-										_ => snd.send(State::__Exhaustive).unwrap(),
-									};
-									Err(())
-								}
-							}
-						})
+							})
 					});
 
 					POOL.sender().spawn(future).unwrap();
@@ -81,8 +118,9 @@ impl MiddleWare<Request> for StaticFileServer {
 								match state {
 									State::Len(len) => {
 										let mut res = Response::new();
+										let mime_type = guess_mime_type(pathbuf);
 										res.headers_mut().set(ContentLength(len));
-										// res.headers_mut().set(ContentType(guess_mime_type(pathbuf)));
+										res.headers_mut().set(ContentType(mime_type));
 										return Err(res);
 									}
 									State::NotFound => {

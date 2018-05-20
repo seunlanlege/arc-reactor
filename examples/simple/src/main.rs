@@ -22,12 +22,11 @@ fn getMainRoutes() -> Router {
 
 fn main() {
 	// Start the reactor and try visiting localhost:3000/your-name
-	let mut public = PathBuf::new();
-	public.push("/home/seun/Documents");
+	let public = PathBuf::from("./http-test-suite/httptest");
 	ArcReactor::new()
 		.port(3000) // port to listen on
 		.routes(getMainRoutes())
-		.before(StaticFileServer::new("public", public))		
+		.before(StaticFileServer::new("httptest", public))		
 		.initiate()
 		.unwrap()
 }

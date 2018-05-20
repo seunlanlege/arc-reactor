@@ -30,7 +30,7 @@ bytes="*"
 mime="*"
 regex = "0.2"
 lazy_static = "1.0"
-mime_guess="*"
+mime_guess="2.0.0-alpha.4"
 [features]
 default = ["impl-service"]
 stable = []

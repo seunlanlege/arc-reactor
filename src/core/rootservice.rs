@@ -1,6 +1,6 @@
 use super::{Request, Response};
 use futures::Future;
-use hyper::{self, server::Service};
+use hyper::{self, server::Service, header::Server};
 use proto::{ArcHandler, ArcService};
 use std::{net::SocketAddr, panic::AssertUnwindSafe};
 use tokio_core::reactor::Handle;
@@ -31,8 +31,10 @@ impl Service for RootService {
 				match result {
 					Ok(response) => {
 						match response {
-							Ok(res) => Ok(res.into()),
-							Err(res) => Ok(res.into()),
+							Ok(mut res) | Err(mut res) => {
+								res.headers_mut().set(Server::new("Arc-Reactor/0.1.5"));
+								Ok(res.into())
+							}
 						}
 					}
 					Err(_) => Ok(hyper::Response::new().with_status(hyper::StatusCode::InternalServerError)),

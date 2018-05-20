@@ -11,6 +11,7 @@ use std::path::Path;
 use tokio::{fs::File, io::ErrorKind};
 use tokio_core::reactor::Handle;
 use POOL;
+use mime_guess::guess_mime_type;
 
 #[derive(Debug)]
 pub struct Response {
@@ -131,10 +132,13 @@ impl Response {
 
 	pub fn with_file<P>(mut self, pathbuf: P) -> impl Future<Item = Response, Error = Response>
 	where
-		P: AsRef<Path> + Send + 'static,
+		P: AsRef<Path> + Send + Clone + 'static,
 	{
 		let (sender, recv) = Body::pair();
+		self.inner.set_body(recv);
+
 		let (snd, rec) = channel::<State>();
+		let path_clone = pathbuf.clone();
 
 		// this future is spawned on the tokio ThreadPool executor
 		let future = lazy(|| {
@@ -170,14 +174,16 @@ impl Response {
 
 		// attempt to spawn future on tokio threadpool
 		POOL.sender().spawn(future).unwrap();
+
 		rec.then(move |len| {
 			match len {
 				Ok(state) => {
 					match state {
 						State::Len(len) => {
+							let mime_type = guess_mime_type(path_clone);
 							self.headers_mut().set(ContentLength(len));
-							// self.headers_mut().set(ContentEncoding(vec![Encoding::Gzip]));
-							self.set_body(recv);
+							self.headers_mut().set(ContentType(mime_type));
+							return Ok(self);
 						}
 						State::NotFound => {
 							self.set_status(StatusCode::NotFound);

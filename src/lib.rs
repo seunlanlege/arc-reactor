@@ -120,6 +120,7 @@ pub use hyper::{header, StatusCode};
 
 pub mod prelude {
 	pub use core::{Request, Response};
+	pub use futures;
 	pub use futures::{
 		prelude::{async_block, await},
 		Future,
