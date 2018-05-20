@@ -1,5 +1,5 @@
-use super::filewrite::FileWrite;
 use bytes::Bytes;
+use core::file;
 use futures::{prelude::*, sync::oneshot::Sender};
 use header::{ContentDisposition, DispositionParam, DispositionType, Header};
 use hyper::{Body, Error};
@@ -47,7 +47,7 @@ pub fn parse(
 
 		// invalid UTF8 bytes
 		if matches.len() == 1 && matches[0].len() == chunk.len() {
-			file = match await!(FileWrite::new(file, chunk)) {
+			file = match await!(file::write(file.unwrap(), chunk)) {
 				Ok(f) => Some(f),
 				Err(err) => return Err(Error::Io(err)),
 			};
@@ -61,7 +61,6 @@ pub fn parse(
 				.collect::<Vec<_>>();
 
 			for parts in split {
-
 				if parts.len() == 0 {
 					match state {
 						DecodeState::Header => {
@@ -87,7 +86,7 @@ pub fn parse(
 									if let Some(ref mimes) = mimes {
 										let mime = mime.parse::<Mime>();
 										if !mime.is_ok() || !mimes.contains(&mime.unwrap()) {
-											return Ok(())
+											return Ok(());
 										}
 									}
 								}
@@ -96,11 +95,11 @@ pub fn parse(
 							for param in disp.parameters {
 								match param {
 									DispositionParam::Ext(_, name) => {
-										map.insert("09/;[.--=p[[;'".into(), name);
+										map.insert("--param".into(), name);
 									}
 									DispositionParam::Filename(_, _, filename) => {
 										let filename = String::from_utf8(filename).unwrap();
-										map.insert("/[;[;p[,l.;,".into(), filename);
+										map.insert("--file".into(), filename);
 									}
 								}
 							}
@@ -109,13 +108,13 @@ pub fn parse(
 					}
 
 					DecodeState::Read(_) => {
-						match (map.remove("/[;[;p[,l.;,"), map.remove("09/;[.--=p[[;'")) {
+						match (map.remove("--file"), map.remove("--param")) {
 							(Some(filename), Some(param)) => {
 								let mut path = dir.clone();
 								path.push(&filename);
 								file = match await!(File::create(path)) {
 									Ok(f) => Some(f),
-									Err(_) => return Ok(()),
+									Err(err) => return Err(Error::Io(err)),
 								};
 								state = DecodeState::Read(CharSet::Binary(filename, param));
 							}
@@ -137,7 +136,7 @@ pub fn parse(
 									map.entry(param.clone()).or_insert("".into()).push_str(&val);
 								}
 								CharSet::Binary(filename, param) => {
-									file = match await!(FileWrite::new(file, parts)) {
+									file = match await!(file::write(file.unwrap(), parts)) {
 										Ok(f) => Some(f),
 										Err(err) => return Err(Error::Io(err)),
 									};

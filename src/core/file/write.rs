@@ -5,13 +5,17 @@ use tokio::{
 	io::{AsyncWrite, Error},
 };
 
-pub struct FileWrite {
+pub fn write(file: File, buf: Bytes) -> impl Future<Item = File, Error = Error> {
+	FileWrite::new(Some(file), buf)
+}
+
+struct FileWrite {
 	file: Option<File>,
 	buf: Bytes,
 }
 
 impl FileWrite {
-	pub fn new(file: Option<File>, buf: Bytes) -> Self {
+	fn new(file: Option<File>, buf: Bytes) -> Self {
 		Self { file, buf }
 	}
 }

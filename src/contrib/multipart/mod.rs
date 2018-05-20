@@ -1,4 +1,3 @@
-mod filewrite;
 mod parser;
 use core::Request;
 use futures::{future::lazy, prelude::*, sync::oneshot::channel};

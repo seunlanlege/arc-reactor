@@ -6,7 +6,7 @@ use routing::recognizer::Params;
 use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
-use std::{fmt, net, collections::HashMap};
+use std::{collections::HashMap, fmt, net};
 use tokio_core::reactor::Handle;
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///

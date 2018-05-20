@@ -2,7 +2,7 @@
 
 mod bodyParser;
 mod fakeReactor;
-mod staticFileServer;
 mod multipart;
+mod staticFileServer;
 
-pub use self::{bodyParser::*, fakeReactor::*, staticFileServer::*, multipart::*};
+pub use self::{bodyParser::*, fakeReactor::*, multipart::*, staticFileServer::*};

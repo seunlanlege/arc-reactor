@@ -75,7 +75,7 @@
 //! ```
 //!
 
-#![feature(proc_macro, generators, fn_must_use, specialization, proc_macro_non_items)]
+#![feature(proc_macro, generators, fn_must_use, specialization, proc_macro_non_items, test)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
@@ -85,11 +85,11 @@ pub extern crate anymap;
 pub extern crate futures_await as futures;
 pub extern crate hyper;
 #[cfg(not(feature = "stable"))]
-extern crate impl_service;
+pub extern crate impl_service;
 pub extern crate native_tls;
 pub extern crate num_cpus;
-extern crate percent_encoding;
-extern crate serde_qs;
+pub extern crate percent_encoding;
+pub extern crate serde_qs;
 pub extern crate tokio;
 pub extern crate tokio_tls;
 #[macro_use]
@@ -97,11 +97,12 @@ pub extern crate lazy_static;
 pub extern crate serde;
 #[macro_use]
 pub extern crate serde_json;
-// extern crate flate2;
 pub extern crate bytes;
-pub extern crate regex;
-pub extern crate tokio_core;
 pub extern crate mime;
+pub extern crate mime_guess;
+pub extern crate regex;
+pub extern crate test;
+pub extern crate tokio_core;
 
 #[macro_use]
 pub mod proto;
@@ -115,11 +116,11 @@ lazy_static! {
 }
 
 pub use futures::*;
+pub use hyper::{header, StatusCode};
 
 pub mod prelude {
 	pub use core::{Request, Response};
 	pub use futures::{
-		self,
 		prelude::{async_block, await},
 		Future,
 		IntoFuture,
@@ -129,5 +130,3 @@ pub mod prelude {
 	pub use impl_service::{middleware, service};
 	pub use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare};
 }
-
-pub use hyper::{header, StatusCode};

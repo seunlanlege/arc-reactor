@@ -91,7 +91,6 @@ mod tests {
 
 		let routegroup = RouteGroup::new("admin")
 			.get("/roles", AsyncService)
-			.any("/", AsyncService)
 			.group(subrouter);
 
 		let router = Router::new().group(routegroup);

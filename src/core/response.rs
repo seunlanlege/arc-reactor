@@ -1,4 +1,4 @@
-use core::{FileMeta, FileStream};
+use core::file;
 use futures::{future::lazy, prelude::*, sync::oneshot::channel};
 use hyper::{
 	self,
@@ -19,10 +19,10 @@ pub struct Response {
 }
 
 #[derive(Debug)]
-pub enum State {
+pub(crate) enum State {
 	Len(u64),
 	NotFound,
-	__Exhaustive
+	__Exhaustive,
 }
 
 impl Response {
@@ -139,12 +139,12 @@ impl Response {
 		// this future is spawned on the tokio ThreadPool executor
 		let future = lazy(|| {
 			File::open(pathbuf)
-				.and_then(FileMeta)
+				.and_then(file::metadata)
 				.then(|result| {
 					match result {
 						Ok((file, meta)) => {
 							snd.send(State::Len(meta.len())).unwrap();
-							let stream = FileStream::new(file);
+							let stream = file::stream(file);
 							let future = stream
 								.map(Ok)
 								.map_err(|err| println!("whoops filestream error occured {}", err))
@@ -159,7 +159,7 @@ impl Response {
 							println!("Aha! Error! {}", err);
 							match err.kind() {
 								ErrorKind::NotFound => snd.send(State::NotFound).unwrap(),
-								_ => snd.send(State::__Exhaustive).unwrap()
+								_ => snd.send(State::__Exhaustive).unwrap(),
 							};
 							Err(())
 						}
@@ -182,9 +182,7 @@ impl Response {
 						State::NotFound => {
 							self.set_status(StatusCode::NotFound);
 						}
-						State::__Exhaustive => {
-							self.set_status(StatusCode::InternalServerError)
-						}
+						State::__Exhaustive => self.set_status(StatusCode::InternalServerError),
 					}
 				}
 				_ => {}

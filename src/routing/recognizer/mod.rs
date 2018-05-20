@@ -1,7 +1,3 @@
-#![cfg_attr(test, feature(test))]
-
-#[cfg(test)] extern crate test;
-
 use self::nfa::NFA;
 use self::nfa::CharacterClass;
 use std::collections::BTreeMap;

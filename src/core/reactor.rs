@@ -170,14 +170,13 @@ impl ArcReactor {
 		let mut count = 0;
 
 		let future = listener.incoming().for_each(|stream| {
-			match receivers[count].unbounded_send(stream) {
-				_ => {}
-			};
+			let _ = receivers[count].unbounded_send(stream);
 			count += 1;
 
 			if count == threads {
 				count = 0
 			}
+
 			Ok(())
 		});
 
