@@ -21,7 +21,6 @@ impl FileStream {
 		Self {
 			file,
 			buf: [0u8; 4096],
-			flushed: true,
 		}
 	}
 }

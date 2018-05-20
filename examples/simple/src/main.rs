@@ -3,9 +3,9 @@
 
 extern crate arc_reactor;
 use arc_reactor::{
-	mime,
-	contrib::{StaticFileServer, Multipart},
+	contrib::{Multipart, StaticFileServer},
 	core::{ArcReactor, Request},
+	mime,
 	prelude::*,
 	routing::Router,
 };
@@ -15,18 +15,20 @@ fn getMainRoutes() -> Router {
 	// Setup and maps routes to Services.
 	return Router::new().get("/", RequestHandler).post2(
 		"/",
-		Multipart::new(PathBuf::from("./".to_string()), Some(vec![mime::IMAGE_JPEG]), None),
+		Multipart::new(
+			PathBuf::from("./".to_string()),
+			Some(vec![mime::IMAGE_JPEG]),
+			None,
+		),
 		RequestHandler,
 	);
 }
 
 fn main() {
 	// Start the reactor and try visiting localhost:3000/your-name
-	let public = PathBuf::from("./http-test-suite/httptest");
 	ArcReactor::new()
 		.port(3000) // port to listen on
 		.routes(getMainRoutes())
-		.before(StaticFileServer::new("httptest", public))		
 		.initiate()
 		.unwrap()
 }
