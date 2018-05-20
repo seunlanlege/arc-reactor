@@ -4,8 +4,8 @@ use futures::{prelude::*, sync::oneshot::Sender};
 use header::{ContentDisposition, DispositionParam, DispositionType, Header};
 use hyper::{Body, Error};
 use mime::Mime;
-use regex::bytes::Regex;
-use std::{collections::HashMap, path::PathBuf};
+use regex::bytes::{Regex, RegexBuilder};
+use std::{collections::HashMap, io, path::PathBuf};
 use tokio::fs::File;
 
 #[derive(Debug)]
@@ -21,17 +21,31 @@ enum CharSet {
 	None,
 }
 
+pub enum ParseResult {
+	Ok(HashMap<String, String>),
+	Io(io::Error),
+	InvalidMime,
+}
+
 #[async]
 pub fn parse(
 	body: Body,
 	boundary: String,
-	sender: Sender<HashMap<String, String>>,
+	sender: Sender<ParseResult>,
 	dir: PathBuf,
 	mimes: Option<Vec<Mime>>,
 ) -> Result<(), Error> {
 	let boundary = format!("--{}", boundary);
 	let re = format!("{}*", boundary);
-	let boundary_regex = Regex::new(&re).unwrap();
+	let mut boundary_regex = RegexBuilder::new(&re);
+	let boundary_regex = match boundary_regex.size_limit(300).build() {
+		Ok(regex) => regex,
+		Err(err) => {
+			println!("Regex {:?}", err);
+			sender.send(ParseResult::Io(io::ErrorKind::Other.into())).is_ok();
+			return Ok(())
+		}
+	};
 	let crlf_regex = Regex::new(r"\r\n").unwrap();
 	let mut map = HashMap::new();
 	let mut file: Option<File> = None;
@@ -49,7 +63,10 @@ pub fn parse(
 		if matches.len() == 1 && matches[0].len() == chunk.len() {
 			file = match await!(file::write(file.unwrap(), chunk)) {
 				Ok(f) => Some(f),
-				Err(err) => return Err(Error::Io(err)),
+				Err(err) => {
+					sender.send(ParseResult::Io(err)).is_ok();
+					return Ok(());
+				}
 			};
 			continue;
 		}
@@ -86,6 +103,7 @@ pub fn parse(
 									if let Some(ref mimes) = mimes {
 										let mime = mime.parse::<Mime>();
 										if !mime.is_ok() || !mimes.contains(&mime.unwrap()) {
+											sender.send(ParseResult::InvalidMime).is_ok();
 											return Ok(());
 										}
 									}
@@ -114,7 +132,10 @@ pub fn parse(
 								path.push(&filename);
 								file = match await!(File::create(path)) {
 									Ok(f) => Some(f),
-									Err(err) => return Err(Error::Io(err)),
+									Err(err) => {
+										sender.send(ParseResult::Io(err)).is_ok();
+										return Ok(());
+									}
 								};
 								state = DecodeState::Read(CharSet::Binary(filename, param));
 							}
@@ -138,7 +159,10 @@ pub fn parse(
 								CharSet::Binary(filename, param) => {
 									file = match await!(file::write(file.unwrap(), parts)) {
 										Ok(f) => Some(f),
-										Err(err) => return Err(Error::Io(err)),
+										Err(err) => {
+											sender.send(ParseResult::Io(err)).is_ok();
+											return Ok(());
+										}
 									};
 
 									if let None = map.get(&param) {
@@ -154,6 +178,6 @@ pub fn parse(
 		}
 	}
 
-	sender.send(map).is_ok();
+	sender.send(ParseResult::Ok(map)).is_ok();
 	Ok(())
 }

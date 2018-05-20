@@ -67,7 +67,7 @@ impl MiddleWare<Request> for Multipart {
 			// to a file) Future on the tokio executor
 			// but we need a way to return the output of the parsing back to the Middleware
 			// so we use a oneshot channel.
-			let (snd, rcv) = channel::<HashMap<String, String>>();
+			let (snd, rcv) = channel::<parser::ParseResult>();
 
 			let future = lazy(|| {
 				parser::parse(body, boundary, snd, dir, mimes)
@@ -75,8 +75,18 @@ impl MiddleWare<Request> for Multipart {
 			});
 
 			POOL.sender().spawn(future).unwrap();
-			if let Ok(map) = await!(rcv) {
-				req.set(MultiPartMap(map));
+			if let Ok(result) = await!(rcv) {
+				match result {
+					parser::ParseResult::Ok(map) => {
+						req.set(MultiPartMap(map));
+					},
+					parser::ParseResult::InvalidMime => {
+						return Err((400, "Invalid Content-Type").into())
+					},
+					parser::ParseResult::Io(_) => {
+						return Err((500, "internal server error").into())
+					}
+				};
 			}
 
 			Ok(req)
