@@ -2,7 +2,7 @@
 use core::{Request, Response};
 use futures::future::{Future, IntoFuture};
 
-type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
+pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
 
 /// The middleware Trait.
 /// In arc-reactor the middleware system is designed to be as intuitive and as simple as possible.
@@ -103,6 +103,22 @@ pub trait MiddleWare<T: Sized>: MiddleWareClone<T> + Sync + Send {
 	fn call(&self, param: T) -> MiddleWareFuture<T>;
 }
 
+impl<T> MiddleWare<Request> for T
+	where T: Fn(Request) -> MiddleWareFuture<Request> + Send + Sync + Clone + 'static
+{
+	fn call(&self, req: Request) -> MiddleWareFuture<Request> {
+		(self)(req)
+	}
+}
+
+impl<T> MiddleWare<Response> for T
+	where T: Fn(Response) -> MiddleWareFuture<Response> + Send + Sync + Clone + 'static
+{
+	fn call(&self, res: Response) -> MiddleWareFuture<Response> {
+		(self)(res)
+	}
+}
+
 #[doc(hidden)]
 pub trait MiddleWareClone<D> {
 	fn clone_middleware(&self) -> Box<MiddleWare<D>>;
@@ -110,10 +126,10 @@ pub trait MiddleWareClone<D> {
 
 impl<T, D> MiddleWareClone<D> for T 
 	where T: 'static + MiddleWare<D> + Clone 
-	{
+{
 	
 	fn clone_middleware(&self) -> Box<MiddleWare<D>> {
-		box self.clone()
+		Box::new(self.clone())
 	}
 }
 
@@ -130,15 +146,24 @@ impl<T: 'static> Clone for Box<MiddleWare<T>> {
 ///
 impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
-		let extended = unsafe {
-			&*(self as *const Vec<Box<MiddleWare<Request>>>)
-		};
+		let ptr = self as *const Vec<Box<MiddleWare<Request>>>;
+		let extended = unsafe { &*ptr };
 
 		extended
 			.iter()
-			.fold(box Ok(request).into_future(), |request, middleware| {
-				box request.and_then(move |req| middleware.call(req))
-			})
+			.fold(Box::new(Ok(request).into_future()), |request, middleware| {
+				Box::new(
+					request.and_then(
+						move |req| middleware.call(req).then(
+							move |req| {
+								drop(ptr);
+								req
+							}
+						)
+					)
+				)
+			}
+		)
 	}
 }
 
@@ -149,22 +174,35 @@ impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 ///
 impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
-		let extended = unsafe {
-			&*(self as *const Vec<Box<MiddleWare<Response>>>)
-		};
+		let ptr = self as *const Vec<Box<MiddleWare<Response>>>;
+		let extended = unsafe { &*ptr };
 
 		extended
 			.iter()
-			.fold(box Ok(response).into_future(), |response, middleware| {
-				box response.and_then(move |res| middleware.call(res))
-			})
+			.fold(Box::new(Ok(response).into_future()), |response, middleware| {
+				Box::new(
+					response.and_then(
+						move |res| middleware.call(res).then(
+							move |res| {
+								drop(ptr);
+								res
+							}
+						)
+					)
+				)
+			}
+		)
 	}
 }
 
-impl<T, M> MiddleWare<T> for Box<M> 
-	where M: 'static + MiddleWare<T> + ?Sized + Clone
-	{
-    fn call(&self, item: T) -> MiddleWareFuture<T> {
+impl MiddleWare<Request> for Box<MiddleWare<Request>> {
+    fn call(&self, item: Request) -> MiddleWareFuture<Request> {
+        (**self).call(item)
+    }
+}
+
+impl MiddleWare<Response> for Box<MiddleWare<Response>> {
+    fn call(&self, item: Response) -> MiddleWareFuture<Response> {
         (**self).call(item)
     }
 }
@@ -192,8 +230,8 @@ impl<T, M> MiddleWare<T> for Box<M>
 #[macro_export]
 macro_rules! mw {
 	($($middlewares:expr), +) => {{
-		use $crate::MiddleWare;
-		let middleWares: Vec<Box<MiddleWare<_>>> = vec![$(box $middlewares), +];
+		use $crate::proto::MiddleWare;
+		let middleWares: Vec<Box<MiddleWare<_>>> = vec![$(Box::new($middlewares)), +];
 		middleWares
 	}};
 }

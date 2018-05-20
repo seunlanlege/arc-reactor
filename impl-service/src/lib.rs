@@ -32,12 +32,12 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let span = Span::call_site();
 
 	let output = quote_spanned! {span=>
-		#[derive(Clone)]
+		#[derive(Clone, Debug)]
 		pub struct #ident;
 		
 		impl ArcService for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item = Response, Error = Response>> {
-				box async_block! (#(#block)*)
+				Box::new(async_block! (#(#block)*))
 			}
 		}
 	};
@@ -71,12 +71,12 @@ pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream 
 	let span = Span::call_site();
 
 	let output = quote_spanned! {span=>
-		#[derive(Clone)]
+		#[derive(Clone, Debug)]
 		pub struct #ident;
 
 		impl MiddleWare<#attribute> for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item=#attribute, Error=Response>> {
-				box async_block!(#(#block)*)
+				Box::new(async_block!(#(#block)*))
 			}
 		}
 	};

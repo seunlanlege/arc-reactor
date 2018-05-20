@@ -1,15 +1,27 @@
-#![feature(proc_macro, box_syntax, generators)]
+#![feature(proc_macro, box_syntax, generators, proc_macro_non_items)]
 #![allow(non_camel_case_types, non_snake_case)]
 
-#[macro_use]
 extern crate arc_reactor;
-use arc_reactor::{ArcReactor, Router};
-use arc_reactor::prelude::*;
+use arc_reactor::{
+	contrib::{Multipart, StaticFileServer},
+	core::{ArcReactor, Request},
+	mime,
+	prelude::*,
+	routing::Router,
+};
+use std::path::PathBuf;
 
 fn getMainRoutes() -> Router {
 	// Setup and maps routes to Services.
-	return Router::new()
-		.get("/", RequestHandler)
+	return Router::new().get("/", RequestHandler).post2(
+		"/",
+		Multipart::new(
+			PathBuf::from("./".to_string()),
+			Some(vec![mime::IMAGE_JPEG]),
+			None,
+		),
+		RequestHandler,
+	);
 }
 
 fn main() {
@@ -17,14 +29,12 @@ fn main() {
 	ArcReactor::new()
 		.port(3000) // port to listen on
 		.routes(getMainRoutes())
-		.threads(3)
 		.initiate()
 		.unwrap()
 }
 
 #[service]
-fn RequestHandler(_request: Request, mut res: Response) {
-	res.set_body("hello world");
-
+fn RequestHandler(_req: Request, mut res: Response) {
+	res.text("hello world");
 	Ok(res)
 }

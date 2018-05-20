@@ -1,17 +1,14 @@
 use super::{Request, Response};
 use futures::Future;
-use hyper;
-use hyper::server::Service;
+use hyper::{self, server::Service, header::Server};
 use proto::{ArcHandler, ArcService};
-use std::net::SocketAddr;
-use std::{panic::AssertUnwindSafe, sync::Arc};
+use std::{net::SocketAddr, panic::AssertUnwindSafe};
 use tokio_core::reactor::Handle;
-
 // The only reason this exists is so I can pass the
 // clientIp to the ArcService.
 pub(crate) struct RootService {
 	pub(crate) remote_ip: SocketAddr,
-	pub(crate) service: Arc<ArcHandler>,
+	pub(crate) service: ArcHandler,
 	pub(crate) handle: Handle,
 }
 
@@ -25,18 +22,25 @@ impl Service for RootService {
 		let mut request: Request = req.into();
 		request.handle = Some(self.handle.clone());
 		request.remote = Some(self.remote_ip);
-		let responseFuture =
-			AssertUnwindSafe(ArcService::call(&*self.service, request, Response::new()))
-				.catch_unwind();
+		let mut res = Response::new();
+		res.handle = Some(self.handle.clone());
+		let responseFuture = AssertUnwindSafe(self.service.call(request, res)).catch_unwind();
 
-		return box responseFuture.then(|result| match result {
-			Ok(response) => match response {
-				Ok(res) => Ok(res.into()),
-				Err(res) => Ok(res.into()),
-			},
-			Err(_) => {
-				Ok(hyper::Response::new().with_status(hyper::StatusCode::InternalServerError))
-			}
-		});
+		let responseFuture =
+			responseFuture.then(|result| {
+				match result {
+					Ok(response) => {
+						match response {
+							Ok(mut res) | Err(mut res) => {
+								res.headers_mut().set(Server::new("Arc-Reactor/0.1.5"));
+								Ok(res.into())
+							}
+						}
+					}
+					Err(_) => Ok(hyper::Response::new().with_status(hyper::StatusCode::InternalServerError)),
+				}
+			});
+
+		return Box::new(responseFuture);
 	}
 }

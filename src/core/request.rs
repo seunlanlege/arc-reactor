@@ -1,12 +1,12 @@
 use anymap::AnyMap;
-use hyper::Chunk;
+use contrib::{Json, MultiPartMap};
 use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use percent_encoding::percent_decode;
-use recognizer::Params;
+use routing::recognizer::Params;
 use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
-use std::{fmt, net};
+use std::{collections::HashMap, fmt, net};
 use tokio_core::reactor::Handle;
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
@@ -108,9 +108,9 @@ impl Request {
 	/// 	let handle = req.reactor_handle();
 	///
 	/// 	let future = async_block! {
-	/// 		println!("I'm doing some asynchronous work!");
-	/// 		Ok(()) // async_block must return a type-def of Result
-	/// 		// and the event loop requires a future of type `Future<Item = (), Error = ()>`
+	/// 	println!("I'm doing some asynchronous work!");
+	/// 	Ok(()) // async_block must return a type-def of Result
+	/// 	// and the event loop requires a future of type `Future<Item = (), Error = ()>`
 	/// 		};
 	///
 	/// 	handle.spawn(future);
@@ -267,8 +267,11 @@ impl Request {
 	/// Move the request body. note that this takes ownership of `self`, use
 	/// wisely.
 	#[inline]
-	pub fn body(self) -> Body {
-		self.body.unwrap_or_default()
+	pub fn body(&mut self) -> Body {
+		match self.body.take() {
+			Some(body) => body,
+			None => Default::default(),
+		}
 	}
 
 	/// Serialize the request's json value into a struct.
@@ -280,8 +283,15 @@ impl Request {
 	where
 		T: DeserializeOwned,
 	{
-		match self.get::<Chunk>() {
+		match self.get::<Json>() {
 			Some(ref slice) => from_slice::<T>(slice).map_err(JsonError::Err),
+			_ => Err(JsonError::None),
+		}
+	}
+
+	pub fn form(&self) -> Result<HashMap<String, String>, JsonError> {
+		match self.get::<MultiPartMap>() {
+			Some(ref map) => Ok(map.0.clone()),
 			_ => Err(JsonError::None),
 		}
 	}

@@ -1,5 +1,6 @@
 **/target/*
 **/*.rs.bk
+**/rls/*
 .vscode
 .idea
 **/.DS_Store

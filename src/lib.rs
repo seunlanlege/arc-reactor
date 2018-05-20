@@ -40,8 +40,7 @@
 //! extern crate arc_reactor;
 //! #[macro_use]
 //! extern crate serde_json;
-//! use arc_reactor::prelude::*;
-//! use arc_reactor::{ArcReactor, Router, StatusCode};
+//! use arc_reactor::{prelude::*, ArcReactor, Router, StatusCode};
 //!
 //! fn main() {
 //! 	ArcReactor::new()
@@ -76,45 +75,59 @@
 //! ```
 //!
 
-#![feature(proc_macro, box_syntax, generators, fn_must_use, specialization, proc_macro_non_items)]
+#![feature(proc_macro, generators, fn_must_use, specialization, proc_macro_non_items, test)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-extern crate anymap;
+pub extern crate anymap;
+#[macro_use]
+#[macro_export]
 pub extern crate futures_await as futures;
 pub extern crate hyper;
-extern crate impl_service;
+#[cfg(not(feature = "stable"))]
+pub extern crate impl_service;
 pub extern crate native_tls;
-extern crate num_cpus;
-extern crate percent_encoding;
-extern crate route_recognizer as recognizer;
-extern crate serde_qs;
-extern crate tokio_tls;
-
-extern crate serde;
+pub extern crate num_cpus;
+pub extern crate percent_encoding;
+pub extern crate serde_qs;
+pub extern crate tokio;
+pub extern crate tokio_tls;
 #[macro_use]
-extern crate serde_json;
+pub extern crate lazy_static;
+pub extern crate serde;
+#[macro_use]
+pub extern crate serde_json;
+pub extern crate bytes;
+pub extern crate mime;
+pub extern crate mime_guess;
+pub extern crate regex;
+pub extern crate test;
 pub extern crate tokio_core;
 
 #[macro_use]
-pub(crate) mod proto;
-pub(crate) mod contrib;
-pub(crate) mod core;
-pub(crate) mod routing;
+pub mod proto;
+pub mod contrib;
+pub mod core;
+pub mod routing;
 
-pub use contrib::*;
-pub use core::{ArcReactor, JsonError, QueryParseError};
-pub use proto::{ArcHandler, ArcService, MiddleWare};
-pub use routing::{RouteGroup, Router};
+use tokio::executor::thread_pool::ThreadPool;
+lazy_static! {
+	pub static ref POOL: ThreadPool = { ThreadPool::new() };
+}
+
+pub use futures::*;
+pub use hyper::{header, StatusCode};
 
 pub mod prelude {
 	pub use core::{Request, Response};
 	pub use futures;
-	pub use futures::prelude::{async_block, await};
-	pub use futures::{Future, Stream};
+	pub use futures::{
+		prelude::{async_block, await},
+		Future,
+		IntoFuture,
+		Stream,
+	};
+	#[cfg(not(feature = "stable"))]
 	pub use impl_service::{middleware, service};
-	pub use proto::{ArcHandler, ArcService, MiddleWare};
+	pub use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare};
 }
-
-pub use hyper::header;
-pub use hyper::StatusCode;

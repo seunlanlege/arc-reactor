@@ -1,16 +1,19 @@
-use super::rootservice::RootService;
-use futures::{Future, Stream};
+use super::{rootservice::RootService, Request, Response};
+use futures::{
+	sync::mpsc::{unbounded, UnboundedReceiver},
+	Future,
+	Stream,
+};
 use hyper::{self, server::Http};
 use native_tls::TlsAcceptor;
 use num_cpus;
-use proto::{ArcHandler, ArcService};
+use proto::{ArcHandler, ArcService, MiddleWare};
 use routing::Router;
-use std::io;
-use std::net::{self, SocketAddr};
-use std::sync::Arc;
-use std::thread;
-use tokio_core::net::TcpListener;
-use tokio_core::reactor::Core;
+use std::{io, net::SocketAddr, sync::Arc, thread};
+use tokio_core::{
+	net::{TcpListener, TcpStream},
+	reactor::Core,
+};
 use tokio_tls::TlsAcceptorExt;
 
 /// The main server, the ArcReactor is where you mount your routes, middlewares
@@ -74,7 +77,7 @@ impl ArcReactor {
 
 	/// Mounts the Router on the ArcReactor.
 	pub fn routes(mut self, routes: Router) -> Self {
-		let routes = box routes as Box<ArcService>;
+		let routes = Box::new(routes) as Box<ArcService>;
 		if let Some(ref mut archandler) = self.handler {
 			archandler.handler = routes;
 		} else {
@@ -83,6 +86,28 @@ impl ArcReactor {
 				after: None,
 				handler: routes,
 			});
+		}
+
+		self
+	}
+
+	pub fn before<M>(mut self, before: M) -> Self
+	where
+		M: MiddleWare<Request> + 'static,
+	{
+		if let Some(ref mut archandler) = self.handler {
+			archandler.before = Some(Box::new(before));
+		}
+
+		self
+	}
+
+	pub fn after<M>(mut self, after: M) -> Self
+	where
+		M: MiddleWare<Response> + 'static,
+	{
+		if let Some(ref mut archandler) = self.handler {
+			archandler.after = Some(Box::new(after));
 		}
 
 		self
@@ -98,59 +123,80 @@ impl ArcReactor {
 
 	#[must_use]
 	pub fn initiate(self) -> io::Result<()> {
-		let addr = format!("0.0.0.0:{}", self.port).parse().unwrap();
+		let ArcReactor {
+			port,
+			handler,
+			tls_acceptor: acceptor,
+			threads,
+		} = self;
 
-		println!("[arc-reactor]: Binding to port {}", self.port);
-		let listener = match net::TcpListener::bind(&addr) {
+		let addr = format!("0.0.0.0:{}", port).parse().unwrap();
+		let mut core = Core::new().expect("Could not start event loop");
+		let handle = core.handle();
+
+		println!("[arc-reactor]: Binding to port {}", port);
+		let listener = match TcpListener::bind(&addr, &handle) {
 			Ok(listener) => listener,
 			Err(e) => {
 				eprintln!(
 					"[arc-reactor]: Whoops! something else is running on port {}, {}",
-					&self.port, e
+					&port, e
 				);
 				return Err(e);
 			}
 		};
 
 		println!("[arc-reactor]: Spawning threads!");
+		let handler = handler.expect("This thing needs routes to work!");
 
-		let routes = Arc::new(self.handler.expect("This thing needs routes to work!"));
-		let mut http = Http::new();
-		http.sleep_on_errors(true);
-		let acceptor = self.tls_acceptor;
+		let mut receivers = Vec::new();
 
-		for _ in 0..self.threads {
-			let listener = listener.try_clone().expect("Could not clone listener!");
-			let routes = routes.clone();
-			let http = http.clone();
+		for i in 0..threads {
+			let (tx, rx) = unbounded::<(TcpStream, SocketAddr)>();
+			receivers.push(tx);
 			let acceptor = acceptor.clone();
+			let handler = handler.clone();
 
-			thread::spawn(move || spawn(routes, listener, addr, http, acceptor));
+			let reactor = thread::Builder::new().name(format!("Reactor {}", i));
+
+			reactor.spawn(move || spawn(handler, rx, acceptor)).unwrap();
 		}
 
 		println!(
 			"[arc-reactor]: Starting main event loop!\n[arc-reactor]: Spawned {} threads",
-			self.threads + 1
+			threads
 		);
 
-		spawn(routes, listener, addr, http, acceptor);
+		let mut count = 0;
+
+		let future = listener.incoming().for_each(|stream| {
+			let _ = receivers[count].unbounded_send(stream);
+			count += 1;
+
+			if count == threads {
+				count = 0
+			}
+
+			Ok(())
+		});
+
+		core.run(future).expect("Error running reactor core!");
+
 		Ok(())
 	}
 }
 
 fn spawn(
-	routes: Arc<ArcHandler>,
-	listener: net::TcpListener,
-	addr: SocketAddr,
-	http: Http<hyper::Chunk>,
+	routes: ArcHandler,
+	listener: UnboundedReceiver<(TcpStream, SocketAddr)>,
 	acceptor: Option<Arc<TlsAcceptor>>,
 ) {
 	let mut core = Core::new().expect("Could not start event loop");
 	let handle = core.handle();
-	let listener = TcpListener::from_listener(listener, &addr, &handle)
-		.expect("Could not convert TCPListener to async");
+	let mut http = Http::<hyper::Chunk>::new();
+	http.sleep_on_errors(true);
 
-	let future = listener.incoming().for_each(|(socket, remote_ip)| {
+	let future = listener.for_each(move |(socket, remote_ip)| {
 		let service = routes.clone();
 		// user has configured a tls acceptor
 		if let Some(ref acceptor) = acceptor {
