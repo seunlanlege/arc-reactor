@@ -77,7 +77,6 @@ impl MiddleWare<Request> for StaticFileServer {
 					// that reponse is forwarded directly to the client.
 					return Box::new(
 						Response::new()
-							.with_handle(req.reactor_handle())
 							.with_file(pathbuf)
 							.then(|res| {
 								match res {

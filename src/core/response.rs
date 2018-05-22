@@ -55,16 +55,6 @@ impl Response {
 		self.inner.status()
 	}
 
-	pub fn reactor_handle(&self) -> Handle {
-		self.handle.clone().unwrap()
-	}
-
-	pub fn with_handle(mut self, handle: Handle) -> Self {
-		self.handle = Some(handle);
-
-		self
-	}
-
 	/// Set the `StatusCode` for this response.
 	///
 	/// # Example

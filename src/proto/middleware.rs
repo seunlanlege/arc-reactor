@@ -111,6 +111,7 @@ impl<T> MiddleWare<Request> for T
 	}
 }
 
+#[cfg(not(feature = "unstable"))]
 impl<T> MiddleWare<Response> for T
 	where T: Fn(Response) -> MiddleWareFuture<Response> + Send + Sync + Clone + 'static
 {

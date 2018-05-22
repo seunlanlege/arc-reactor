@@ -121,7 +121,6 @@ impl ArcReactor {
 	/// Calling this function will panic if: no routes are supplied, or it
 	/// cannot start the main event loop.
 
-	#[must_use]
 	pub fn initiate(self) -> io::Result<()> {
 		let ArcReactor {
 			port,

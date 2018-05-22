@@ -9,7 +9,7 @@ pub trait ArcService: ArcServiceClone + Send + Sync {
 	fn call(&self, req: Request, res: Response) -> FutureResponse;
 }
 
-#[cfg(feature = "stable")]
+#[cfg(not(feature = "unstable"))]
 impl<T> ArcService for T
 where
 	T: Fn(Request, Response) -> FutureResponse + Send + Sync + Clone + 'static,

@@ -30,6 +30,7 @@ impl<T: Serialize> From<(u16, T)> for Response {
 	}
 }
 
+#[cfg(feature = "unstable")]
 impl<T: Serialize> From<T> for Response {
 	default fn from(json: T) -> Response {
 		let body = to_vec(&json).unwrap();

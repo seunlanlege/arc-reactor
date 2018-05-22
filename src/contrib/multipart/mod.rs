@@ -51,9 +51,16 @@ impl MiddleWare<Request> for Multipart {
 			let body = { req.body() };
 
 			let boundary = {
-				match req.headers()
-					.get::<ContentType>()
-					.and_then(|contentType| contentType.get_param("boundary"))
+				let content = match req.headers_mut().remove::<ContentType>() {
+					None => return Ok(req),
+					Some(c) => {
+						req.headers_mut().set(c.clone());
+						c
+					},
+				};
+
+				match content
+					.get_param("boundary")
 					.and_then(|val| Some(String::from(val.as_str())))
 				{
 					Some(b) => b,

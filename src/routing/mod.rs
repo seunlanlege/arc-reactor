@@ -8,6 +8,7 @@ pub use self::router::*;
 pub(crate) use self::util::*;
 
 #[cfg(test)]
+#[cfg(feature = "unstable")]
 mod tests {
 	use core::{Request, Response};
 	use futures::prelude::async_block;

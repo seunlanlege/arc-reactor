@@ -1,25 +1,16 @@
-#![feature(proc_macro, box_syntax, generators, proc_macro_non_items)]
 #![allow(non_camel_case_types, non_snake_case)]
-
+#![feature(proc_macro, proc_macro_non_items, generators)]
 extern crate arc_reactor;
 use arc_reactor::{
-	contrib::{Multipart, StaticFileServer},
 	core::{ArcReactor, Request},
-	mime,
 	prelude::*,
 	routing::Router,
 };
-use std::path::PathBuf;
 
 fn getMainRoutes() -> Router {
 	// Setup and maps routes to Services.
-	return Router::new().get("/", RequestHandler).post2(
+	return Router::new().get("/", RequestHandler).post(
 		"/",
-		Multipart::new(
-			PathBuf::from("./".to_string()),
-			Some(vec![mime::IMAGE_JPEG]),
-			None,
-		),
 		RequestHandler,
 	);
 }

@@ -117,6 +117,7 @@ impl FakeReactor {
 	}
 }
 
+#[cfg(feature = "unstable")]
 #[cfg(test)]
 mod tests {
 	use super::*;
