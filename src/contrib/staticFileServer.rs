@@ -15,11 +15,17 @@ use POOL;
 /// A static File Server implemented as a Middleware<Request>
 #[derive(Clone)]
 pub struct StaticFileServer {
+	/// the root url for all your files. e.g `static`, `assets`
+	/// request urls that begin with the supplied value for root would be 
+	/// matched.
 	pub root: &'static str,
+	/// Path to folder to serve your static files from.
 	pub public: PathBuf,
 }
 
 impl StaticFileServer {
+	/// Creates a StaticFileServer with the given 
+	/// root and pathbuf.
 	pub fn new(root: &'static str, public: PathBuf) -> Self {
 		Self { root, public }
 	}

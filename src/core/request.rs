@@ -8,7 +8,9 @@ use routing::recognizer::Params;
 use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
-use std::{fmt, net, collections::HashMap};
+#[cfg(feature = "unstable")]
+use std::collections::HashMap;
+use std::{fmt, net};
 use tokio_core::reactor::Handle;
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
@@ -270,8 +272,7 @@ impl Request {
 		self.anyMap.remove::<T>()
 	}
 
-	/// Move the request body. note that this takes ownership of `self`, use
-	/// wisely.
+	/// Move the request body
 	#[inline]
 	pub fn body(&mut self) -> Body {
 		match self.body.take() {

@@ -22,8 +22,7 @@ impl Service for RootService {
 		let mut request: Request = req.into();
 		request.handle = Some(self.handle.clone());
 		request.remote = Some(self.remote_ip);
-		let mut res = Response::new();
-		res.handle = Some(self.handle.clone());
+		let res = Response::new();
 		let responseFuture = AssertUnwindSafe(self.service.call(request, res)).catch_unwind();
 
 		let responseFuture =

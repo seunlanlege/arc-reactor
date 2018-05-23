@@ -1,6 +1,7 @@
-//! Parses the request body as json if the content-type header is set.
+//! Parses the request body as json if the content-type: json header is set.
 //! Note that if there are any errors in parsing the json
-//! it will return an error response.
+//! it will forward an error response to the client.
+//! It is recommended you mount this middleware on the root `Router`
 use core::Request;
 use futures::{
 	Stream,
@@ -21,6 +22,8 @@ impl Deref for Json {
 	}
 }
 
+/// Json Body Parser.
+/// 
 #[derive(Clone, Debug)]
 pub struct BodyParser;
 

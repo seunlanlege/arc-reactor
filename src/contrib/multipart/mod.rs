@@ -7,10 +7,12 @@ use proto::{MiddleWare, MiddleWareFuture};
 use std::{collections::HashMap, path::PathBuf};
 use POOL;
 
-/// Multipart request parser.
+/// A Multipart request parser.
+/// This is only avaible behind the `unstable` features flag.
+/// 
 #[derive(Clone)]
 pub struct Multipart {
-	/// mimes you want to accept,
+	/// list of mimes you want to accept,
 	pub mimes: Option<Vec<Mime>>,
 	/// maximum upload size for files.
 	pub size_limit: Option<u64>,

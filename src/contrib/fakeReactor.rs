@@ -117,22 +117,20 @@ impl FakeReactor {
 	}
 }
 
-#[cfg(feature = "unstable")]
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use core::{Request, Response};
-	use futures::{prelude::async_block, Future, Stream};
+	use futures::{future, Future, Stream};
 	use hyper::StatusCode;
-	use impl_service::*;
-	use proto::ArcService;
+	use proto::FutureResponse;
 	use routing::*;
 
-	#[service]
-	fn AsyncService(_req: Request, res: Response) {
+	fn AsyncService(_req: Request, res: Response) -> FutureResponse {
 		let res = res.with_status(StatusCode::Ok)
 			.with_body("Hello World".as_bytes());
-		Result::Ok(res)
+
+		Box::new(future::ok(res))
 	}
 
 	#[test]
