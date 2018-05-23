@@ -132,7 +132,7 @@ If you wish to use arc-reactor with it's default features:
   - The trait `ArcService` is implemented for all functions that satisfy the signature `Fn(Request, Response) -> FutureResponse`
   - The trait `MiddleWare<Request>` is implemented for all functions that satisfy the signature `Fn(Request) -> MiddleWareFuture<Request>`
   - The trait `MiddleWare<Response>` is implemented for all functions that satisfy the signature `Fn(Response) -> MiddleWareFuture<Response>`
-  - futures from futures-rs is re-exported instead of futures-await.
+  - `futures` from `futures-rs` is re-exported instead of `futures-await`.
   - you lose the ability to `await!` on futures in your ServiceHandlers and MiddleWares.
   - Currently, Multipart support is implemented using unstable features, so you would have to implement your own.
 
@@ -150,9 +150,9 @@ as well as the design decisions that were made.
 Arc-Reactor is highly extensible via middlewares which are placed in the `contrib` module.
 
 Some of the things are missing include:
- - [] Logger
- - [] Websocket
- - [] Support byte range headers
+ - [ ] Logger
+ - [ ] Websocket
+ - [ ] Support byte range headers
  - [x] Asynchronous StaticFileServer
  - [x] Json body parser
  - [x] Multipart Support

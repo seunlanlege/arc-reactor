@@ -119,20 +119,15 @@ lazy_static! {
 	pub static ref POOL: ThreadPool = { ThreadPool::new() };
 }
 
-pub use futures::*;
+pub use futures::prelude::*;
 pub use hyper::{header, StatusCode};
 
 pub mod prelude {
 	pub use core::{Request, Response};
 	pub use futures;
-	pub use futures::{
-		Future,
-		IntoFuture,
-		Stream,
-	};
 	#[cfg(feature = "unstable")]	
 	pub use impl_service::{middleware, service};
 	#[cfg(feature = "unstable")]
 	pub use futures::prelude::{async_block, await};
-	pub use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare};
+	pub use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare, MiddleWareFuture};
 }

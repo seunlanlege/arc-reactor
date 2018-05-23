@@ -1,16 +1,10 @@
-# Design
+# Design (WIP)
 
 When i began building arc-reactor, i was still learning the rust language.
 Coming from a nodejs background, I wanted a web framework that closely mimiced the simplicity of expressjs
 the most popular web framework for nodejs.
 
 So I wrote Arc Reactor.
-
-This document is split into three parts:
-
- - Client dispatch
- - Middlewares
- - proc_macros
 
 ## Client Dispatch
 In order to achieve high throughput, Arc Reactor uses Multiple threads each running an event loop.
@@ -25,12 +19,12 @@ connection #5 goes to thread #1
 
 etc.
 
-The raw socket is handed off to hyper's Http::bind_service, as well as a Service trait object. RootService.
-bind_service returns a future, that completes when the response returned from the service has been flushed to the client.
+The raw socket is handed off to hyper's `Http::serve_connection`, as well as a `Service` trait object. `RootService`.
+`serve_connection` returns a future, that completes when the response returned from the `Service` has been flushed to the client.
 If the client drops the connection, the future is dropped as well.
 
-In order to provide things like  a handle to the underlying event loop, and as well as access to the client IP, which hyper removed.
-the RootService deconstructs the hyper::Request passed to it, constructs a core::Request and passes it to it's inner ArcHandler.
+In order to provide things like  a handle to the underlying event loop, and as well as access to the client IP, which `hyper` removed.
+the RootService deconstructs the `hyper::Request` passed to it, constructs a `arc_reactor::core::Request` and passes it to it's inner `ArcHandler`.
 
 ## ArcService
 ```rust
@@ -71,9 +65,9 @@ ArcHandler is one of the central pieces to arc reactor.
 
 - [x] Becuase of it's structure, It becomes possible to nest ArcHandlers.
 - [x] Nested ArcHandlers inherit their parent's middlewares.
-- [x] A request is passed from the `before`(MiddleWare<Request>) to the `handler`(which is also possibly an ArcHandler) and finally to the `after`(MiddleWare<Response>).
-- [x] If the MiddleWare<Request> returns an Err(Response), the `handler` is skipped, and the response is forwarded to the `after`(MiddleWare<Response>)*.
-- [x] Returning an Err(Response) from a `handler` has no effect, if the `after`(MiddleWare<Response>) exists it would *always* recieve the response returned from the `handler`. Returning an Err(Response) should only be done for testability sake with `FakeReactor`.
+- [x] A request is passed from the `before`(`MiddleWare<Request>`) to the `handler`(which is also possibly an ArcHandler) and finally to the `after`(MiddleWare<Response>).
+- [x] If the `MiddleWare<Request>` returns an `Err(Response)`, the `handler` is skipped, and the response is forwarded to the `after`(MiddleWare<Response>)*.
+- [x] Returning an `Err(Response)` from a `handler` has no effect, if the `after`(MiddleWare<Response>) exists it would *always* recieve the response returned from the `handler`. Returning an `Err(Response)` should only be done for testability sake with `FakeReactor`.
 
 
 ## MiddleWare
@@ -114,9 +108,9 @@ fn LoggerMiddleWare(res: Request) {
 ```
 
 In order to provide ease of use, and integration with `futures-await`. the `service` and `middleware` proc_macros were introduced.
-the `service` proc_macro, creates a zero-sized struct (i.e a struct with no fields, with the same name as the fn), and implements the `ArcService` trait for the struct wrapping its function body in an `async_block`.
+the `service` proc_macro, creates a zero-sized struct (i.e a struct with no fields, with the same name as the `fn`), and implements the `ArcService` trait for the struct wrapping its function body in an `async_block`.
 
-the `middleware` proc_macro, creates a zero-sized struct (i.e a struct with no fields, with the same name as the fn), and implements the `MiddleWare<T>` trait for the struct wrapping its function body in an `async_block`.
+the `middleware` proc_macro, creates a zero-sized struct (i.e a struct with no fields, with the same name as the `fn`), and implements the `MiddleWare<T>` trait for the struct wrapping its function body in an `async_block`.
 
 ```rust
 pub struct ServiceHandler;
