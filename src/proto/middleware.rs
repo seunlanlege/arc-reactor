@@ -111,6 +111,7 @@ impl<T> MiddleWare<Request> for T
 	}
 }
 
+#[cfg(not(feature = "unstable"))]
 impl<T> MiddleWare<Response> for T
 	where T: Fn(Response) -> MiddleWareFuture<Response> + Send + Sync + Clone + 'static
 {
@@ -146,20 +147,13 @@ impl<T: 'static> Clone for Box<MiddleWare<T>> {
 ///
 impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
-		let ptr = self as *const Vec<Box<MiddleWare<Request>>>;
-		let extended = unsafe { &*ptr };
-
-		extended
+		self
 			.iter()
 			.fold(Box::new(Ok(request).into_future()), |request, middleware| {
+				let middleware = middleware.clone();
 				Box::new(
 					request.and_then(
-						move |req| middleware.call(req).then(
-							move |req| {
-								drop(ptr);
-								req
-							}
-						)
+						move |req| middleware.call(req)
 					)
 				)
 			}
@@ -174,20 +168,13 @@ impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 ///
 impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
-		let ptr = self as *const Vec<Box<MiddleWare<Response>>>;
-		let extended = unsafe { &*ptr };
-
-		extended
+		self
 			.iter()
 			.fold(Box::new(Ok(response).into_future()), |response, middleware| {
+				let middleware = middleware.clone();
 				Box::new(
 					response.and_then(
-						move |res| middleware.call(res).then(
-							move |res| {
-								drop(ptr);
-								res
-							}
-						)
+						move |res| middleware.call(res)
 					)
 				)
 			}

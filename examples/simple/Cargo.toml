@@ -4,6 +4,4 @@ version = "0.1.0"
 authors = ["Seun LanLege <seunlanlege@gmail.com>"]
 
 [dependencies]
-arc-reactor = { path="../../", version="*" }
-regex = "0.2"
-futures-await = "0.1"
+arc-reactor = { path="../../", version="*", features =["unstable"] }

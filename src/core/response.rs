@@ -1,3 +1,4 @@
+use anymap::AnyMap;
 use core::file;
 use futures::{future::lazy, prelude::*, sync::oneshot::channel};
 use hyper::{
@@ -7,16 +8,15 @@ use hyper::{
 	HttpVersion,
 	StatusCode,
 };
+use mime_guess::guess_mime_type;
 use std::path::Path;
 use tokio::{fs::File, io::ErrorKind};
-use tokio_core::reactor::Handle;
 use POOL;
-use mime_guess::guess_mime_type;
 
 #[derive(Debug)]
 pub struct Response {
 	pub(crate) inner: hyper::Response,
-	pub(crate) handle: Option<Handle>,
+	pub(crate) anymap: AnyMap,
 }
 
 #[derive(Debug)]
@@ -53,16 +53,6 @@ impl Response {
 	#[inline]
 	pub fn status(&self) -> StatusCode {
 		self.inner.status()
-	}
-
-	pub fn reactor_handle(&self) -> Handle {
-		self.handle.clone().unwrap()
-	}
-
-	pub fn with_handle(mut self, handle: Handle) -> Self {
-		self.handle = Some(handle);
-
-		self
 	}
 
 	/// Set the `StatusCode` for this response.
@@ -112,7 +102,7 @@ impl Response {
 		self
 	}
 
-	/// Set the body.
+	/// Set a text/plain response.
 	#[inline]
 	pub fn text<T: Into<String>>(&mut self, body: T) {
 		let body = body.into();
@@ -123,6 +113,10 @@ impl Response {
 		self.inner.headers_mut().set(ContentType::plaintext());
 	}
 
+	/// set a text/plain response
+	/// moves the response
+	///
+	/// useful for builder-style
 	#[inline]
 	pub fn with_text<T: Into<String>>(mut self, body: T) -> Self {
 		self.text(body);
@@ -130,6 +124,26 @@ impl Response {
 		self
 	}
 
+	/// get a reference to a type previously set on the response
+	pub fn get<T: 'static>(&self) -> Option<&T> {
+		self.anymap.get::<T>()
+	}
+
+	/// Set a type on the response.
+	pub fn set<T: 'static>(&mut self, value: T) -> Option<T> {
+		self.anymap.insert::<T>(value)
+	}
+
+	/// Removes the type previously set on the response.
+	pub fn remove<T: 'static>(&mut self) -> Option<T> {
+		self.anymap.remove::<T>()
+	}
+
+	/// respond with a file
+	/// sets the appropriate Content-type and Content-Length headers
+	/// unfortunately, this doesn't support byte ranges, yet.
+	/// The file is streamed asynchronously from the filesystem to the client
+	/// Content-Encoding: chunked.
 	pub fn with_file<P>(mut self, pathbuf: P) -> impl Future<Item = Response, Error = Response>
 	where
 		P: AsRef<Path> + Send + Clone + 'static,
@@ -282,7 +296,7 @@ impl Default for Response {
 	fn default() -> Response {
 		Response {
 			inner: hyper::Response::default(),
-			handle: None,
+			anymap: AnyMap::new()
 		}
 	}
 }

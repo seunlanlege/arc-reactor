@@ -75,16 +75,21 @@
 //! ```
 //!
 
-#![feature(proc_macro, generators, fn_must_use, specialization, proc_macro_non_items, test)]
+#![cfg_attr(feature = "unstable", feature(proc_macro, generators, fn_must_use, specialization, proc_macro_non_items, test))]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
 pub extern crate anymap;
+
+#[cfg(feature = "unstable")]
 #[macro_use]
 #[macro_export]
 pub extern crate futures_await as futures;
+#[cfg(not(feature = "unstable"))]
+#[macro_use]
+pub extern crate futures;
 pub extern crate hyper;
-#[cfg(not(feature = "stable"))]
+#[cfg(feature = "unstable")]
 pub extern crate impl_service;
 pub extern crate native_tls;
 pub extern crate num_cpus;
@@ -101,7 +106,6 @@ pub extern crate bytes;
 pub extern crate mime;
 pub extern crate mime_guess;
 pub extern crate regex;
-pub extern crate test;
 pub extern crate tokio_core;
 
 #[macro_use]
@@ -122,12 +126,13 @@ pub mod prelude {
 	pub use core::{Request, Response};
 	pub use futures;
 	pub use futures::{
-		prelude::{async_block, await},
 		Future,
 		IntoFuture,
 		Stream,
 	};
-	#[cfg(not(feature = "stable"))]
+	#[cfg(feature = "unstable")]	
 	pub use impl_service::{middleware, service};
+	#[cfg(feature = "unstable")]
+	pub use futures::prelude::{async_block, await};
 	pub use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare};
 }

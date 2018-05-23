@@ -1,12 +1,16 @@
 use anymap::AnyMap;
-use contrib::{Json, MultiPartMap};
+use contrib::Json;
+#[cfg(feature = "unstable")]
+use contrib::MultiPartMap;
 use hyper::{Body, Headers, HttpVersion, Method, Uri};
 use percent_encoding::percent_decode;
 use routing::recognizer::Params;
 use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
-use std::{collections::HashMap, fmt, net};
+#[cfg(feature = "unstable")]
+use std::collections::HashMap;
+use std::{fmt, net};
 use tokio_core::reactor::Handle;
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
@@ -132,6 +136,10 @@ impl Request {
 	#[inline]
 	pub fn headers(&self) -> &Headers {
 		&self.headers
+	}
+
+	pub fn headers_mut(&mut self) -> &mut Headers {
+		&mut self.headers
 	}
 
 	/// Returns a reference to the request's method
@@ -264,8 +272,7 @@ impl Request {
 		self.anyMap.remove::<T>()
 	}
 
-	/// Move the request body. note that this takes ownership of `self`, use
-	/// wisely.
+	/// Move the request body
 	#[inline]
 	pub fn body(&mut self) -> Body {
 		match self.body.take() {
@@ -289,6 +296,7 @@ impl Request {
 		}
 	}
 
+	#[cfg(feature = "unstable")]
 	pub fn form(&self) -> Result<HashMap<String, String>, JsonError> {
 		match self.get::<MultiPartMap>() {
 			Some(ref map) => Ok(map.0.clone()),

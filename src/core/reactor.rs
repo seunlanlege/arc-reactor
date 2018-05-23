@@ -121,7 +121,6 @@ impl ArcReactor {
 	/// Calling this function will panic if: no routes are supplied, or it
 	/// cannot start the main event loop.
 
-	#[must_use]
 	pub fn initiate(self) -> io::Result<()> {
 		let ArcReactor {
 			port,
@@ -216,9 +215,11 @@ fn spawn(
 						remote_ip,
 						handle: handle_clone,
 					};
+
 					let conn_future = http_clone
 						.serve_connection(socket, service)
 						.then(|_| Ok(()));
+						
 					conn_future
 				})
 				.then(|_: Result<(), Result<(), ()>>| Ok(()));

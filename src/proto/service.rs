@@ -9,7 +9,7 @@ pub trait ArcService: ArcServiceClone + Send + Sync {
 	fn call(&self, req: Request, res: Response) -> FutureResponse;
 }
 
-#[cfg(feature = "stable")]
+#[cfg(not(feature = "unstable"))]
 impl<T> ArcService for T
 where
 	T: Fn(Request, Response) -> FutureResponse + Send + Sync + Clone + 'static,
@@ -65,64 +65,54 @@ impl ArcHandler {
 
 impl ArcService for ArcHandler {
 	fn call(&self, req: Request, res: Response) -> FutureResponse {
-		let ptr = self as *const ArcHandler;
-		let extended = unsafe { &*ptr };
-
-		if extended.before.is_some() && extended.after.is_none() {
-			let before = match extended.before {
-				Some(ref before) => before,
+		if self.before.is_some() && self.after.is_none() {
+			let before = match self.before {
+				Some(ref before) => before.clone(),
 				_ => unreachable!(),
 			};
+
+			let handler = self.handler.clone();
+			let responsefuture = before.call(req).and_then(move |req| handler.call(req, res));
+			return Box::new(responsefuture);
+		}
+
+		if self.before.is_none() && self.after.is_some() {
+			let after = match self.after {
+				Some(ref after) => after.clone(),
+				_ => unreachable!(),
+			};
+			let handler = self.handler.clone();
+			let responsefuture = handler.call(req, res).then(move |res| {
+				match res {
+					Ok(res) | Err(res) => after.call(res),
+				}
+			});
+			return Box::new(responsefuture);
+		}
+
+		if self.before.is_some() && self.after.is_some() {
+			let before = match self.before {
+				Some(ref before) => before.clone(),
+				_ => unreachable!(),
+			};
+
+			let handler = self.handler.clone();
+			let after = match self.after {
+				Some(ref after) => after.clone(),
+				_ => unreachable!(),
+			};
+
 			let responsefuture = before
 				.call(req)
-				.and_then(move |req| extended.handler.call(req, res));
-			return Box::new(responsefuture.then(move |res| {
-				drop(ptr);
-				drop(extended);
-				res
-			}));
+				.and_then(move |req| handler.call(req, res))
+				.then(move |res| {
+					match res {
+						Ok(res) | Err(res) => after.call(res),
+					}
+				});
+			return Box::new(responsefuture);
 		}
 
-		if extended.before.is_none() && extended.after.is_some() {
-			let after = match extended.after {
-				Some(ref after) => after,
-				_ => unreachable!(),
-			};
-			let responsefuture = extended
-				.handler
-				.call(req, res)
-				.and_then(move |res| after.call(res));
-			return Box::new(responsefuture.then(move |res| {
-				drop(ptr);
-				drop(extended);
-				res
-			}));
-		}
-
-		if extended.before.is_some() && extended.after.is_some() {
-			let before = match extended.before {
-				Some(ref before) => before,
-				_ => unreachable!(),
-			};
-			let after = match extended.after {
-				Some(ref after) => after,
-				_ => unreachable!(),
-			};
-			let responsefuture = before
-				.call(req)
-				.and_then(move |req| extended.handler.call(req, res))
-				.and_then(move |res| after.call(res));
-			return Box::new(responsefuture.then(move |res| {
-				drop(ptr);
-				drop(extended);
-				res
-			}));
-		}
-
-		return Box::new(extended.handler.call(req, res).then(move |res| {
-			drop(ptr);
-			drop(extended);
-			res
-		}));
+		return self.handler.call(req, res);
 	}
 }
