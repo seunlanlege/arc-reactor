@@ -215,9 +215,11 @@ fn spawn(
 						remote_ip,
 						handle: handle_clone,
 					};
+
 					let conn_future = http_clone
 						.serve_connection(socket, service)
 						.then(|_| Ok(()));
+						
 					conn_future
 				})
 				.then(|_: Result<(), Result<(), ()>>| Ok(()));

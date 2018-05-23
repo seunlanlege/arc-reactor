@@ -5,5 +5,3 @@ authors = ["Seun LanLege <seunlanlege@gmail.com>"]
 
 [dependencies]
 arc-reactor = { path="../../", version="*", features =["unstable"] }
-regex = "0.2"
-futures-await = "0.1"
