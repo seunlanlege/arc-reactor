@@ -28,7 +28,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	};
 
 	let block = block.stmts.iter();
-	let inputs = decl.inputs.into_tokens();
+	let inputs = decl.inputs.into_token_stream();
 	let span = Span::call_site();
 
 	let output = quote_spanned! {span=>
@@ -67,7 +67,7 @@ pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream 
 
 
 	let block = block.stmts.iter();
-	let inputs = decl.inputs.into_tokens();
+	let inputs = decl.inputs.into_token_stream();
 	let span = Span::call_site();
 
 	let output = quote_spanned! {span=>

@@ -75,7 +75,7 @@
 //! ```
 //!
 
-#![cfg_attr(feature = "unstable", feature(proc_macro, generators, fn_must_use, specialization, proc_macro_non_items, test))]
+#![cfg_attr(feature = "unstable", feature(proc_macro, generators, specialization, proc_macro_non_items, test))]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
@@ -125,6 +125,7 @@ pub use hyper::{header, StatusCode};
 pub mod prelude {
 	pub use core::{Request, Response};
 	pub use futures;
+	pub use futures::prelude::*;
 	#[cfg(feature = "unstable")]	
 	pub use impl_service::{middleware, service};
 	#[cfg(feature = "unstable")]
