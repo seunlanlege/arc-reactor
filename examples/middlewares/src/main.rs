@@ -1,14 +1,18 @@
-#![feature(proc_macro, box_syntax, generators, conservative_impl_trait)]
+#![feature(proc_macro, generators, proc_macro_non_items)]
 extern crate arc_reactor;
 
-use arc_reactor::prelude::*;
-use arc_reactor::{futures, ArcReactor, RouteGroup, Router, bodyParser};
+use arc_reactor::{
+	contrib::BodyParser,
+	core::{ArcReactor, Request},
+	prelude::*,
+	routing::{RouteGroup, Router},
+};
 
 /// Setup and mounts routes to actions
 fn get_main_routes() -> Router {
 	// create a routegroup.
 	let group = RouteGroup::new("api")
-		.before(bodyParser) // mount the bodyparser request middleware on this routegroup.
+		.before(BodyParser) // mount the bodyparser request middleware on this routegroup.
 		.get("/route", IndexService); // you can also nest a routegroup on a routegroup, node-style.
 
 	Router::new() // you can also mount a routegroup on the router.
@@ -33,12 +37,12 @@ fn main() {
 /// to the client.
 ///
 #[service]
-fn IndexService(_req: Request, res: Response) {
-	println("Request Path => {}", req.path());
+fn IndexService(req: Request, res: Response) {
+	println!("Request Path => {}", req.path());
 	Ok(res)
 }
 
-/// Middlewares must return Result<Request, Response>; 
+/// Middlewares must return Result<Request, Response>;
 /// If a request middleware returns Ok(request)
 /// the returned request is passed on to the next middleware in the chain (if
 /// there is one) or the route handler.
