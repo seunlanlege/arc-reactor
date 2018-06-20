@@ -4,7 +4,7 @@ use futures::{
 	Future,
 	Stream,
 };
-use hyper::{self, server::Http};
+use hyper::server::conn::Http;
 use native_tls::TlsAcceptor;
 use num_cpus;
 use proto::{ArcHandler, ArcService, MiddleWare};
@@ -192,8 +192,8 @@ fn spawn(
 ) {
 	let mut core = Core::new().expect("Could not start event loop");
 	let handle = core.handle();
-	let mut http = Http::<hyper::Chunk>::new();
-	http.sleep_on_errors(true);
+	let mut http = Http::new();
+	// http.sleep_on_errors(true);
 
 	let future = listener.for_each(move |(socket, remote_ip)| {
 		let service = routes.clone();
@@ -219,7 +219,7 @@ fn spawn(
 					let conn_future = http_clone
 						.serve_connection(socket, service)
 						.then(|_| Ok(()));
-						
+
 					conn_future
 				})
 				.then(|_: Result<(), Result<(), ()>>| Ok(()));
@@ -228,14 +228,15 @@ fn spawn(
 		}
 
 		// default to http
-		let connection_future = http.serve_connection(
-			socket,
-			RootService {
-				service,
-				remote_ip,
-				handle: handle.clone(),
-			},
-		).then(|_| Ok(()));
+		let connection_future =
+			http.serve_connection(
+				socket,
+				RootService {
+					service,
+					remote_ip,
+					handle: handle.clone(),
+				},
+			).then(|_| Ok(()));
 		handle.spawn(connection_future);
 
 		Ok(())

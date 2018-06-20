@@ -42,8 +42,10 @@ pub fn parse(
 		Ok(regex) => regex,
 		Err(err) => {
 			println!("Regex {:?}", err);
-			sender.send(ParseResult::Io(io::ErrorKind::Other.into())).is_ok();
-			return Ok(())
+			sender
+				.send(ParseResult::Io(io::ErrorKind::Other.into()))
+				.is_ok();
+			return Ok(());
 		}
 	};
 	let crlf_regex = Regex::new(r"\r\n").unwrap();

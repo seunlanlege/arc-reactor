@@ -9,7 +9,7 @@ use POOL;
 
 /// A Multipart request parser.
 /// This is only avaible behind the `unstable` features flag.
-/// 
+///
 #[derive(Clone)]
 pub struct Multipart {
 	/// list of mimes you want to accept,

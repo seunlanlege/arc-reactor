@@ -109,7 +109,8 @@ impl FakeReactor {
 			handle: Some(reactor.handle()),
 		};
 
-		let matched = self.routes
+		let matched = self
+			.routes
 			.matchRoute(req.path(), &method)
 			.expect(&format!("No Handler registered for Method::{}", method));
 
@@ -127,7 +128,8 @@ mod tests {
 	use routing::*;
 
 	fn AsyncService(_req: Request, res: Response) -> FutureResponse {
-		let res = res.with_status(StatusCode::Ok)
+		let res = res
+			.with_status(StatusCode::Ok)
 			.with_body("Hello World".as_bytes());
 
 		Box::new(future::ok(res))

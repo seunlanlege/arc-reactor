@@ -43,8 +43,8 @@ impl Stream for FileStream {
 // 	type SinkError = Error;
 // 	type SinkItem = Chunk;
 
-// 	fn start_send(&mut self, chunk: Chunk) -> StartSend<Self::SinkItem, Self::SinkError> {
-// 		if !self.flushed {
+// fn start_send(&mut self, chunk: Chunk) -> StartSend<Self::SinkItem,
+// Self::SinkError> { 		if !self.flushed {
 // 			match try!(self.poll_complete()) {
 // 				Async::Ready(()) => {}
 // 				Async::NotReady => return Ok(AsyncSink::NotReady(chunk)),

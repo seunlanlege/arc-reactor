@@ -3,12 +3,9 @@
 //! it will forward an error response to the client.
 //! It is recommended you mount this middleware on the root `Router`
 use core::Request;
-use futures::{
-	Stream,
-	IntoFuture,
-	Future
-};
+use futures::{Future, IntoFuture, Stream};
 use hyper::{self, header::ContentType};
+use mime;
 use proto::{MiddleWare, MiddleWareFuture};
 use std::ops::Deref;
 
@@ -23,7 +20,7 @@ impl Deref for Json {
 }
 
 /// Json Body Parser.
-/// 
+///
 #[derive(Clone, Debug)]
 pub struct BodyParser;
 
@@ -32,12 +29,12 @@ impl MiddleWare<Request> for BodyParser {
 		let mut isJson = false;
 		{
 			if let Some(ct) = req.headers.get::<ContentType>() {
-				isJson = *ct == ContentType::json();
+				isJson = (**ct).subtype() == mime::JSON;
 			}
 		}
 
 		if !isJson {
-			return Box::new(Ok(req).into_future())
+			return Box::new(Ok(req).into_future());
 		}
 
 		let body = req.body();
@@ -64,7 +61,7 @@ impl MiddleWare<Request> for BodyParser {
 			req.set(json);
 			Ok(req)
 		});
-		
+
 		return Box::new(future);
 	}
 }

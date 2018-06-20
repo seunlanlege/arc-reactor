@@ -27,7 +27,7 @@
 //!
 //! Add this to your `cargo.toml`
 //! ```toml
-//! arc-reactor = "0.1"
+//! arc - reactor = "0.1"
 //! ```
 //! ## Guides
 //! Check out the examples folder to get a feel for how `arc reactor`, it's
@@ -75,12 +75,15 @@
 //! ```
 //!
 
-#![cfg_attr(feature = "unstable", feature(proc_macro, generators, specialization, proc_macro_non_items, test))]
+#![cfg_attr(
+	feature = "unstable",
+	feature(proc_macro, generators, specialization, proc_macro_non_items, test)
+)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
 pub extern crate anymap;
-
+pub extern crate http;
 #[cfg(feature = "unstable")]
 #[macro_use]
 #[macro_export]
@@ -124,11 +127,10 @@ pub use hyper::{header, StatusCode};
 
 pub mod prelude {
 	pub use core::{Request, Response};
-	pub use futures;
-	pub use futures::prelude::*;
-	#[cfg(feature = "unstable")]	
-	pub use impl_service::{middleware, service};
 	#[cfg(feature = "unstable")]
 	pub use futures::prelude::{async_block, await};
+	pub use futures::{self, prelude::*};
+	#[cfg(feature = "unstable")]
+	pub use impl_service::{middleware, service};
 	pub use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare, MiddleWareFuture};
 }

@@ -16,7 +16,7 @@ use POOL;
 #[derive(Clone)]
 pub struct StaticFileServer {
 	/// the root url for all your files. e.g `static`, `assets`
-	/// request urls that begin with the supplied value for root would be 
+	/// request urls that begin with the supplied value for root would be
 	/// matched.
 	pub root: &'static str,
 	/// Path to folder to serve your static files from.
@@ -24,7 +24,7 @@ pub struct StaticFileServer {
 }
 
 impl StaticFileServer {
-	/// Creates a StaticFileServer with the given 
+	/// Creates a StaticFileServer with the given
 	/// root and pathbuf.
 	pub fn new(root: &'static str, public: PathBuf) -> Self {
 		Self { root, public }
@@ -57,7 +57,6 @@ impl MiddleWare<Request> for StaticFileServer {
 			None => None,
 		};
 
-
 		if prefix == Some(self.root) {
 			// supported http-methods
 			let method = { req.method().clone() };
@@ -81,15 +80,11 @@ impl MiddleWare<Request> for StaticFileServer {
 				Method::Get => {
 					// if a MiddleWare<T> returns Err(Response)
 					// that reponse is forwarded directly to the client.
-					return Box::new(
-						Response::new()
-							.with_file(pathbuf)
-							.then(|res| {
-								match res {
-									Ok(res) | Err(res) => Err(res),
-								}
-							}),
-					);
+					return Box::new(Response::new().with_file(pathbuf).then(|res| {
+						match res {
+							Ok(res) | Err(res) => Err(res),
+						}
+					}));
 				}
 				Method::Head => {
 					let (snd, rec) = channel::<State>();

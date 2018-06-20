@@ -1,8 +1,14 @@
-use anymap::AnyMap;
 use contrib::Json;
 #[cfg(feature = "unstable")]
 use contrib::MultiPartMap;
-use hyper::{Body, Headers, HttpVersion, Method, Uri};
+use http::request::Parts;
+use hyper::{
+	header::{HeaderMap, HeaderValue},
+	Body,
+	Method,
+	Uri,
+	Version,
+};
 use percent_encoding::percent_decode;
 use routing::recognizer::Params;
 use serde::de::DeserializeOwned;
@@ -10,19 +16,14 @@ use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
 #[cfg(feature = "unstable")]
 use std::collections::HashMap;
-use std::{fmt, net};
-use tokio_core::reactor::Handle;
+
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
+/// #
+#[derive(Debug)]
 pub struct Request {
-	pub(crate) uri: Uri,
-	pub(crate) handle: Option<Handle>,
-	pub(crate) body: Option<Body>,
-	pub(crate) version: HttpVersion,
-	pub(crate) headers: Headers,
-	pub(crate) remote: Option<net::SocketAddr>,
-	pub(crate) method: Method,
-	pub(crate) anyMap: AnyMap,
+	pub(crate) parts: Parts,
+	pub(crate) body: Body,
 }
 
 /// The error returned by `Request::json()`.
@@ -80,23 +81,8 @@ pub enum QueryParseError {
 }
 
 impl Request {
-	pub(crate) fn new(
-		method: Method,
-		uri: Uri,
-		version: HttpVersion,
-		headers: Headers,
-		body: Body,
-	) -> Self {
-		Self {
-			method,
-			uri,
-			version,
-			headers,
-			body: Some(body),
-			remote: None,
-			anyMap: AnyMap::new(),
-			handle: None,
-		}
+	pub(crate) fn new(parts: Parts, body: Body) -> Self {
+		Self { parts, body }
 	}
 
 	/// get a handle to the underlying event loop executing this request.
@@ -122,24 +108,24 @@ impl Request {
 	/// 	}
 	/// ```
 	///
-	pub fn reactor_handle(&self) -> Handle {
-		self.handle.clone().unwrap()
-	}
+	// pub fn reactor_handle(&self) -> Handle {
+	// 	self.handle.clone().unwrap()
+	// }
 
-	/// Returns a reference to the request's HttpVersion
+	/// Returns a reference to the request's Version
 	#[inline]
-	pub fn version(&self) -> &HttpVersion {
-		&self.version
+	pub fn version(&self) -> &Version {
+		&self.parts.version
 	}
 
 	/// Returns a reference to the request's headers
 	#[inline]
-	pub fn headers(&self) -> &Headers {
-		&self.headers
+	pub fn headers(&self) -> &HeaderMap<HeaderValue> {
+		&self.parts.headers
 	}
 
-	pub fn headers_mut(&mut self) -> &mut Headers {
-		&mut self.headers
+	pub fn headers_mut(&mut self) -> &mut HeaderMap<HeaderValue> {
+		&mut self.parts.headers
 	}
 
 	/// Returns a reference to the request's method
@@ -148,28 +134,28 @@ impl Request {
 	/// GET, HEAD, POST, PUT DELETE, CONNECT, OPTIONS, TRACE, PATCH.
 	#[inline]
 	pub fn method(&self) -> &Method {
-		&self.method
+		&self.parts.method
 	}
 
 	/// Returns a request to the request's Uri
 	#[inline]
 	pub fn uri(&self) -> &Uri {
-		&self.uri
+		&self.parts.uri
 	}
 
 	/// Returns the query path of the request.
 	#[inline]
 	pub fn path(&self) -> &str {
-		self.uri.path()
+		self.parts.uri.path()
 	}
 
 	/// Returns the IP of the connected client.
 	/// This should always be set, except in testing environments with
 	/// `FakeReactor`.
-	#[inline]
-	pub fn remote_ip(&self) -> Option<net::SocketAddr> {
-		self.remote
-	}
+	// #[inline]
+	// pub fn remote_ip(&self) -> Option<net::SocketAddr> {
+	// 	self.remote
+	// }
 
 	/// Serializes the query string into a struct via serde.
 	///
@@ -197,7 +183,7 @@ impl Request {
 	where
 		T: DeserializeOwned,
 	{
-		self.uri
+		self.uri()
 			.query()
 			.ok_or(QueryParseError::None)
 			.and_then(|encoded| Ok(percent_decode(encoded.as_bytes()).decode_utf8_lossy()))
@@ -219,7 +205,7 @@ impl Request {
 	/// }
 	/// ```
 	pub fn params(&self) -> Option<&Params> {
-		self.anyMap.get::<Params>()
+		self.parts.extensions.get::<Params>()
 	}
 
 	/// The request struct constains an `AnyMap` so that middlewares can append
@@ -258,27 +244,24 @@ impl Request {
 	/// 	// be called.
 	/// 	}
 	/// ```
-	pub fn get<T: 'static>(&self) -> Option<&T> {
-		self.anyMap.get::<T>()
+	pub fn get<T: Send + Sync + 'static>(&self) -> Option<&T> {
+		self.parts.extensions.get::<T>()
 	}
 
 	/// Set a type on the request.
-	pub fn set<T: 'static>(&mut self, value: T) -> Option<T> {
-		self.anyMap.insert::<T>(value)
+	pub fn set<T: Send + Sync + 'static>(&mut self, value: T) -> Option<T> {
+		self.parts.extensions.insert::<T>(value)
 	}
 
 	/// Removes the type previously set on the request.
-	pub fn remove<T: 'static>(&mut self) -> Option<T> {
-		self.anyMap.remove::<T>()
+	pub fn remove<T: Send + Sync + 'static>(&mut self) -> Option<T> {
+		self.parts.extensions.remove::<T>()
 	}
 
 	/// Move the request body
 	#[inline]
-	pub fn body(&mut self) -> Body {
-		match self.body.take() {
-			Some(body) => body,
-			None => Default::default(),
-		}
+	pub fn body(self) -> Body {
+		self.body
 	}
 
 	/// Serialize the request's json value into a struct.
@@ -306,35 +289,12 @@ impl Request {
 
 	/// Get a reference to the request body.
 	#[inline]
-	pub fn body_ref(&self) -> Option<&Body> {
-		self.body.as_ref()
+	pub fn body_ref(&self) -> &Body {
+		&self.body
 	}
 
 	/// Set the request body.
 	pub fn set_body(&mut self, body: Body) {
-		self.body = Some(body)
-	}
-
-	/// Decontruct this request.
-	pub fn deconstruct(self) -> (Method, Uri, HttpVersion, Headers, Body) {
-		(
-			self.method,
-			self.uri,
-			self.version,
-			self.headers,
-			self.body.unwrap_or_default(),
-		)
-	}
-}
-
-impl fmt::Debug for Request {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		f.debug_struct("Request")
-			.field("method", &self.method)
-			.field("uri", &self.uri)
-			.field("version", &self.version)
-			.field("remote", &self.remote)
-			.field("headers", &self.headers)
-			.finish()
+		self.body = body
 	}
 }
