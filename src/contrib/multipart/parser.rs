@@ -1,10 +1,13 @@
 use bytes::Bytes;
 use core::file;
-use futures::{prelude::*, sync::oneshot::Sender};
-use header::{ContentDisposition, DispositionParam, DispositionType, Header};
-use hyper::{Body, Error};
+use futures::prelude::*;
+use hyper::{self, Body};
+use hyperx::header::{ContentDisposition, DispositionParam, DispositionType, Header};
 use mime::Mime;
-use regex::bytes::{Regex, RegexBuilder};
+use regex::{
+	self,
+	bytes::{Regex, RegexBuilder},
+};
 use std::{collections::HashMap, io, path::PathBuf};
 use tokio::fs::File;
 
@@ -20,32 +23,34 @@ enum CharSet {
 	Binary(String, String),
 	None,
 }
-
-pub enum ParseResult {
-	Ok(HashMap<String, String>),
+#[derive(Debug)]
+pub enum ParseError {
 	Io(io::Error),
+	Regex(regex::Error),
+	Hyper(hyper::Error),
 	InvalidMime,
+}
+
+impl From<hyper::Error> for ParseError {
+	fn from(err: hyper::Error) -> ParseError {
+		ParseError::Hyper(err)
+	}
 }
 
 #[async]
 pub fn parse(
 	body: Body,
 	boundary: String,
-	sender: Sender<ParseResult>,
 	dir: PathBuf,
 	mimes: Option<Vec<Mime>>,
-) -> Result<(), Error> {
+) -> Result<HashMap<String, String>, ParseError> {
 	let boundary = format!("--{}", boundary);
 	let re = format!("{}*", boundary);
 	let mut boundary_regex = RegexBuilder::new(&re);
-	let boundary_regex = match boundary_regex.size_limit(300).build() {
+	let boundary_regex = match boundary_regex.size_limit(5000).build() {
 		Ok(regex) => regex,
 		Err(err) => {
-			println!("Regex {:?}", err);
-			sender
-				.send(ParseResult::Io(io::ErrorKind::Other.into()))
-				.is_ok();
-			return Ok(());
+			return Err(ParseError::Regex(err));
 		}
 	};
 	let crlf_regex = Regex::new(r"\r\n").unwrap();
@@ -66,8 +71,7 @@ pub fn parse(
 			file = match await!(file::write(file.unwrap(), chunk)) {
 				Ok(f) => Some(f),
 				Err(err) => {
-					sender.send(ParseResult::Io(err)).is_ok();
-					return Ok(());
+					return Err(ParseError::Io(err));
 				}
 			};
 			continue;
@@ -105,8 +109,7 @@ pub fn parse(
 									if let Some(ref mimes) = mimes {
 										let mime = mime.parse::<Mime>();
 										if !mime.is_ok() || !mimes.contains(&mime.unwrap()) {
-											sender.send(ParseResult::InvalidMime).is_ok();
-											return Ok(());
+											return Err(ParseError::InvalidMime);
 										}
 									}
 								}
@@ -135,8 +138,7 @@ pub fn parse(
 								file = match await!(File::create(path)) {
 									Ok(f) => Some(f),
 									Err(err) => {
-										sender.send(ParseResult::Io(err)).is_ok();
-										return Ok(());
+										return Err(ParseError::Io(err));
 									}
 								};
 								state = DecodeState::Read(CharSet::Binary(filename, param));
@@ -162,8 +164,7 @@ pub fn parse(
 									file = match await!(file::write(file.unwrap(), parts)) {
 										Ok(f) => Some(f),
 										Err(err) => {
-											sender.send(ParseResult::Io(err)).is_ok();
-											return Ok(());
+											return Err(ParseError::Io(err));
 										}
 									};
 
@@ -180,6 +181,5 @@ pub fn parse(
 		}
 	}
 
-	sender.send(ParseResult::Ok(map)).is_ok();
-	Ok(())
+	Ok(map)
 }

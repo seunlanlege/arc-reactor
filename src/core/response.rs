@@ -1,5 +1,5 @@
 use core::file;
-use futures::{future::lazy, prelude::*, sync::oneshot::channel};
+use futures::prelude::*;
 use http::response::Parts;
 use hyper::{
 	self,
@@ -9,21 +9,13 @@ use hyper::{
 	Version,
 };
 use mime_guess::guess_mime_type;
-use std::path::Path;
+use std::{fmt::Debug, path::Path};
 use tokio::{fs::File, io::ErrorKind};
-use POOL;
 
 #[derive(Debug)]
 pub struct Response {
 	pub(crate) parts: Parts,
 	pub(crate) body: Body,
-}
-
-#[derive(Debug)]
-pub(crate) enum State {
-	Len(u64),
-	NotFound,
-	__Exhaustive,
 }
 
 impl Response {
@@ -96,7 +88,7 @@ impl Response {
 			CONTENT_LENGTH,
 			HeaderValue::from_str(&body.len().to_string()).unwrap(),
 		);
-		self.body = Body::from(body.into());
+		self.body = Body::from(body);
 	}
 
 	/// set a text/plain response
@@ -132,78 +124,40 @@ impl Response {
 	/// Content-Encoding: chunked.
 	pub fn with_file<P>(mut self, pathbuf: P) -> impl Future<Item = Response, Error = Response>
 	where
-		P: AsRef<Path> + Send + Clone + 'static,
+		P: AsRef<Path> + Send + Clone + Debug + 'static,
 	{
-		let (sender, body) = Body::channel();
-		self.body = body;
-
-		let (snd, rec) = channel::<State>();
 		let path_clone = pathbuf.clone();
 
-		// this future is spawned on the tokio ThreadPool executor
-		let future = lazy(|| {
-			File::open(pathbuf)
-				.and_then(file::metadata)
-				.then(|result| {
-					match result {
-						Ok((file, meta)) => {
-							snd.send(State::Len(meta.len())).unwrap();
-							let stream = file::stream(file);
-							let future = stream
-								.map_err(|err| println!("whoops filestream error occured {}", err))
-								.for_each(|chunk| {
-									if sender.poll_ready().is_ok() {
-										sender.send_data(chunk);
-									}
+		File::open(pathbuf)
+			.and_then(file::metadata)
+			.then(move |result| {
+				match result {
+					Ok((file, meta)) => {
+						let mime_type = guess_mime_type(path_clone.clone());
+						self.headers_mut().insert(
+							CONTENT_LENGTH,
+							HeaderValue::from_str(&meta.len().to_string()).unwrap(),
+						);
+						self.headers_mut().insert(
+							CONTENT_TYPE,
+							HeaderValue::from_str(mime_type.as_ref()).unwrap(),
+						);
 
-									Ok(())
-								});
+						let stream = file::stream(file);
+						self.body = Body::wrap_stream(stream);
 
-							Ok(future)
-						}
-						Err(err) => {
-							println!("Aha! Error! {}", err);
-							match err.kind() {
-								ErrorKind::NotFound => snd.send(State::NotFound).unwrap(),
-								_ => snd.send(State::__Exhaustive).unwrap(),
-							};
-							Err(())
-						}
+						Ok(self)
 					}
-				})
-				.and_then(|f| f)
-		});
-
-		// attempt to spawn future on tokio threadpool
-		POOL.sender().spawn(future).unwrap();
-
-		rec.then(move |len| {
-			match len {
-				Ok(state) => {
-					match state {
-						State::Len(len) => {
-							let mime_type = guess_mime_type(path_clone);
-							self.headers_mut().insert(
-								CONTENT_LENGTH,
-								HeaderValue::from_str(&len.to_string()).unwrap(),
-							);
-							self.headers_mut().insert(
-								CONTENT_TYPE,
-								HeaderValue::from_str(mime_type.as_ref()).unwrap(),
-							);
-							return Ok(self);
-						}
-						State::NotFound => {
-							self.set_status(404);
-						}
-						State::__Exhaustive => self.set_status(500),
+					Err(err) => {
+						println!("Aha! Error! {}", err);
+						match err.kind() {
+							ErrorKind::NotFound => self.set_status(404),
+							_ => self.set_status(500),
+						};
+						Err(self)
 					}
 				}
-				_ => {}
-			}
-
-			Ok(self)
-		})
+			})
 	}
 
 	/// Set the body and move the Response.
@@ -233,9 +187,9 @@ impl Response {
 	}
 
 	/// Set a HTTP redirect on the response header
-	pub fn redirect(self, url: &'static str) -> Response {
-		self.with_status(301)
-			.headers_mut()
+	pub fn redirect(mut self, url: &'static str) -> Response {
+		self.set_status(301);
+		self.headers_mut()
 			.insert(LOCATION, HeaderValue::from_static(url));
 
 		self

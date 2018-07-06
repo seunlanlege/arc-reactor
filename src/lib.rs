@@ -82,7 +82,6 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-pub extern crate anymap;
 pub extern crate http;
 #[cfg(feature = "unstable")]
 #[macro_use]
@@ -95,13 +94,10 @@ pub extern crate hyper;
 #[cfg(feature = "unstable")]
 pub extern crate impl_service;
 pub extern crate native_tls;
-pub extern crate num_cpus;
 pub extern crate percent_encoding;
 pub extern crate serde_qs;
 pub extern crate tokio;
 pub extern crate tokio_tls;
-#[macro_use]
-pub extern crate lazy_static;
 pub extern crate serde;
 #[macro_use]
 pub extern crate serde_json;
@@ -109,18 +105,13 @@ pub extern crate bytes;
 pub extern crate mime;
 pub extern crate mime_guess;
 pub extern crate regex;
-pub extern crate tokio_core;
+pub extern crate hyperx;
 
 #[macro_use]
 pub mod proto;
 pub mod contrib;
 pub mod core;
 pub mod routing;
-
-use tokio::executor::thread_pool::ThreadPool;
-lazy_static! {
-	pub static ref POOL: ThreadPool = { ThreadPool::new() };
-}
 
 pub use futures::prelude::*;
 pub use hyper::{header, StatusCode};

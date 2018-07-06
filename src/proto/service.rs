@@ -1,8 +1,8 @@
 use core::{Request, Response};
-use futures::Future;
+use hyper::rt::Future;
 use proto::MiddleWare;
 
-pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
+pub type FutureResponse = Box<Future<Item = Response, Error = Response> + Send>;
 
 /// This trait is automatically derived by the #[service] proc_macro.
 pub trait ArcService: ArcServiceClone + Send + Sync {

@@ -15,7 +15,8 @@ use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
 #[cfg(feature = "unstable")]
-use std::collections::HashMap;
+use std::{collections::HashMap};
+use std::net::SocketAddr;
 
 /// The Request Struct, This is passed to Middlewares and route handlers.
 ///
@@ -24,6 +25,7 @@ use std::collections::HashMap;
 pub struct Request {
 	pub(crate) parts: Parts,
 	pub(crate) body: Body,
+	pub(crate) remote: Option<SocketAddr>,
 }
 
 /// The error returned by `Request::json()`.
@@ -82,7 +84,7 @@ pub enum QueryParseError {
 
 impl Request {
 	pub(crate) fn new(parts: Parts, body: Body) -> Self {
-		Self { parts, body }
+		Self { parts, body, remote: None }
 	}
 
 	/// get a handle to the underlying event loop executing this request.
@@ -152,10 +154,10 @@ impl Request {
 	/// Returns the IP of the connected client.
 	/// This should always be set, except in testing environments with
 	/// `FakeReactor`.
-	// #[inline]
-	// pub fn remote_ip(&self) -> Option<net::SocketAddr> {
-	// 	self.remote
-	// }
+	#[inline]
+	pub fn remote_ip(&self) -> Option<SocketAddr> {
+		self.remote
+	}
 
 	/// Serializes the query string into a struct via serde.
 	///
@@ -260,8 +262,8 @@ impl Request {
 
 	/// Move the request body
 	#[inline]
-	pub fn body(self) -> Body {
-		self.body
+	pub fn body(&mut self) -> Body {
+		::std::mem::replace(&mut self.body, Body::empty())
 	}
 
 	/// Serialize the request's json value into a struct.
@@ -291,6 +293,12 @@ impl Request {
 	#[inline]
 	pub fn body_ref(&self) -> &Body {
 		&self.body
+	}
+
+	/// Get a reference to the request body.
+	#[inline]
+	pub fn body_mut(&mut self) -> &mut Body {
+		&mut self.body
 	}
 
 	/// Set the request body.

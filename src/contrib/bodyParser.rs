@@ -4,10 +4,9 @@
 //! It is recommended you mount this middleware on the root `Router`
 use core::Request;
 use futures::{Future, IntoFuture, Stream};
-use hyper::{self, header::ContentType};
-use mime;
+use hyper::{self, header::CONTENT_TYPE, Body};
 use proto::{MiddleWare, MiddleWareFuture};
-use std::ops::Deref;
+use std::{mem, ops::Deref};
 
 pub(crate) struct Json(hyper::Chunk);
 
@@ -28,8 +27,8 @@ impl MiddleWare<Request> for BodyParser {
 	fn call(&self, mut req: Request) -> MiddleWareFuture<Request> {
 		let mut isJson = false;
 		{
-			if let Some(ct) = req.headers.get::<ContentType>() {
-				isJson = (**ct).subtype() == mime::JSON;
+			if let Some(ct) = req.headers().get(CONTENT_TYPE) {
+				isJson = ct.to_str().unwrap().contains("json");
 			}
 		}
 
@@ -37,7 +36,7 @@ impl MiddleWare<Request> for BodyParser {
 			return Box::new(Ok(req).into_future());
 		}
 
-		let body = req.body();
+		let body = mem::replace(req.body_mut(), Body::empty());
 
 		let future = body.concat2().then(|result| {
 			let json = match result {

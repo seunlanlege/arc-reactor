@@ -1,8 +1,9 @@
 #![macro_use]
 use core::{Request, Response};
-use futures::future::{Future, IntoFuture};
+use futures::future::{IntoFuture};
+use hyper::rt::Future;
 
-pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response>>;
+pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response> + Send>;
 
 /// The middleware Trait.
 /// In arc-reactor the middleware system is designed to be as intuitive and as simple as possible.

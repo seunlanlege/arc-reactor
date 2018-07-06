@@ -1,8 +1,8 @@
 use super::recognizer::{Match, Router as Recognizer};
 use core::{Request, Response};
-use futures::{Future, IntoFuture};
+use futures::IntoFuture;
 use hyper::Method;
-use proto::{ArcHandler, ArcService, MiddleWare};
+use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare};
 use routing::{stripTrailingSlash, RouteGroup};
 use std::collections::HashMap;
 
@@ -402,7 +402,7 @@ impl Router {
 }
 
 impl ArcService for Router {
-	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Response>> {
+	fn call(&self, req: Request, res: Response) -> FutureResponse {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
 			let mut request: Request = req.into();
 			request.set(routeMatch.params);

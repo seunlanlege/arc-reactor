@@ -5,27 +5,32 @@ use arc_reactor::{
 	core::{ArcReactor, Request},
 	prelude::*,
 	routing::Router,
+	contrib::MultiPart,
+	tokio,
 };
 
 fn getMainRoutes() -> Router {
 	// Setup and maps routes to Services.
-	return Router::new().get("/", RequestHandler).post(
-		"/",
-		RequestHandler,
-	);
+	return Router::new()
+		.get("/", RequestHandler)
+		.post("/", RequestHandler);
 }
 
 fn main() {
 	// Start the reactor and try visiting localhost:3000/your-name
-	ArcReactor::new()
-		.port(3000) // port to listen on
-		.routes(getMainRoutes())
-		.initiate()
-		.unwrap()
+	tokio::run(
+		ArcReactor::new()
+			.port(3000)
+			.routes(getMainRoutes())
+			.before(MultiPart { dir: ::std::path::PathBuf::from("/home/seun/Desktop"), mimes: None, size_limit: None })
+			.start()
+			.unwrap()
+			.map_err(|err| println!("err {}", err)),
+	)
 }
 
 #[service]
-fn RequestHandler(_req: Request, mut res: Response) {
+fn RequestHandler(req: Request, mut res: Response) {
 	res.text("hello world");
 	Ok(res)
 }

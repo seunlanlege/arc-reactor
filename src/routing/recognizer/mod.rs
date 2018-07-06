@@ -55,7 +55,7 @@ impl PartialEq for Metadata {
 
 impl Eq for Metadata {}
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Params {
     map: BTreeMap<String, String>
 }
