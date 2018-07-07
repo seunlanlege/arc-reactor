@@ -35,7 +35,7 @@ impl Default for ArcReactor {
 		ArcReactor {
 			port: 8080,
 			arc_handler: ArcHandler {
-				before: Some(Box::new(mw![BodyParser])),
+				before: Some(mw![BodyParser]),
 				after: None,
 				handler: None,
 			},

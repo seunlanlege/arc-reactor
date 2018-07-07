@@ -224,6 +224,6 @@ macro_rules! mw {
 	($($middlewares:expr), +) => {{
 		use $crate::proto::MiddleWare;
 		let middleWares: Vec<Box<MiddleWare<_>>> = vec![$(Box::new($middlewares)), +];
-		middleWares
+		Box::new(middleWares) as Box<MiddleWare<_>>
 	}};
 }

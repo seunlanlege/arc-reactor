@@ -8,7 +8,7 @@ dependencies = [
 
 [[package]]
 name = "arc-reactor"
-version = "0.1.8"
+version = "0.2.0"
 dependencies = [
  "bytes 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
