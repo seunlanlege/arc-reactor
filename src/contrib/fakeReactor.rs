@@ -2,7 +2,6 @@ use core::{Request, Response};
 use http::request::Builder;
 use hyper::{Body, HeaderMap, Method};
 use proto::ArcService;
-use routing::Router;
 use serde::ser::Serialize;
 use serde_json::to_vec;
 use tokio::runtime::Runtime;
@@ -12,10 +11,18 @@ use tokio::runtime::Runtime;
 /// Do note that Ip addresses won't be present on the request struct
 /// when testing for obvious reasons.
 pub struct FakeReactor {
-	pub routes: Router,
+	pub service: Box<ArcService>,
 }
 
 impl FakeReactor {
+	pub fn new<S>(service: S) -> Self
+	where
+		S: ArcService + 'static,
+	{
+		let service = Box::new(service);
+
+		Self { service }
+	}
 	/// Post a request to the fake reactor, and either
 	/// returns a `Result<Response, Response>`
 	/// or panics if the route wasn't found.
@@ -105,12 +112,7 @@ impl FakeReactor {
 		*request.headers_mut() = headers;
 		let req: Request = request.into();
 
-		let matched = self
-			.routes
-			.matchRoute(req.path(), &method)
-			.expect(&format!("No Handler registered for Method::{}", method));
-
-		return reactor.block_on(ArcService::call(matched.handler, req, Response::new()));
+		return reactor.block_on(self.service.call(req, Response::new()));
 	}
 }
 
@@ -123,9 +125,7 @@ mod tests {
 	use routing::*;
 
 	fn AsyncService(_req: Request, res: Response) -> FutureResponse {
-		let res = res
-			.with_status(200)
-			.with_body("Hello World".as_bytes());
+		let res = res.with_body("Hello World".as_bytes());
 
 		Box::new(future::ok(res))
 	}
@@ -134,7 +134,7 @@ mod tests {
 	fn it_matches_the_correct_route_and_returns_the_correct_body() {
 		let routes = Router::new().get("/hello", AsyncService);
 
-		let fakereactor = FakeReactor { routes };
+		let fakereactor = FakeReactor::new(routes);
 
 		// Assert it returns Ok.
 		let result = fakereactor

@@ -48,7 +48,7 @@ impl Router {
 				for (path, handler) in map {
 					let handler = ArcHandler {
 						before: self.before.clone(),
-						handler: Box::new(handler),
+						handler: Some(Box::new(handler)),
 						after: self.after.clone(),
 					};
 
@@ -100,7 +100,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::GET, route, handler)
@@ -120,7 +120,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::GET, route, handler)
@@ -133,7 +133,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::GET, route, handler)
@@ -156,7 +156,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::POST, route, handler)
@@ -178,7 +178,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::POST, route, handler)
@@ -193,7 +193,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::GET, route, handler)
@@ -214,7 +214,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::PUT, route, handler)
@@ -234,7 +234,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::PUT, route, handler)
@@ -247,7 +247,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::PUT, route, handler)
@@ -268,7 +268,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::PATCH, route, handler)
@@ -288,7 +288,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::PATCH, route, handler)
@@ -301,7 +301,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::PATCH, route, handler)
@@ -322,7 +322,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::DELETE, route, handler)
@@ -342,7 +342,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::DELETE, route, handler)
@@ -355,7 +355,7 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::DELETE, route, handler)
@@ -378,7 +378,7 @@ impl Router {
 		{
 			let handler = ArcHandler {
 				before: self.before.clone(),
-				handler: Box::new(handler),
+				handler: Some(Box::new(handler)),
 				after: self.after.clone(),
 			};
 			self.routes
@@ -409,6 +409,7 @@ impl ArcService for Router {
 			return ArcService::call(&*routeMatch.handler, request, res);
 		} else {
 			if let Some(ref notFound) = self.notFound {
+				info!("No service registered for route {} and method {}", req.path(), req.method());
 				return notFound.call(req, res);
 			}
 			let responseFuture = Ok(Response::new().with_status(404)).into_future();

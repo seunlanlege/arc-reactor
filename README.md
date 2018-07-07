@@ -32,19 +32,21 @@ arc-reactor = "0.1"
 
 ```rust
 extern crate arc_reactor;
+extern crate tokio;
 #[macro_use]
 extern crate serde_json;
 use arc_reactor::prelude::*;
 use arc_reactor::{Router, ArcReactor, StatusCode};
 
 fn main() {
-  ArcReactor::new()
-    .routes(rootRoutes())
+  let server = ArcReactor::new()
+     .routes(rootRoutes())
      .port(3000)
-     .initiate()
-     .unwrap()
-}
+     .start()
+     .expect("couldn't start server");
 
+	tokio::run(server)
+}
 fn rootRoutes() -> Router {
   Router::new()
     .get("/", IndexRoute)
@@ -81,15 +83,19 @@ fn fakeFuture() -> impl Future<Item=bool, Error=()> {
 extern crate arc_reactor;
 #[macro_use]
 extern crate serde_json;
+extern crate tokio;
+
 use arc_reactor::prelude::*;
 use arc_reactor::{Router, ArcReactor, StatusCode};
 
 fn main() {
-  ArcReactor::new()
-    .routes(rootRoutes())
+  let server = ArcReactor::new()
+     .routes(rootRoutes())
      .port(3000)
-     .initiate()
-     .unwrap()
+     .start()
+     .expect("couldn't start server");
+
+	tokio::run(server)
 }
 
 fn rootRoutes() -> Router {

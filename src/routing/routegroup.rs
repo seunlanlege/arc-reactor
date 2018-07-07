@@ -46,9 +46,7 @@ impl RouteGroup {
 	///  routegroup.group(nestedgroup);
 	/// ```
 	pub fn group(mut self, group: RouteGroup) -> Self {
-		let RouteGroup {
-			routes, ..
-		} = group;
+		let RouteGroup { routes, .. } = group;
 		let mut parent = self.parent.clone();
 
 		if parent.starts_with("/") {
@@ -60,7 +58,7 @@ impl RouteGroup {
 				let fullPath = format!("/{}{}", parent, path);
 				let mut handler = ArcHandler {
 					before: self.before.clone(),
-					handler: Box::new(handler),
+					handler: Some(Box::new(handler)),
 					after: self.after.clone(),
 				};
 				self.routes
@@ -110,7 +108,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::GET, route, handler)
@@ -130,7 +128,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::GET, route, handler)
@@ -143,7 +141,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::GET, route, handler)
@@ -166,7 +164,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::POST, route, handler)
@@ -188,7 +186,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::POST, route, handler)
@@ -203,7 +201,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::GET, route, handler)
@@ -224,7 +222,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::PUT, route, handler)
@@ -244,7 +242,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::PUT, route, handler)
@@ -257,7 +255,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::PUT, route, handler)
@@ -278,7 +276,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::PATCH, route, handler)
@@ -298,7 +296,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::PATCH, route, handler)
@@ -311,7 +309,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::PATCH, route, handler)
@@ -332,7 +330,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
 		self.route(Method::DELETE, route, handler)
@@ -352,7 +350,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::DELETE, route, handler)
@@ -365,7 +363,7 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
 		self.route(Method::DELETE, route, handler)
@@ -399,7 +397,7 @@ impl RouteGroup {
 
 		let handler = ArcHandler {
 			before: self.before.clone(),
-			handler: Box::new(routehandler),
+			handler: Some(Box::new(routehandler)),
 			after: self.after.clone(),
 		};
 

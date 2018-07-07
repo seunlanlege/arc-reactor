@@ -1,5 +1,5 @@
 use core::{file, Request, Response};
-use futures::prelude::*;
+use futures::{prelude::*, future};
 use hyper::{
 	header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
 	Method,
@@ -59,7 +59,7 @@ impl MiddleWare<Request> for StaticFileServer {
 			// supported http-methods
 			let method = { req.method().clone() };
 			if method != Method::GET && method != Method::HEAD {
-				return Box::new(Ok(req).into_future());
+				return Box::new(future::ok(req));
 			}
 
 			let mut pathbuf = self.public.clone();
@@ -103,15 +103,14 @@ impl MiddleWare<Request> for StaticFileServer {
 									return Err(res);
 								}
 								Err(err) => {
+									error!("Error opening file: {}", err);
 									match err.kind() {
 										ErrorKind::NotFound => {
-											let mut res = Response::new();
-											res.set_status(404);
+											let mut res = Response::new().with_status(404);
 											return Err(res);
 										}
 										_ => {
-											let mut res = Response::new();
-											res.set_status(500);
+											let mut res = Response::new().with_status(500);
 											return Err(res);
 										}
 									}
@@ -125,6 +124,6 @@ impl MiddleWare<Request> for StaticFileServer {
 			}
 		}
 
-		Box::new(Ok(req).into_future())
+		Box::new(future::ok(req))
 	}
 }

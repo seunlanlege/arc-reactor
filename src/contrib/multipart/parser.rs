@@ -50,6 +50,7 @@ pub fn parse(
 	let boundary_regex = match boundary_regex.size_limit(5000).build() {
 		Ok(regex) => regex,
 		Err(err) => {
+			error!("[MultiPart Parser] Regex Error: {}", err);
 			return Err(ParseError::Regex(err));
 		}
 	};
@@ -71,6 +72,7 @@ pub fn parse(
 			file = match await!(file::write(file.unwrap(), chunk)) {
 				Ok(f) => Some(f),
 				Err(err) => {
+					error!("[MultiPart Parser] Error writing to file: {}", err);
 					return Err(ParseError::Io(err));
 				}
 			};
@@ -109,6 +111,7 @@ pub fn parse(
 									if let Some(ref mimes) = mimes {
 										let mime = mime.parse::<Mime>();
 										if !mime.is_ok() || !mimes.contains(&mime.unwrap()) {
+											error!("[MultiPart Parser] Unsupported Mime!");
 											return Err(ParseError::InvalidMime);
 										}
 									}
@@ -138,6 +141,7 @@ pub fn parse(
 								file = match await!(File::create(path)) {
 									Ok(f) => Some(f),
 									Err(err) => {
+										error!("[MultiPart Parser] Error creating file: {}", err);
 										return Err(ParseError::Io(err));
 									}
 								};
@@ -164,6 +168,7 @@ pub fn parse(
 									file = match await!(file::write(file.unwrap(), parts)) {
 										Ok(f) => Some(f),
 										Err(err) => {
+											error!("[MultiPart Parser] Error writing to file: {}", err);
 											return Err(ParseError::Io(err));
 										}
 									};

@@ -35,20 +35,24 @@
 //!
 //! ## Demo
 //!
-//! ```rust,
+//! ```rust,ignore
 //! #![feature(proc_macro, generators, box_syntax)] // <== need to add this.
 //! extern crate arc_reactor;
+//! extern crate tokio;
 //! #[macro_use]
 //! extern crate serde_json;
 //! use arc_reactor::{prelude::*, ArcReactor, Router, StatusCode};
 //!
+//! 
 //! fn main() {
-//! 	ArcReactor::new()
-//! 		.routes(rootRoutes())
-//! 		.port(3000)
-//! 		.initiate()
-//! 		.unwrap()
-//! 	}
+//!   let server = ArcReactor::new()
+//!      .routes(rootRoutes())
+//!      .port(3000)
+//!      .start()
+//!      .expect("couldn't start server");
+//! 
+//! 	tokio::run(server)
+//! }
 //!
 //! fn rootRoutes() -> Router {
 //! 	Router::new().get("/", IndexRoute)
@@ -81,7 +85,8 @@
 )]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
-
+#[macro_use]
+extern crate log;
 pub extern crate http;
 #[cfg(feature = "unstable")]
 #[macro_use]

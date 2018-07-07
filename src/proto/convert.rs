@@ -56,6 +56,7 @@ impl From<JsonError> for Response {
 	fn from(error: JsonError) -> Response {
 		match error {
 			JsonError::None => {
+				error!("No json body");
 				let json = json!({
 					"error": "Json was empty",
 				});
@@ -68,6 +69,7 @@ impl From<JsonError> for Response {
 				res.badRequest().with_body(body)
 			}
 			JsonError::Err(e) => {
+				error!("serde deserialization error: {}", e);
 				let json = json!({
 					"error": format!("{}", e),
 				});
@@ -87,6 +89,7 @@ impl From<QueryParseError> for Response {
 	fn from(error: QueryParseError) -> Response {
 		match error {
 			QueryParseError::None => {
+				error!("No query string");
 				let json = json!({
 					"error": "query data was empty",
 				});
@@ -100,6 +103,7 @@ impl From<QueryParseError> for Response {
 			}
 
 			QueryParseError::Err(err) => {
+				error!("Error deserializing query: {}", err);
 				let json = json!({
 					"error": format!("{}", err),
 				});

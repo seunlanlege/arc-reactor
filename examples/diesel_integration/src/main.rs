@@ -14,45 +14,46 @@ extern crate serde;
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
+extern crate tokio;
 
-use arc_reactor::prelude::*;
+use arc_reactor::{prelude::*, ArcReactor, Router, StatusCode};
 use diesel::prelude::*;
-use arc_reactor::{ArcReactor, Router, StatusCode};
 
 mod db;
 
 fn main() {
-	let routes = Router::new().get("/", IndexService);
-	ArcReactor::new()
-		.routes(routes)
-		.initiate()
-		.unwrap()
+	let service = ArcReactor::default()
+		.service(IndexService)
+		.start()
+		.expect("Couldn't start server");
+
+	tokio::run(server);
 }
 
 // DB Person Schema.
 #[derive(Queryable, Serialize, Deserialize)]
 struct Person {
 	pub id: i64,
-	pub name: String
+	pub name: String,
 }
 
 /// Create a table called `people` and add data to it
 /// set the database url as an env.
-/// 
+///
 /// This guide assumes you already know how to use diesel.
 #[service]
 fn IndexService(_req: Request, res: Response) {
 	use db::people::dsl::*;
-	
-	// Returns a future, that resolves to the rows in the query.
-	let future = db::query(|conn| people.load::<Person>(conn));
 
-	match await!(future) { // the await macro is exported in the arc_reactor::prelude;
+	// Returns a future, that resolves to the rows in the query.
+	let people_future = db::query(|conn| people.load::<Person>(conn));
+
+	match await!(people_future) {
+		// the await macro is exported in the arc_reactor::prelude;
 		Ok(result) => return Ok(result.into()), // From<T: Serialize> is implemented for Response.
 		_ => {}
 	};
 
 	// diesel error occured ? then return NotFound.
-	return Err(res.with_status(StatusCode::NotFound))
+	return Err(res.unauthorized());
 }
-

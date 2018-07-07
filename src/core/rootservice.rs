@@ -39,7 +39,8 @@ impl Service for RootService {
 						}
 					}
 				}
-				Err(_) => {
+				Err(err) => {
+					error!("Service pannicked {:?}", err);
 					let res = hyper::Response::builder()
 						.status(500)
 						.body(Body::empty())

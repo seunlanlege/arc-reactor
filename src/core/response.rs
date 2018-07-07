@@ -56,14 +56,13 @@ impl Response {
 	/// # Example
 	///
 	/// ```rust, ignore
-	/// use hyper::StatusCode;
 	///
-	/// pub fn get_profile(req: Request, _res: Response) {
+	/// pub fn get_profile(req: Request, res: Response) {
 	/// 	// performed task on request
 	///
-	/// 	// return an Ok response
-	/// 	_res.set_status(StatusCode::Unauthorized);
-	/// 	}
+	/// 	// return an 401 response
+	/// 	res.set_status(401);
+	/// }
 	/// ```
 	///
 	#[inline]
@@ -117,11 +116,11 @@ impl Response {
 		self.parts.extensions.remove::<T>()
 	}
 
-	/// respond with a file
-	/// sets the appropriate Content-type and Content-Length headers
+	/// Respond with a file.
+	/// this method will set the appropriate Content-type and Content-Length headers
 	/// unfortunately, this doesn't support byte ranges, yet.
 	/// The file is streamed asynchronously from the filesystem to the client
-	/// Content-Encoding: chunked.
+	/// with the Content-Encoding: chunked.
 	pub fn with_file<P>(mut self, pathbuf: P) -> impl Future<Item = Response, Error = Response>
 	where
 		P: AsRef<Path> + Send + Clone + Debug + 'static,
@@ -143,13 +142,12 @@ impl Response {
 							HeaderValue::from_str(mime_type.as_ref()).unwrap(),
 						);
 
-						let stream = file::stream(file);
-						self.body = Body::wrap_stream(stream);
+						self.body = Body::wrap_stream(file::stream(file));
 
 						Ok(self)
 					}
 					Err(err) => {
-						println!("Aha! Error! {}", err);
+						error!("Error responding with a file: {}", err);
 						match err.kind() {
 							ErrorKind::NotFound => self.set_status(404),
 							_ => self.set_status(500),

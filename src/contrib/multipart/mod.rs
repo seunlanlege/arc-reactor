@@ -79,9 +79,6 @@ impl MiddleWare<Request> for MultiPart {
 					None => return Err((400, "Unspecified Boundary for Multipart").into()),
 				}
 			};
-			
-			println!("boundary {}", boundary);
-
 
 			match await!(parser::parse(body, boundary, dir, mimes)) {
 				Ok(map) => {

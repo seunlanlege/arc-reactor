@@ -33,7 +33,8 @@ pub struct Request {
 /// `From<JsonError>` is implemented for Response
 /// so you can use the `?` to unwrap or return an early response
 ///
-/// ```rust
+/// ```rust, ignore
+/// #![feature(proc_macro, generators, specialization, proc_macro_non_items)]
 /// extern crate arc_reactor;
 /// use arc_reactor::prelude::*;
 ///
@@ -43,7 +44,7 @@ pub struct Request {
 /// 	// will return an error response with the
 /// 	// json '{ "error": "Json was empty" }' if JsonError::None
 /// 	// or '{ "error": "{serde error}" }' if it failed to deserialize.
-/// 	}
+/// }
 /// ```
 ///
 #[derive(Debug)]
@@ -91,7 +92,7 @@ impl Request {
 	/// useful for spawning additional work/futures on the event loop.
 	///
 	/// # Examples
-	/// ```rust
+	/// ```rust, ignore
 	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
 	///
@@ -163,21 +164,26 @@ impl Request {
 	///
 	///  # Examples
 	///
-	/// ```rust
+	/// ```rust, ignore
+	/// extern crate serde;
+	/// #[macro_use]
+	/// extern crate serde_derive;
+	///
 	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
+	/// 
 	///
 	/// #[derive(Serialize, Deserialize)]
 	/// struct AccessToken {
 	/// 	token: String,
-	/// 	}
+	/// }
 	///
 	/// #[service]
 	/// pub fn login(req: Request, _res: Response) {
 	/// 	if let Ok(AccessToken { token }) = req.query() {
 	/// 		// do something with the token here.
-	/// 		}
 	/// 	}
+	/// }
 	/// ```
 	///
 	#[inline]
@@ -196,7 +202,7 @@ impl Request {
 	///
 	/// e.g `/profile/:id`
 	///
-	/// ```rust
+	/// ```rust, ignore
 	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
 	///
@@ -217,17 +223,17 @@ impl Request {
 	///
 	/// # Examples
 	///
-	/// ```rust
+	/// ```rust, ignore
 	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
 	/// #[derive(Serialize, Deserialize)]
 	/// struct AccessToken {
 	/// 	token: String,
-	/// 	}
+	/// }
 	///
 	/// struct User {
 	/// 	name: String,
-	/// 	}
+	/// }
 	///
 	/// #[middleware(Request)]
 	/// pub fn AssertAuth(req: Request) {
@@ -236,15 +242,15 @@ impl Request {
 	/// 		req.set::<User>(user); // Set the user
 	/// 	} else {
 	/// 		return Err((401, "Unauthorized!").into());
-	/// 		}
 	/// 	}
+	/// }
 	///
 	/// #[service]
 	/// pub fn ProfileService(req: Request, res: Response) {
 	/// 	let user = req.get::<User>().unwrap();
 	/// 	// Its safe to unwrap here, because if user isn't set this service will never
 	/// 	// be called.
-	/// 	}
+	/// }
 	/// ```
 	pub fn get<T: Send + Sync + 'static>(&self) -> Option<&T> {
 		self.parts.extensions.get::<T>()

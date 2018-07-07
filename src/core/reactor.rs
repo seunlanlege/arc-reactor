@@ -1,4 +1,5 @@
 use super::{rootservice::RootService, Request, Response};
+use contrib::BodyParser;
 use futures::{Future, Stream};
 use hyper::server::conn::Http;
 use native_tls::TlsAcceptor;
@@ -15,29 +16,39 @@ use tokio_tls::TlsAcceptorExt;
 ///
 /// ```rust,ignore
 /// extern crate arc_reactor;
+/// extern crate tokio;
 /// use arc_reactor::ArcReactor;
 ///
 /// fn main() {
-/// 	ArcReactor::new().routes(..).port(1234).initiate().unwrap()
-/// 	}
+/// 	let server = ArcReactor::default().port(1234).start().expect("couldn't start server");
+///		tokio::run(server);
+/// }
 /// ```
 pub struct ArcReactor {
 	port: i16,
-	handler: Option<ArcHandler>,
+	arc_handler: ArcHandler,
 	tls_acceptor: Option<Arc<TlsAcceptor>>,
+}
+
+impl Default for ArcReactor {
+	fn default() -> Self {
+		ArcReactor {
+			port: 8080,
+			arc_handler: ArcHandler {
+				before: Some(Box::new(mw![BodyParser])),
+				after: None,
+				handler: None,
+			},
+			tls_acceptor: None,
+		}
+	}
 }
 
 impl ArcReactor {
 	/// Creates an instance of the server.
 	/// with a default port of `8080`
-	/// and *No* routes. Note that calling `initiate` on an `ArcReactor` without
-	/// routes will cause your program to panic.
-	pub fn new() -> ArcReactor {
-		ArcReactor {
-			port: 8080,
-			handler: None,
-			tls_acceptor: None,
-		}
+	pub fn new() -> Self {
+		ArcReactor::default()
 	}
 
 	/// Sets the port for the server to listen on and returns the instance.
@@ -58,30 +69,14 @@ impl ArcReactor {
 	/// Mounts the Router on the ArcReactor.
 	pub fn routes(mut self, routes: Router) -> Self {
 		let routes = Box::new(routes) as Box<ArcService>;
-		if let Some(ref mut archandler) = self.handler {
-			archandler.handler = routes;
-		} else {
-			self.handler = Some(ArcHandler {
-				before: None,
-				after: None,
-				handler: routes,
-			});
-		}
+		self.arc_handler.handler = Some(routes);
 
 		self
 	}
 
 	pub fn service<S: ArcService + 'static>(mut self, service: S) -> Self {
 		let service = Box::new(service) as Box<ArcService>;
-		if let Some(ref mut archandler) = self.handler {
-			archandler.handler = service;
-		} else {
-			self.handler = Some(ArcHandler {
-				before: None,
-				after: None,
-				handler: service,
-			});
-		}
+		self.arc_handler.handler = Some(service);
 
 		self
 	}
@@ -90,9 +85,7 @@ impl ArcReactor {
 	where
 		M: MiddleWare<Request> + 'static,
 	{
-		if let Some(ref mut archandler) = self.handler {
-			archandler.before = Some(Box::new(before));
-		}
+		self.arc_handler.before = Some(Box::new(before));
 
 		self
 	}
@@ -101,9 +94,7 @@ impl ArcReactor {
 	where
 		M: MiddleWare<Response> + 'static,
 	{
-		if let Some(ref mut archandler) = self.handler {
-			archandler.after = Some(Box::new(after));
-		}
+		self.arc_handler.after = Some(Box::new(after));
 
 		self
 	}
@@ -119,56 +110,49 @@ impl ArcReactor {
 	pub fn start(self) -> Result<impl Future<Item = (), Error = io::Error> + Send, io::Error> {
 		let ArcReactor {
 			port,
-			handler,
+			arc_handler,
 			tls_acceptor: acceptor,
 		} = self;
 
 		let addr = format!("0.0.0.0:{}", port).parse().unwrap();
 
-		println!("[arc-reactor]: Binding to port {}", port);
+		info!("Binding to port {}", port);
 
 		let listener = TcpListener::bind(&addr)?;
 
-		println!("[arc-reactor]: Spawning threads!");
-		let handler = handler.expect("This thing needs routes to work!");
-
 		let http = Http::new();
 
-		let future = listener
-			.incoming()
-			.for_each(move |socket| {
-				let service = handler.clone();
-				let remote_ip = socket.peer_addr().ok();
-				// user has configured a tls acceptor
-				if let Some(ref acceptor) = acceptor {
-					let http_clone = http.clone();
-					let connection_future = acceptor
-						.accept_async(socket)
-						.map_err(|err| {
-							// could not complete tls handshake
-							println!("[arc-reactor] Handshake Error {:?}", err);
-							Err(())
-						})
-						.and_then(move |socket| {
-							// handshake successful
-							http_clone
-								.serve_connection(socket, RootService { service, remote_ip })
-								.then(|_| Ok(()))
-						})
-						.then(|_: Result<(), Result<(), ()>>| Ok(()));
-					tokio::spawn(connection_future);
-				} else {
-					// default to http
-					let connection_future = http
-						.serve_connection(socket, RootService { service, remote_ip })
-						.then(|_| Ok(()));
+		let conn_stream_future = listener.incoming().for_each(move |socket| {
+			let service = arc_handler.clone();
+			let remote_ip = socket.peer_addr().ok();
+			// user has configured a tls acceptor
+			if let Some(ref acceptor) = acceptor {
+				let http_clone = http.clone();
+				let connection_future = acceptor
+					.accept_async(socket)
+					.map_err(|err| error!("TLS Handshake Error: {}", err))
+					.and_then(move |socket| {
+						// handshake successful
+						http_clone
+							.serve_connection(socket, RootService { service, remote_ip })
+							.map_err(|err| error!("serve_connection Error: {}", err))
+							.and_then(|_| Ok(()))
+					});
+					
+				tokio::spawn(connection_future);
+			} else {
+				// default to http
+				let connection_future = http
+					.serve_connection(socket, RootService { service, remote_ip })
+					.map_err(|err| error!("serve_connection Error: {}", err))
+					.and_then(|_| Ok(()));
 
-					tokio::spawn(connection_future);
-				}
+				tokio::spawn(connection_future);
+			}
 
-				Ok(())
-			});
+			Ok(())
+		});
 
-		Ok(future)
+		Ok(conn_stream_future)
 	}
 }

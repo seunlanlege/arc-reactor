@@ -1,6 +1,6 @@
 #![macro_use]
 use core::{Request, Response};
-use futures::future::{IntoFuture};
+use futures::future;
 use hyper::rt::Future;
 
 pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response> + Send>;
@@ -20,14 +20,12 @@ pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response> + Send>;
 ///
 /// #[middleware(Request)]
 /// fn hasAccessToken(req: Request) {
-/// 	if let Some(user) = req.query::AccessToken().and_then(|token|
-/// 			await!(db::fetchUserFromToken(token)).ok() // psuedo-code this won't compile,
-///       // the await macro is exported in the prelude. it is re-exported from futures_await
-/// 		)
+/// 	let token = req.query::<AccessToken>();
+/// 	if let Some(user) = await!(db::fetchUserFromToken(token)).ok() {
 /// 		req.set::<User>(user);
-/// 		return Ok(req);
+///			return Ok(req);
 /// 	}
-/// 	let res = Response::new().with_status(StatusCode::Unauthorized);
+/// 	let res = Response::new().with_status(401);
 /// 	return Err(res)
 /// }
 ///
@@ -41,7 +39,7 @@ pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response> + Send>;
 ///
 /// fn main() {
 /// 	let router = Router::new()
-/// 		.get("/user", arc!(mw![hasAccessToken], UserService));
+/// 		.get2("/user", mw![hasAccessToken], UserService);
 ///   .....
 ///   // start the server mount the routes.
 ///
@@ -67,7 +65,7 @@ pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response> + Send>;
 /// #[middleware(Request)]
 /// fn middleware2(req: Request) {
 /// 	println!("will always be called, because middleware1 always returns Ok(request)");
-/// 	return Err(Response::new().with_status(StatusCode::Unauthorized))
+/// 	return Err(Response::new().with_status(401))
 /// }
 ///
 /// #[middleware(Request)]
@@ -85,7 +83,7 @@ pub type MiddleWareFuture<I> = Box<Future<Item = I, Error = Response> + Send>;
 ///
 /// fn main() {
 /// 	let router = Router::new()
-/// 		.get("/user", arc!(mw![middleware1, middleware2, middleware3], TestService)); // note that the order of middlewares matter!
+/// 		.get2("/user", mw![middleware1, middleware2, middleware3], TestService); // note that the order of middlewares matter!
 ///   .....
 ///   // start the server mount the routes.
 ///
@@ -150,7 +148,7 @@ impl MiddleWare<Request> for Vec<Box<MiddleWare<Request>>> {
 	fn call(&self, request: Request) -> MiddleWareFuture<Request> {
 		self
 			.iter()
-			.fold(Box::new(Ok(request).into_future()), |request, middleware| {
+			.fold(Box::new(future::ok(request)), |request, middleware| {
 				let middleware = middleware.clone();
 				Box::new(
 					request.and_then(
@@ -171,7 +169,7 @@ impl MiddleWare<Response> for Vec<Box<MiddleWare<Response>>> {
 	fn call(&self, response: Response) -> MiddleWareFuture<Response> {
 		self
 			.iter()
-			.fold(Box::new(Ok(response).into_future()), |response, middleware| {
+			.fold(Box::new(future::ok(response)), |response, middleware| {
 				let middleware = middleware.clone();
 				Box::new(
 					response.and_then(
@@ -200,7 +198,13 @@ impl MiddleWare<Response> for Box<MiddleWare<Response>> {
 /// # Example
 ///
 /// ```rust, ignore
-/// fn getMainRoutes() -> Router {
+/// #![feature(proc_macro, generators, specialization, proc_macro_non_items)]
+/// #[macro_use]
+/// extern crate arc_reactor;
+/// use arc_reactor::prelude::*;
+/// use arc_reactor::routing::Router;
+/// 
+/// fn get_main_routes() -> Router {
 /// 	let app_middlewares = mw![checkIfAuth];
 ///
 /// 	// Feel free to use pre-configured app middleware

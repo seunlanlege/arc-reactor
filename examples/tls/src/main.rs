@@ -2,6 +2,7 @@
 #![allow(non_camel_case_types, non_snake_case)]
 
 extern crate arc_reactor;
+extern crate tokio;
 use arc_reactor::native_tls::{Pkcs12, TlsAcceptor};
 use arc_reactor::{prelude::*, ArcReactor, Router};
 
@@ -11,17 +12,18 @@ fn main() {
 	let cert = Pkcs12::from_der(der, "mypass").unwrap();
 	let tls_cx = TlsAcceptor::builder(cert).unwrap().build().unwrap();
 
-	ArcReactor::new()
+	let server = ArcReactor::default()
 		.port(3000) // port to listen on
-		.routes(getMainRoutes())
+		.routes(get_main_routes())
 		.tls(tls_cx) // set the tls acceptor on the arc reactor
-		.threads(3)
-		.initiate()
-		.unwrap()
+		.start()
+		.unwrap();
+		
+	tokio::run(server);
 	// now visit https://localhost:3000 in your browser.
 }
 
-fn getMainRoutes() -> Router {
+fn get_main_routes() -> Router {
 	// Setup and maps routes to Services.
 	Router::new()
 		.get("/", RequestHandler)
