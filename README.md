@@ -25,7 +25,7 @@ An **Asynchronous**, **Extensible**, **Micro** web framework for Rust.
 Add this to your `cargo.toml`
 
 ```toml
-arc-reactor = "0.1"
+arc-reactor = "0.2"
 ```
 
 ## Hello World (default)
