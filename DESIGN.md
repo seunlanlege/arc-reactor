@@ -6,25 +6,6 @@ the most popular web framework for nodejs.
 
 So I wrote Arc Reactor.
 
-## Client Dispatch
-In order to achieve high throughput, Arc Reactor uses Multiple threads each running an event loop.
-The main thread listens for incoming connections and dipatches them to worker threads sequentially over a futures aware mpsc channel.
-Say there are 4 worker threads.
-
-connection #1 goes to thread #1<br/>
-connection #2 goes to thread #2<br/>
-connection #3 goes to thread #3<br/>
-connection #4 goes to thread #4<br/>
-connection #5 goes to thread #1
-
-etc.
-
-The raw socket is handed off to hyper's `Http::serve_connection`, as well as a `Service` trait object. `RootService`.
-`serve_connection` returns a future, that completes when the response returned from the `Service` has been flushed to the client.
-If the client drops the connection, the future is dropped as well.
-
-In order to provide things like  a handle to the underlying event loop, and as well as access to the client IP, which `hyper` removed.
-the RootService deconstructs the `hyper::Request` passed to it, constructs a `arc_reactor::core::Request` and passes it to it's inner `ArcHandler`.
 
 ## ArcService
 ```rust

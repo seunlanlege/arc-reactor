@@ -1,11 +1,10 @@
-use core::{Request, Response};
-use futures::{Future, IntoFuture};
-use hyper::{Method, StatusCode};
-use proto::{ArcHandler, ArcService, MiddleWare};
 use super::recognizer::{Match, Router as Recognizer};
+use core::{Request, Response};
+use futures::IntoFuture;
+use hyper::Method;
+use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare};
 use routing::{stripTrailingSlash, RouteGroup};
-use std::{collections::HashMap};
-
+use std::collections::HashMap;
 
 /// The main router of you application that is supplied to the ArcReactor.
 ///
@@ -43,15 +42,13 @@ impl Router {
 	///  router.group(nestedgroup);
 	/// ```
 	pub fn group(mut self, group: RouteGroup) -> Self {
-		let RouteGroup {
-			routes, ..
-		} = group;
+		let RouteGroup { routes, .. } = group;
 		{
 			for (method, map) in routes.into_iter() {
 				for (path, handler) in map {
 					let handler = ArcHandler {
 						before: self.before.clone(),
-						handler: Box::new(handler),
+						handler: Some(Box::new(handler)),
 						after: self.after.clone(),
 					};
 
@@ -93,7 +90,7 @@ impl Router {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	pub fn get2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
@@ -103,10 +100,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	pub fn get3<S, ReqMW, ResMW>(
@@ -123,10 +120,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	pub fn get4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
@@ -136,10 +133,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	/// Add a route and a Service for a POST request.
@@ -147,7 +144,7 @@ impl Router {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Post, route, handler)
+		self.route(Method::POST, route, handler)
 	}
 
 	/// mount a Service as well as a MiddleWare<Request>
@@ -159,10 +156,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Post, route, handler)
+		self.route(Method::POST, route, handler)
 	}
 
 	/// mount a Service as well as a MiddleWare<Request> and
@@ -181,10 +178,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Post, route, handler)
+		self.route(Method::POST, route, handler)
 	}
 
 	/// mount a Service as well as a MiddleWare<Response>
@@ -196,10 +193,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	/// add a route and a ServiceHandler for a put request
@@ -207,7 +204,7 @@ impl Router {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Put, route, handler)
+		self.route(Method::PUT, route, handler)
 	}
 
 	pub fn put2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
@@ -217,10 +214,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Put, route, handler)
+		self.route(Method::PUT, route, handler)
 	}
 
 	pub fn put3<S, ReqMW, ResMW>(
@@ -237,10 +234,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Put, route, handler)
+		self.route(Method::PUT, route, handler)
 	}
 
 	pub fn put4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
@@ -250,10 +247,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Put, route, handler)
+		self.route(Method::PUT, route, handler)
 	}
 
 	/// Add a route and a ServiceHandler for a PATCH request.
@@ -261,7 +258,7 @@ impl Router {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Patch, route, handler)
+		self.route(Method::PATCH, route, handler)
 	}
 
 	pub fn patch2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
@@ -271,10 +268,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Patch, route, handler)
+		self.route(Method::PATCH, route, handler)
 	}
 
 	pub fn patch3<S, ReqMW, ResMW>(
@@ -291,10 +288,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Patch, route, handler)
+		self.route(Method::PATCH, route, handler)
 	}
 
 	pub fn patch4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
@@ -304,10 +301,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Patch, route, handler)
+		self.route(Method::PATCH, route, handler)
 	}
 
 	/// Add a route and a ServiceHandler for DELETE request.
@@ -315,7 +312,7 @@ impl Router {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Delete, route, handler)
+		self.route(Method::DELETE, route, handler)
 	}
 
 	pub fn delete2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
@@ -325,10 +322,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Delete, route, handler)
+		self.route(Method::DELETE, route, handler)
 	}
 
 	pub fn delete3<S, ReqMW, ResMW>(
@@ -345,10 +342,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Delete, route, handler)
+		self.route(Method::DELETE, route, handler)
 	}
 
 	pub fn delete4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
@@ -358,10 +355,10 @@ impl Router {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Delete, route, handler)
+		self.route(Method::DELETE, route, handler)
 	}
 
 	/// Add a 404 handler.
@@ -374,7 +371,6 @@ impl Router {
 		self
 	}
 
-
 	fn route<S>(mut self, method: Method, path: &'static str, handler: S) -> Self
 	where
 		S: ArcService + 'static,
@@ -382,7 +378,7 @@ impl Router {
 		{
 			let handler = ArcHandler {
 				before: self.before.clone(),
-				handler: Box::new(handler),
+				handler: Some(Box::new(handler)),
 				after: self.after.clone(),
 			};
 			self.routes
@@ -406,18 +402,23 @@ impl Router {
 }
 
 impl ArcService for Router {
-	fn call(&self, req: Request, res: Response) -> Box<Future<Item = Response, Error = Response>> {
+	fn call(&self, req: Request, res: Response) -> FutureResponse {
 		if let Some(routeMatch) = self.matchRoute(req.path(), req.method()) {
 			let mut request: Request = req.into();
 			request.set(routeMatch.params);
 			return ArcService::call(&*routeMatch.handler, request, res);
 		} else {
 			if let Some(ref notFound) = self.notFound {
+				info!(
+					"No service registered for route {} and method {}",
+					req.path(),
+					req.method()
+				);
 				return notFound.call(req, res);
 			}
-			let responseFuture = Ok(Response::new().with_status(StatusCode::NotFound)).into_future();
+			let responseFuture = Ok(Response::new().with_status(404)).into_future();
 
-			return Box::new(responseFuture)
+			return Box::new(responseFuture);
 		}
 	}
 }

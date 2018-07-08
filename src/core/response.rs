@@ -1,29 +1,21 @@
-use anymap::AnyMap;
 use core::file;
-use futures::{future::lazy, prelude::*, sync::oneshot::channel};
+use futures::prelude::*;
+use http::response::Parts;
 use hyper::{
 	self,
-	header::{ContentLength, ContentType, Header, Headers, Location},
+	header::{HeaderMap, HeaderValue, CONTENT_LENGTH, CONTENT_TYPE, LOCATION},
 	Body,
-	HttpVersion,
 	StatusCode,
+	Version,
 };
 use mime_guess::guess_mime_type;
-use std::path::Path;
+use std::{fmt::Debug, path::Path};
 use tokio::{fs::File, io::ErrorKind};
-use POOL;
 
 #[derive(Debug)]
 pub struct Response {
-	pub(crate) inner: hyper::Response,
-	pub(crate) anymap: AnyMap,
-}
-
-#[derive(Debug)]
-pub(crate) enum State {
-	Len(u64),
-	NotFound,
-	__Exhaustive,
+	pub(crate) parts: Parts,
+	pub(crate) body: Body,
 }
 
 impl Response {
@@ -33,26 +25,30 @@ impl Response {
 
 	/// Get the HTTP version of this response.
 	#[inline]
-	pub fn version(&self) -> HttpVersion {
-		self.inner.version()
+	pub fn version(&self) -> Version {
+		self.parts.version
 	}
 
 	/// Get the headers from the response.
 	#[inline]
-	pub fn headers(&self) -> &Headers {
-		self.inner.headers()
+	pub fn headers(&self) -> &HeaderMap<HeaderValue> {
+		&self.parts.headers
 	}
 
 	/// Get a mutable reference to the headers.
 	#[inline]
-	pub fn headers_mut(&mut self) -> &mut Headers {
-		self.inner.headers_mut()
+	pub fn headers_mut(&mut self) -> &mut HeaderMap<HeaderValue> {
+		&mut self.parts.headers
 	}
 
 	/// Get the status from the server.
 	#[inline]
 	pub fn status(&self) -> StatusCode {
-		self.inner.status()
+		self.parts.status
+	}
+
+	pub fn status_mut(&mut self) -> &mut StatusCode {
+		&mut self.parts.status
 	}
 
 	/// Set the `StatusCode` for this response.
@@ -60,45 +56,25 @@ impl Response {
 	/// # Example
 	///
 	/// ```rust, ignore
-	/// use hyper::StatusCode;
-	///
-	/// pub fn get_profile(req: Request, _res: Response) {
+	/// pub fn get_profile(req: Request, res: Response) {
 	/// 	// performed task on request
 	///
-	/// 	// return an Ok response
-	/// 	_res.set_status(StatusCode::Unauthorized);
-	/// 	}
+	/// 	// return an 401 response
+	/// 	res.set_status(401);
+	/// }
 	/// ```
 	///
 	#[inline]
-	pub fn set_status(&mut self, status: StatusCode) {
-		self.inner.set_status(status);
+	pub fn set_status(&mut self, status: u16) {
+		self.parts.status = StatusCode::from_u16(status).unwrap();
 	}
 
 	/// Set the status and move the Response.
 	///
 	/// Useful for the "builder-style" pattern.
 	#[inline]
-	pub fn with_status(mut self, status: StatusCode) -> Self {
-		self.inner = self.inner.with_status(status);
-		self
-	}
-
-	/// Set a header and move the Response.
-	///
-	/// Useful for the "builder-style" pattern.
-	#[inline]
-	pub fn with_header<H: Header>(mut self, header: H) -> Self {
-		self.inner = self.inner.with_header(header);
-		self
-	}
-
-	/// Set the headers and move the Response.
-	///
-	/// Useful for the "builder-style" pattern.
-	#[inline]
-	pub fn with_headers(mut self, headers: Headers) -> Self {
-		self.inner = self.inner.with_headers(headers);
+	pub fn with_status(mut self, status: u16) -> Self {
+		self.parts.status = StatusCode::from_u16(status).unwrap();
 		self
 	}
 
@@ -106,11 +82,11 @@ impl Response {
 	#[inline]
 	pub fn text<T: Into<String>>(&mut self, body: T) {
 		let body = body.into();
-		self.inner
-			.headers_mut()
-			.set(ContentLength(body.len() as u64));
-		self.inner.set_body(body);
-		self.inner.headers_mut().set(ContentType::plaintext());
+		self.headers_mut().insert(
+			CONTENT_LENGTH,
+			HeaderValue::from_str(&body.len().to_string()).unwrap(),
+		);
+		self.body = Body::from(body);
 	}
 
 	/// set a text/plain response
@@ -125,91 +101,60 @@ impl Response {
 	}
 
 	/// get a reference to a type previously set on the response
-	pub fn get<T: 'static>(&self) -> Option<&T> {
-		self.anymap.get::<T>()
+	pub fn get<T: Send + Sync + 'static>(&self) -> Option<&T> {
+		self.parts.extensions.get::<T>()
 	}
 
 	/// Set a type on the response.
-	pub fn set<T: 'static>(&mut self, value: T) -> Option<T> {
-		self.anymap.insert::<T>(value)
+	pub fn set<T: Send + Sync + 'static>(&mut self, value: T) -> Option<T> {
+		self.parts.extensions.insert::<T>(value)
 	}
 
 	/// Removes the type previously set on the response.
-	pub fn remove<T: 'static>(&mut self) -> Option<T> {
-		self.anymap.remove::<T>()
+	pub fn remove<T: Send + Sync + 'static>(&mut self) -> Option<T> {
+		self.parts.extensions.remove::<T>()
 	}
 
-	/// respond with a file
-	/// sets the appropriate Content-type and Content-Length headers
-	/// unfortunately, this doesn't support byte ranges, yet.
+	/// Respond with a file.
+	/// this method will set the appropriate Content-type and Content-Length
+	/// headers unfortunately, this doesn't support byte ranges, yet.
 	/// The file is streamed asynchronously from the filesystem to the client
-	/// Content-Encoding: chunked.
+	/// with the Content-Encoding: chunked.
 	pub fn with_file<P>(mut self, pathbuf: P) -> impl Future<Item = Response, Error = Response>
 	where
-		P: AsRef<Path> + Send + Clone + 'static,
+		P: AsRef<Path> + Send + Clone + Debug + 'static,
 	{
-		let (sender, recv) = Body::pair();
-		self.inner.set_body(recv);
-
-		let (snd, rec) = channel::<State>();
 		let path_clone = pathbuf.clone();
 
-		// this future is spawned on the tokio ThreadPool executor
-		let future = lazy(|| {
-			File::open(pathbuf)
-				.and_then(file::metadata)
-				.then(|result| {
-					match result {
-						Ok((file, meta)) => {
-							snd.send(State::Len(meta.len())).unwrap();
-							let stream = file::stream(file);
-							let future = stream
-								.map(Ok)
-								.map_err(|err| println!("whoops filestream error occured {}", err))
-								.forward(sender.sink_map_err(|err| {
-									println!("whoops filestream error occured {}", err)
-								}))
-								.then(|_| Ok(()));
+		File::open(pathbuf)
+			.and_then(file::metadata)
+			.then(move |result| {
+				match result {
+					Ok((file, meta)) => {
+						let mime_type = guess_mime_type(path_clone.clone());
+						self.headers_mut().insert(
+							CONTENT_LENGTH,
+							HeaderValue::from_str(&meta.len().to_string()).unwrap(),
+						);
+						self.headers_mut().insert(
+							CONTENT_TYPE,
+							HeaderValue::from_str(mime_type.as_ref()).unwrap(),
+						);
 
-							Ok(future)
-						}
-						Err(err) => {
-							println!("Aha! Error! {}", err);
-							match err.kind() {
-								ErrorKind::NotFound => snd.send(State::NotFound).unwrap(),
-								_ => snd.send(State::__Exhaustive).unwrap(),
-							};
-							Err(())
-						}
+						self.body = Body::wrap_stream(file::stream(file));
+
+						Ok(self)
 					}
-				})
-				.and_then(|f| f)
-		});
-
-		// attempt to spawn future on tokio threadpool
-		POOL.sender().spawn(future).unwrap();
-
-		rec.then(move |len| {
-			match len {
-				Ok(state) => {
-					match state {
-						State::Len(len) => {
-							let mime_type = guess_mime_type(path_clone);
-							self.headers_mut().set(ContentLength(len));
-							self.headers_mut().set(ContentType(mime_type));
-							return Ok(self);
-						}
-						State::NotFound => {
-							self.set_status(StatusCode::NotFound);
-						}
-						State::__Exhaustive => self.set_status(StatusCode::InternalServerError),
+					Err(err) => {
+						error!("Error responding with a file: {}", err);
+						match err.kind() {
+							ErrorKind::NotFound => self.set_status(404),
+							_ => self.set_status(500),
+						};
+						Err(self)
 					}
 				}
-				_ => {}
-			}
-
-			Ok(self)
-		})
+			})
 	}
 
 	/// Set the body and move the Response.
@@ -217,87 +162,86 @@ impl Response {
 	/// Useful for the "builder-style" pattern.
 	#[inline]
 	pub fn with_body<T: Into<Body>>(mut self, body: T) -> Self {
-		self.inner = self.inner.with_body(body);
+		self.body = body.into();
 		self
 	}
 
 	#[inline]
 	pub fn set_body<T: Into<Body>>(&mut self, body: T) {
-		self.inner.set_body(body);
+		self.body = body.into();
 	}
 
 	/// Read the body.
 	#[inline]
-	pub fn body_ref(&self) -> Option<&Body> {
-		self.inner.body_ref()
+	pub fn body_ref(&self) -> &Body {
+		&self.body
 	}
 
 	/// Take the `Body` of this response.
 	#[inline]
 	pub fn body(self) -> Body {
-		self.inner.body()
+		self.body
 	}
 
 	/// Set a HTTP redirect on the response header
-	pub fn redirect(self, url: &'static str) -> Response {
-		let mut headers = Headers::new();
-		headers.set(Location::new(url));
-		self.with_status(StatusCode::MovedPermanently)
-			.with_headers(headers)
-	}
+	pub fn redirect(mut self, url: &'static str) -> Response {
+		self.set_status(301);
+		self.headers_mut()
+			.insert(LOCATION, HeaderValue::from_static(url));
 
-	/// Set the status code 200 on the response
-	pub fn ok(self) -> Self {
-		self.with_status(StatusCode::Ok)
+		self
 	}
 
 	/// Set the status code 401 on the response
 	pub fn unauthorized(self) -> Self {
-		self.with_status(StatusCode::Unauthorized)
+		self.with_status(401)
+	}
+
+	/// Set the status code 400 on the response
+	pub fn badRequest(self) -> Self {
+		self.with_status(400)
 	}
 
 	/// Set the status code 403 on the response
 	pub fn forbidden(self) -> Self {
-		self.with_status(StatusCode::Forbidden)
+		self.with_status(403)
 	}
 
 	/// Set the status code 405 on the response
 	pub fn methodNotAllowed(self) -> Self {
-		self.with_status(StatusCode::MethodNotAllowed)
+		self.with_status(405)
 	}
 
 	/// Set the status code 406 on the response
 	pub fn notAcceptable(self) -> Self {
-		self.with_status(StatusCode::NotAcceptable)
+		self.with_status(406)
 	}
 
 	/// Set the status code 408 on the response
 	pub fn requestTimeout(self) -> Self {
-		self.with_status(StatusCode::RequestTimeout)
+		self.with_status(408)
 	}
 
 	/// Set the status code 500 on the response
 	pub fn internalServerError(self) -> Self {
-		self.with_status(StatusCode::InternalServerError)
+		self.with_status(500)
 	}
 
 	/// Set the status code 502 on the response
 	pub fn badGateway(self) -> Self {
-		self.with_status(StatusCode::BadGateway)
+		self.with_status(502)
 	}
 
 	/// Set the status code 503 on the response
 	pub fn serviceUnavailable(self) -> Self {
-		self.with_status(StatusCode::ServiceUnavailable)
+		self.with_status(503)
 	}
 }
 
 impl Default for Response {
 	fn default() -> Response {
-		Response {
-			inner: hyper::Response::default(),
-			anymap: AnyMap::new()
-		}
+		let (parts, body) = hyper::Response::new(Body::empty()).into_parts();
+		Response { parts, body }
 	}
 }
 

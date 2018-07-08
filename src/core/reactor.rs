@@ -1,19 +1,12 @@
 use super::{rootservice::RootService, Request, Response};
-use futures::{
-	sync::mpsc::{unbounded, UnboundedReceiver},
-	Future,
-	Stream,
-};
-use hyper::{self, server::Http};
+use contrib::BodyParser;
+use futures::{Future, Stream};
+use hyper::server::conn::Http;
 use native_tls::TlsAcceptor;
-use num_cpus;
 use proto::{ArcHandler, ArcService, MiddleWare};
 use routing::Router;
-use std::{io, net::SocketAddr, sync::Arc, thread};
-use tokio_core::{
-	net::{TcpListener, TcpStream},
-	reactor::Core,
-};
+use std::{io, sync::Arc};
+use tokio::{self, net::TcpListener};
 use tokio_tls::TlsAcceptorExt;
 
 /// The main server, the ArcReactor is where you mount your routes, middlewares
@@ -21,48 +14,49 @@ use tokio_tls::TlsAcceptorExt;
 ///
 /// #Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// extern crate arc_reactor;
-/// use arc_reactor::ArcReactor;
+/// extern crate tokio;
+/// use arc_reactor::core::ArcReactor;
 ///
 /// fn main() {
-/// 	ArcReactor::new().routes(..).port(1234).initiate().unwrap()
-/// 	}
+/// 	let server = ArcReactor::default()
+/// 		.port(1234)
+/// 		.start()
+/// 		.expect("couldn't start server");
+/// 	tokio::run(server);
+/// }
 /// ```
 pub struct ArcReactor {
 	port: i16,
-	threads: usize,
-	handler: Option<ArcHandler>,
+	arc_handler: ArcHandler,
 	tls_acceptor: Option<Arc<TlsAcceptor>>,
+}
+
+impl Default for ArcReactor {
+	fn default() -> Self {
+		ArcReactor {
+			port: 8080,
+			arc_handler: ArcHandler {
+				before: Some(mw![BodyParser]),
+				after: None,
+				handler: None,
+			},
+			tls_acceptor: None,
+		}
+	}
 }
 
 impl ArcReactor {
 	/// Creates an instance of the server.
 	/// with a default port of `8080`
-	/// and *No* routes. Note that calling `initiate` on an `ArcReactor` without
-	/// routes will cause your program to panic.
-	pub fn new() -> ArcReactor {
-		ArcReactor {
-			port: 8080,
-			handler: None,
-			tls_acceptor: None,
-			threads: num_cpus::get(),
-		}
+	pub fn new() -> Self {
+		ArcReactor::default()
 	}
 
 	/// Sets the port for the server to listen on and returns the instance.
 	pub fn port(mut self, port: i16) -> Self {
 		self.port = port;
-
-		self
-	}
-
-	/// set the number of threads, for Arc-Reactor
-	/// to spawn reactors on.
-	///
-	/// Default is num_cpus::get()
-	pub fn threads(mut self, num: usize) -> Self {
-		self.threads = num;
 
 		self
 	}
@@ -78,15 +72,14 @@ impl ArcReactor {
 	/// Mounts the Router on the ArcReactor.
 	pub fn routes(mut self, routes: Router) -> Self {
 		let routes = Box::new(routes) as Box<ArcService>;
-		if let Some(ref mut archandler) = self.handler {
-			archandler.handler = routes;
-		} else {
-			self.handler = Some(ArcHandler {
-				before: None,
-				after: None,
-				handler: routes,
-			});
-		}
+		self.arc_handler.handler = Some(routes);
+
+		self
+	}
+
+	pub fn service<S: ArcService + 'static>(mut self, service: S) -> Self {
+		let service = Box::new(service) as Box<ArcService>;
+		self.arc_handler.handler = Some(service);
 
 		self
 	}
@@ -95,9 +88,7 @@ impl ArcReactor {
 	where
 		M: MiddleWare<Request> + 'static,
 	{
-		if let Some(ref mut archandler) = self.handler {
-			archandler.before = Some(Box::new(before));
-		}
+		self.arc_handler.before = Some(Box::new(before));
 
 		self
 	}
@@ -106,140 +97,68 @@ impl ArcReactor {
 	where
 		M: MiddleWare<Response> + 'static,
 	{
-		if let Some(ref mut archandler) = self.handler {
-			archandler.after = Some(Box::new(after));
-		}
+		self.arc_handler.after = Some(Box::new(after));
 
 		self
 	}
 
-	/// Binds the listener and blocks the main thread while listening for
-	/// incoming connections.
+	/// Binds the listener and returns a future representing the server
+	/// this future should be spawned on the tokio runtime.
 	///
 	/// # Panics
 	///
 	/// Calling this function will panic if: no routes are supplied, or it
 	/// cannot start the main event loop.
 
-	pub fn initiate(self) -> io::Result<()> {
+	pub fn start(self) -> Result<impl Future<Item = (), Error = ()> + Send, io::Error> {
 		let ArcReactor {
 			port,
-			handler,
+			arc_handler,
 			tls_acceptor: acceptor,
-			threads,
 		} = self;
 
 		let addr = format!("0.0.0.0:{}", port).parse().unwrap();
-		let mut core = Core::new().expect("Could not start event loop");
-		let handle = core.handle();
 
-		println!("[arc-reactor]: Binding to port {}", port);
-		let listener = match TcpListener::bind(&addr, &handle) {
-			Ok(listener) => listener,
-			Err(e) => {
-				eprintln!(
-					"[arc-reactor]: Whoops! something else is running on port {}, {}",
-					&port, e
-				);
-				return Err(e);
-			}
-		};
+		info!("Binding to port {}", port);
 
-		println!("[arc-reactor]: Spawning threads!");
-		let handler = handler.expect("This thing needs routes to work!");
+		let listener = TcpListener::bind(&addr)?;
 
-		let mut receivers = Vec::new();
+		let http = Http::new();
 
-		for i in 0..threads {
-			let (tx, rx) = unbounded::<(TcpStream, SocketAddr)>();
-			receivers.push(tx);
-			let acceptor = acceptor.clone();
-			let handler = handler.clone();
+		let conn_stream_future = listener
+			.incoming()
+			.map_err(|err| error!("error accepting connection: {}", err))
+			.for_each(move |socket| {
+				let service = arc_handler.clone();
+				let remote_ip = socket.peer_addr().ok();
+				// user has configured a tls acceptor
+				if let Some(ref acceptor) = acceptor {
+					let http_clone = http.clone();
+					let connection_future = acceptor
+						.accept_async(socket)
+						.map_err(|err| error!("TLS Handshake Error: {}", err))
+						.and_then(move |socket| {
+							// handshake successful
+							http_clone
+								.serve_connection(socket, RootService { service, remote_ip })
+								.map_err(|err| error!("serve_connection Error: {}", err))
+								.and_then(|_| Ok(()))
+						});
 
-			let reactor = thread::Builder::new().name(format!("Reactor {}", i));
+					tokio::spawn(connection_future);
+				} else {
+					// default to http
+					let connection_future = http
+						.serve_connection(socket, RootService { service, remote_ip })
+						.map_err(|err| error!("serve_connection Error: {}", err))
+						.and_then(|_| Ok(()));
 
-			reactor.spawn(move || spawn(handler, rx, acceptor)).unwrap();
-		}
+					tokio::spawn(connection_future);
+				}
 
-		println!(
-			"[arc-reactor]: Starting main event loop!\n[arc-reactor]: Spawned {} threads",
-			threads
-		);
+				Ok(())
+			});
 
-		let mut count = 0;
-
-		let future = listener.incoming().for_each(|stream| {
-			let _ = receivers[count].unbounded_send(stream);
-			count += 1;
-
-			if count == threads {
-				count = 0
-			}
-
-			Ok(())
-		});
-
-		core.run(future).expect("Error running reactor core!");
-
-		Ok(())
+		Ok(conn_stream_future)
 	}
-}
-
-fn spawn(
-	routes: ArcHandler,
-	listener: UnboundedReceiver<(TcpStream, SocketAddr)>,
-	acceptor: Option<Arc<TlsAcceptor>>,
-) {
-	let mut core = Core::new().expect("Could not start event loop");
-	let handle = core.handle();
-	let mut http = Http::<hyper::Chunk>::new();
-	http.sleep_on_errors(true);
-
-	let future = listener.for_each(move |(socket, remote_ip)| {
-		let service = routes.clone();
-		// user has configured a tls acceptor
-		if let Some(ref acceptor) = acceptor {
-			let http_clone = http.clone();
-			let handle_clone = handle.clone();
-			let connection_future = acceptor
-				.accept_async(socket)
-				.map_err(|err| {
-					// could not complete tls handshake
-					println!("[arc-reactor] Handshake Error {:?}", err);
-					Err(())
-				})
-				.and_then(move |socket| {
-					// handshake successful
-					let service = RootService {
-						service,
-						remote_ip,
-						handle: handle_clone,
-					};
-
-					let conn_future = http_clone
-						.serve_connection(socket, service)
-						.then(|_| Ok(()));
-						
-					conn_future
-				})
-				.then(|_: Result<(), Result<(), ()>>| Ok(()));
-			handle.spawn(connection_future);
-			return Ok(());
-		}
-
-		// default to http
-		let connection_future = http.serve_connection(
-			socket,
-			RootService {
-				service,
-				remote_ip,
-				handle: handle.clone(),
-			},
-		).then(|_| Ok(()));
-		handle.spawn(connection_future);
-
-		Ok(())
-	});
-
-	core.run(future).expect("Error running reactor core!");
 }

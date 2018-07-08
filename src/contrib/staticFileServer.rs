@@ -1,22 +1,20 @@
-use core::{file, Request, Response, State};
-use futures::{future::lazy, prelude::*, sync::oneshot::channel};
+use core::{file, Request, Response};
+use futures::{future, prelude::*};
 use hyper::{
-	header::{ContentLength, ContentType},
+	header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
 	Method,
-	StatusCode,
 };
 use mime_guess::guess_mime_type;
 use percent_encoding::percent_decode;
 use proto::{MiddleWare, MiddleWareFuture};
-use std::{fmt, path::PathBuf};
+use std::path::PathBuf;
 use tokio::{fs::File, io::ErrorKind};
-use POOL;
 
 /// A static File Server implemented as a Middleware<Request>
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StaticFileServer {
 	/// the root url for all your files. e.g `static`, `assets`
-	/// request urls that begin with the supplied value for root would be 
+	/// request urls that begin with the supplied value for root would be
 	/// matched.
 	pub root: &'static str,
 	/// Path to folder to serve your static files from.
@@ -24,7 +22,7 @@ pub struct StaticFileServer {
 }
 
 impl StaticFileServer {
-	/// Creates a StaticFileServer with the given 
+	/// Creates a StaticFileServer with the given
 	/// root and pathbuf.
 	pub fn new(root: &'static str, public: PathBuf) -> Self {
 		Self { root, public }
@@ -57,12 +55,11 @@ impl MiddleWare<Request> for StaticFileServer {
 			None => None,
 		};
 
-
 		if prefix == Some(self.root) {
 			// supported http-methods
 			let method = { req.method().clone() };
-			if method != Method::Get && method != Method::Head {
-				return Box::new(Ok(req).into_future());
+			if method != Method::GET && method != Method::HEAD {
+				return Box::new(future::ok(req));
 			}
 
 			let mut pathbuf = self.public.clone();
@@ -78,75 +75,48 @@ impl MiddleWare<Request> for StaticFileServer {
 			let path_clone = pathbuf.clone();
 
 			match method {
-				Method::Get => {
+				Method::GET => {
 					// if a MiddleWare<T> returns Err(Response)
 					// that reponse is forwarded directly to the client.
-					return Box::new(
-						Response::new()
-							.with_file(pathbuf)
-							.then(|res| {
-								match res {
-									Ok(res) | Err(res) => Err(res),
-								}
-							}),
-					);
-				}
-				Method::Head => {
-					let (snd, rec) = channel::<State>();
-					let future = lazy(|| {
-						File::open(path_clone)
-							.and_then(file::metadata)
-							.then(|result| {
-								match result {
-									Ok((_, meta)) => {
-										snd.send(State::Len(meta.len())).unwrap();
-										Ok(())
-									}
-									Err(err) => {
-										println!("Aha! Error! {}", err);
-										match err.kind() {
-											ErrorKind::NotFound => {
-												snd.send(State::NotFound).unwrap()
-											}
-											_ => snd.send(State::__Exhaustive).unwrap(),
-										};
-										Err(())
-									}
-								}
-							})
-					});
-
-					POOL.sender().spawn(future).unwrap();
-					let future = rec.then(|result| {
-						match result {
-							Ok(state) => {
-								match state {
-									State::Len(len) => {
-										let mut res = Response::new();
-										let mime_type = guess_mime_type(pathbuf);
-										res.headers_mut().set(ContentLength(len));
-										res.headers_mut().set(ContentType(mime_type));
-										return Err(res);
-									}
-									State::NotFound => {
-										let mut res = Response::new();
-										res.set_status(StatusCode::NotFound);
-										return Err(res);
-									}
-									State::__Exhaustive => {
-										let mut res = Response::new();
-										res.set_status(StatusCode::InternalServerError);
-										return Err(res);
-									}
-								}
-							}
-							_ => {
-								let mut res = Response::new();
-								res.set_status(StatusCode::InternalServerError);
-								return Err(res);
-							}
+					return Box::new(Response::new().with_file(pathbuf).then(|res| {
+						match res {
+							Ok(res) | Err(res) => Err(res),
 						}
-					});
+					}));
+				}
+				Method::HEAD => {
+					let future = File::open(path_clone)
+						.and_then(file::metadata)
+						.then(|result| {
+							match result {
+								Ok((_, meta)) => {
+									let mut res = Response::new();
+									let mime_type = guess_mime_type(pathbuf);
+									res.headers_mut().insert(
+										CONTENT_LENGTH,
+										HeaderValue::from_str(&meta.len().to_string()).unwrap(),
+									);
+									res.headers_mut().insert(
+										CONTENT_TYPE,
+										HeaderValue::from_str(mime_type.as_ref()).unwrap(),
+									);
+									return Err(res);
+								}
+								Err(err) => {
+									error!("Error opening file: {}", err);
+									match err.kind() {
+										ErrorKind::NotFound => {
+											let mut res = Response::new().with_status(404);
+											return Err(res);
+										}
+										_ => {
+											let mut res = Response::new().with_status(500);
+											return Err(res);
+										}
+									}
+								}
+							}
+						});
 
 					return Box::new(future);
 				}
@@ -154,15 +124,6 @@ impl MiddleWare<Request> for StaticFileServer {
 			}
 		}
 
-		Box::new(Ok(req).into_future())
-	}
-}
-
-impl fmt::Debug for StaticFileServer {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		f.debug_struct("StaticFileServer")
-			.field("root", &self.root)
-			.field("public", &self.public)
-			.finish()
+		Box::new(future::ok(req))
 	}
 }

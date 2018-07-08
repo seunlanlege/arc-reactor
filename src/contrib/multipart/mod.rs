@@ -1,17 +1,16 @@
 mod parser;
 use core::Request;
-use futures::{future::lazy, prelude::*, sync::oneshot::channel};
-use header::{ContentLength, ContentType};
+use futures::{future, prelude::*};
+use header::{CONTENT_LENGTH, CONTENT_TYPE};
+use hyperx::header::{ContentType, Header};
 use mime::Mime;
 use proto::{MiddleWare, MiddleWareFuture};
 use std::{collections::HashMap, path::PathBuf};
-use POOL;
-
 /// A Multipart request parser.
 /// This is only avaible behind the `unstable` features flag.
-/// 
+///
 #[derive(Clone)]
-pub struct Multipart {
+pub struct MultiPart {
 	/// list of mimes you want to accept,
 	pub mimes: Option<Vec<Mime>>,
 	/// maximum upload size for files.
@@ -20,7 +19,7 @@ pub struct Multipart {
 	pub dir: PathBuf,
 }
 
-impl Multipart {
+impl MultiPart {
 	pub fn new(dir: PathBuf, mimes: Option<Vec<Mime>>, size_limit: Option<u64>) -> Self {
 		Self {
 			mimes,
@@ -32,71 +31,67 @@ impl Multipart {
 
 pub(crate) struct MultiPartMap(pub(crate) HashMap<String, String>);
 
-impl MiddleWare<Request> for Multipart {
+impl MiddleWare<Request> for MultiPart {
 	fn call(&self, mut req: Request) -> MiddleWareFuture<Request> {
 		let (dir, mimes) = (self.dir.clone(), self.mimes.clone());
-		if let (Some(len), Some(limit)) = {
-			(
-				req.headers().get::<ContentLength>().clone(),
-				self.size_limit,
-			)
-		} {
-			if **len > limit {
-				return Box::new(
-					Err((400, format!("File upload limit {} Exceeded!", limit)).into())
-						.into_future(),
-				);
-			}
+
+		if let (Some(len), Some(limit)) =
+			{ (req.headers().get(CONTENT_LENGTH).clone(), self.size_limit) }
+		{
+			let len = len
+				.to_str()
+				.map_err(|_| ())
+				.and_then(|len| len.parse::<u64>().map_err(|_| ()));
+			match len {
+				Ok(len) => {
+					if len > limit {
+						return Box::new(future::err(
+							(400, format!("File upload limit {} Exceeded!", limit)).into(),
+						));
+					}
+				}
+				Err(_) => {
+					return Box::new(future::err((400, "Invalid Content Length").into()));
+				}
+			};
 		}
+
+		let content_type = req.headers().get(CONTENT_TYPE).and_then(|v| {
+			let hv = v.clone();
+			hv.to_str().ok().and_then(|v| Some(v.to_string()))
+		});
 
 		let future = async_block! {
 			let body = { req.body() };
 
 			let boundary = {
-				let content = match req.headers_mut().remove::<ContentType>() {
-					None => return Ok(req),
-					Some(c) => {
-						req.headers_mut().set(c.clone());
-						c
-					},
+				let content_type = match content_type {
+					None => return Err((400, "Invalid Content Length").into()),
+					Some(c) => ContentType::parse_header(&c.into()).ok()
 				};
 
-				match content
-					.get_param("boundary")
-					.and_then(|val| Some(String::from(val.as_str())))
+
+				match content_type
+					.and_then(|disp| disp.get_param("boundary").and_then(|val| Some(String::from(val.as_str()))))
 				{
 					Some(b) => b,
 					None => return Err((400, "Unspecified Boundary for Multipart").into()),
 				}
 			};
 
-			// we need to stream the body to a file using tokio::fs
-			// but we need to do so in the context of a tokio executor
-			// therefore, we spawn the Parser(that will poll the body, parse it and stream
-			// to a file) Future on the tokio executor
-			// but we need a way to return the output of the parsing back to the Middleware
-			// so we use a oneshot channel.
-			let (snd, rcv) = channel::<parser::ParseResult>();
-
-			let future = lazy(|| {
-				parser::parse(body, boundary, snd, dir, mimes)
-					.map_err(|err| println!("[MultiPartParser][Error] {:?}", err))
-			});
-
-			POOL.sender().spawn(future).unwrap();
-			if let Ok(result) = await!(rcv) {
-				match result {
-					parser::ParseResult::Ok(map) => {
-						req.set(MultiPartMap(map));
-					},
-					parser::ParseResult::InvalidMime => {
-						return Err((400, "Invalid Content-Type").into())
-					},
-					parser::ParseResult::Io(_) => {
-						return Err((500, "internal server error").into())
-					}
-				};
-			}
+			match await!(parser::parse(body, boundary, dir, mimes)) {
+				Ok(map) => {
+					req.set(MultiPartMap(map));
+				},
+				Err(err) => {
+					println!("[MultiPartParser][Error] {:?}", err);
+					use self::parser::ParseError::*;
+					match err {
+						InvalidMime => return Err((400, "Invalid Content-Type").into()),
+						_ => return Err((500, "internal server error").into()),
+					};
+				}
+			};
 
 			Ok(req)
 		};

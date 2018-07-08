@@ -46,9 +46,7 @@ impl RouteGroup {
 	///  routegroup.group(nestedgroup);
 	/// ```
 	pub fn group(mut self, group: RouteGroup) -> Self {
-		let RouteGroup {
-			routes, ..
-		} = group;
+		let RouteGroup { routes, .. } = group;
 		let mut parent = self.parent.clone();
 
 		if parent.starts_with("/") {
@@ -60,7 +58,7 @@ impl RouteGroup {
 				let fullPath = format!("/{}{}", parent, path);
 				let mut handler = ArcHandler {
 					before: self.before.clone(),
-					handler: Box::new(handler),
+					handler: Some(Box::new(handler)),
 					after: self.after.clone(),
 				};
 				self.routes
@@ -100,7 +98,7 @@ impl RouteGroup {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	pub fn get2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
@@ -110,10 +108,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	pub fn get3<S, ReqMW, ResMW>(
@@ -130,10 +128,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	pub fn get4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
@@ -143,10 +141,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	/// Add a route and a Service for a POST request.
@@ -154,7 +152,7 @@ impl RouteGroup {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Post, route, handler)
+		self.route(Method::POST, route, handler)
 	}
 
 	/// mount a Service as well as a MiddleWare<Request>
@@ -166,10 +164,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Post, route, handler)
+		self.route(Method::POST, route, handler)
 	}
 
 	/// mount a Service as well as a MiddleWare<Request> and
@@ -188,10 +186,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Post, route, handler)
+		self.route(Method::POST, route, handler)
 	}
 
 	/// mount a Service as well as a MiddleWare<Response>
@@ -203,10 +201,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Get, route, handler)
+		self.route(Method::GET, route, handler)
 	}
 
 	/// add a route and a ServiceHandler for a put request
@@ -214,7 +212,7 @@ impl RouteGroup {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Put, route, handler)
+		self.route(Method::PUT, route, handler)
 	}
 
 	pub fn put2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
@@ -224,10 +222,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Put, route, handler)
+		self.route(Method::PUT, route, handler)
 	}
 
 	pub fn put3<S, ReqMW, ResMW>(
@@ -244,10 +242,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Put, route, handler)
+		self.route(Method::PUT, route, handler)
 	}
 
 	pub fn put4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
@@ -257,10 +255,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Put, route, handler)
+		self.route(Method::PUT, route, handler)
 	}
 
 	/// Add a route and a ServiceHandler for a PATCH request.
@@ -268,7 +266,7 @@ impl RouteGroup {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Patch, route, handler)
+		self.route(Method::PATCH, route, handler)
 	}
 
 	pub fn patch2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
@@ -278,10 +276,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Patch, route, handler)
+		self.route(Method::PATCH, route, handler)
 	}
 
 	pub fn patch3<S, ReqMW, ResMW>(
@@ -298,10 +296,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Patch, route, handler)
+		self.route(Method::PATCH, route, handler)
 	}
 
 	pub fn patch4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
@@ -311,10 +309,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Patch, route, handler)
+		self.route(Method::PATCH, route, handler)
 	}
 
 	/// Add a route and a ServiceHandler for DELETE request.
@@ -322,7 +320,7 @@ impl RouteGroup {
 	where
 		S: ArcService + 'static,
 	{
-		self.route(Method::Delete, route, handler)
+		self.route(Method::DELETE, route, handler)
 	}
 
 	pub fn delete2<S, M>(self, route: &'static str, before: M, handler: S) -> Self
@@ -332,10 +330,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: None,
 		};
-		self.route(Method::Delete, route, handler)
+		self.route(Method::DELETE, route, handler)
 	}
 
 	pub fn delete3<S, ReqMW, ResMW>(
@@ -352,10 +350,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: Some(Box::new(before)),
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Delete, route, handler)
+		self.route(Method::DELETE, route, handler)
 	}
 
 	pub fn delete4<S, M>(self, route: &'static str, handler: S, after: M) -> Self
@@ -365,10 +363,10 @@ impl RouteGroup {
 	{
 		let handler = ArcHandler {
 			before: None,
-			handler: Box::new(handler),
+			handler: Some(Box::new(handler)),
 			after: Some(Box::new(after)),
 		};
-		self.route(Method::Delete, route, handler)
+		self.route(Method::DELETE, route, handler)
 	}
 
 	fn route<T: ToString, S: ArcService + 'static + Send + Sync>(
@@ -399,7 +397,7 @@ impl RouteGroup {
 
 		let handler = ArcHandler {
 			before: self.before.clone(),
-			handler: Box::new(routehandler),
+			handler: Some(Box::new(routehandler)),
 			after: self.after.clone(),
 		};
 

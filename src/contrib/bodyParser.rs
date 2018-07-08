@@ -3,12 +3,8 @@
 //! it will forward an error response to the client.
 //! It is recommended you mount this middleware on the root `Router`
 use core::Request;
-use futures::{
-	Stream,
-	IntoFuture,
-	Future
-};
-use hyper::{self, header::ContentType};
+use futures::{future, Future, Stream};
+use hyper::{self, header::CONTENT_TYPE};
 use proto::{MiddleWare, MiddleWareFuture};
 use std::ops::Deref;
 
@@ -23,7 +19,7 @@ impl Deref for Json {
 }
 
 /// Json Body Parser.
-/// 
+///
 #[derive(Clone, Debug)]
 pub struct BodyParser;
 
@@ -31,29 +27,32 @@ impl MiddleWare<Request> for BodyParser {
 	fn call(&self, mut req: Request) -> MiddleWareFuture<Request> {
 		let mut isJson = false;
 		{
-			if let Some(ct) = req.headers.get::<ContentType>() {
-				isJson = *ct == ContentType::json();
+			if let Some(ct) = req.headers().get(CONTENT_TYPE) {
+				isJson = {
+					let ct = ct.to_str();
+					ct.is_ok() && ct.unwrap().contains("json")
+				};
 			}
 		}
 
 		if !isJson {
-			return Box::new(Ok(req).into_future())
+			return Box::new(future::ok(req));
 		}
 
-		let body = req.body();
-
-		let future = body.concat2().then(|result| {
+		let read_body_future = req.body().concat2().then(|result| {
 			let json = match result {
 				Ok(chunk) => {
 					// assert that the chunk length is > 0
 					// otherwise bad request.
 					if chunk.len() == 0 {
+						error!("zero-length json body");
 						let error = json!({ "error": "Empty request body" });
 						return Err((400, error).into());
 					}
 					Json(chunk)
 				}
-				Err(_) => {
+				Err(err) => {
+					error!("Error reading json body from client: {}", err);
 					let error = json!({
 						"error": "Could not read request payload"
 					});
@@ -64,7 +63,7 @@ impl MiddleWare<Request> for BodyParser {
 			req.set(json);
 			Ok(req)
 		});
-		
-		return Box::new(future);
+
+		return Box::new(read_body_future);
 	}
 }

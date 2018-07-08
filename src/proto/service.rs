@@ -1,8 +1,8 @@
 use core::{Request, Response};
-use futures::Future;
+use hyper::rt::Future;
 use proto::MiddleWare;
 
-pub type FutureResponse = Box<Future<Item = Response, Error = Response>>;
+pub type FutureResponse = Box<Future<Item = Response, Error = Response> + Send>;
 
 /// This trait is automatically derived by the #[service] proc_macro.
 pub trait ArcService: ArcServiceClone + Send + Sync {
@@ -41,7 +41,7 @@ impl Clone for Box<ArcService> {
 #[derive(Clone)]
 pub struct ArcHandler {
 	pub before: Option<Box<MiddleWare<Request>>>,
-	pub handler: Box<ArcService>,
+	pub handler: Option<Box<ArcService>>,
 	pub after: Option<Box<MiddleWare<Response>>>,
 }
 
@@ -49,7 +49,7 @@ impl ArcHandler {
 	pub fn new<T: 'static + ArcService>(h: T) -> Self {
 		Self {
 			before: None,
-			handler: Box::new(h),
+			handler: Some(Box::new(h)),
 			after: None,
 		}
 	}
@@ -71,7 +71,7 @@ impl ArcService for ArcHandler {
 				_ => unreachable!(),
 			};
 
-			let handler = self.handler.clone();
+			let handler = self.handler.clone().unwrap();
 			let responsefuture = before.call(req).and_then(move |req| handler.call(req, res));
 			return Box::new(responsefuture);
 		}
@@ -81,7 +81,7 @@ impl ArcService for ArcHandler {
 				Some(ref after) => after.clone(),
 				_ => unreachable!(),
 			};
-			let handler = self.handler.clone();
+			let handler = self.handler.clone().unwrap();
 			let responsefuture = handler.call(req, res).then(move |res| {
 				match res {
 					Ok(res) | Err(res) => after.call(res),
@@ -96,7 +96,7 @@ impl ArcService for ArcHandler {
 				_ => unreachable!(),
 			};
 
-			let handler = self.handler.clone();
+			let handler = self.handler.clone().unwrap();
 			let after = match self.after {
 				Some(ref after) => after.clone(),
 				_ => unreachable!(),
@@ -113,6 +113,10 @@ impl ArcService for ArcHandler {
 			return Box::new(responsefuture);
 		}
 
-		return self.handler.call(req, res);
+		return self
+			.handler
+			.clone()
+			.expect("No service Supplied")
+			.call(req, res);
 	}
 }

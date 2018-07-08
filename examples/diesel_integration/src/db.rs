@@ -1,4 +1,4 @@
-use arc_reactor::futures::{Future, IntoFuture};
+use arc_reactor::futures::{Future, IntoFuture, future};
 use futures_cpupool::CpuPool;
 use diesel;
 use diesel::{result, PgConnection};
@@ -18,15 +18,14 @@ pub fn query<T, F, R>(f: F) -> impl Future<Item = T, Error = result::Error>
 	where
 		T: Send + 'static,
 		F: FnOnce(&Conn) -> R + Send + 'static,
-		R: IntoFuture<Item = T, Error = result::Error> + Send + 'static,
-		<R as IntoFuture>::Future: Send,
+		R: Future<Item = T, Error = result::Error> + Send + 'static,
 {
 	lazy_static! {
-			static ref R2D2: Pool<ConnectionManager<PgConnection>> = {
-					let database_url = var("DATABASE_URL").expect("DATABASE_URL must be set");
-					let manager = ConnectionManager::<PgConnection>::new(database_url.as_str());
-					r2d2::Pool::builder().build(manager).expect("Failed to create pool.")
-			};
+		static ref R2D2: Pool<ConnectionManager<PgConnection>> = {
+			let database_url = var("DATABASE_URL").expect("DATABASE_URL must be set");
+			let manager = ConnectionManager::<PgConnection>::new(database_url.as_str());
+			r2d2::Pool::builder().build(manager).expect("Failed to create pool.")
+		};
 	}
 
 	let pool = R2D2.clone();
@@ -34,9 +33,7 @@ pub fn query<T, F, R>(f: F) -> impl Future<Item = T, Error = result::Error>
 		pool
 			.get()
 			.map_err(|_err| result::Error::NotFound)
-			.map(|conn| f(&*conn))
-			.into_future()
-			.and_then(|f| f)
+			.map(|conn| future::ok(f(&*conn)))
 	})
 }
 

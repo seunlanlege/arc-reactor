@@ -1,22 +1,28 @@
-use anymap::AnyMap;
 use core::{Request, Response};
-use hyper::{Body, Headers, HttpVersion, Method, Uri};
+use http::request::Builder;
+use hyper::{Body, HeaderMap, Method};
 use proto::ArcService;
-use routing::Router;
 use serde::ser::Serialize;
 use serde_json::to_vec;
-use std::str::FromStr;
-use tokio_core::reactor::Core;
+use tokio::runtime::Runtime;
 
 /// Fake reactor allows for testing your application's endpoints.
 ///
 /// Do note that Ip addresses won't be present on the request struct
 /// when testing for obvious reasons.
 pub struct FakeReactor {
-	pub routes: Router,
+	pub service: Box<ArcService>,
 }
 
 impl FakeReactor {
+	pub fn new<S>(service: S) -> Self
+	where
+		S: ArcService + 'static,
+	{
+		let service = Box::new(service);
+
+		Self { service }
+	}
 	/// Post a request to the fake reactor, and either
 	/// returns a `Result<Response, Response>`
 	/// or panics if the route wasn't found.
@@ -24,17 +30,17 @@ impl FakeReactor {
 		&self,
 		route: &str,
 		body: Option<T>,
-		headers: Option<Headers>,
+		headers: Option<HeaderMap>,
 	) -> Result<Response, Response>
 	where
 		T: Serialize,
 	{
-		self.build(Method::Post, route, body, headers)
+		self.build(Method::POST, route, body, headers)
 	}
 
 	/// Send a GET request to the `FakeReactor`.
-	pub fn get(&self, route: &str, headers: Option<Headers>) -> Result<Response, Response> {
-		self.build(Method::Get, route, None::<u8>, headers)
+	pub fn get(&self, route: &str, headers: Option<HeaderMap>) -> Result<Response, Response> {
+		self.build(Method::GET, route, None::<u8>, headers)
 	}
 
 	/// Send a PUT request to the `FakeReactor`.
@@ -42,12 +48,12 @@ impl FakeReactor {
 		&self,
 		route: &str,
 		body: Option<T>,
-		headers: Option<Headers>,
+		headers: Option<HeaderMap>,
 	) -> Result<Response, Response>
 	where
 		T: Serialize,
 	{
-		self.build(Method::Put, route, body, headers)
+		self.build(Method::PUT, route, body, headers)
 	}
 
 	/// Send a PATCH request to the `FakeReactor`.
@@ -55,12 +61,12 @@ impl FakeReactor {
 		&self,
 		route: &str,
 		body: Option<T>,
-		headers: Option<Headers>,
+		headers: Option<HeaderMap>,
 	) -> Result<Response, Response>
 	where
 		T: Serialize,
 	{
-		self.build(Method::Patch, route, body, headers)
+		self.build(Method::PATCH, route, body, headers)
 	}
 
 	/// Send a DELETE request to the `FakeReactor`.
@@ -68,12 +74,12 @@ impl FakeReactor {
 		&self,
 		route: &str,
 		body: Option<T>,
-		headers: Option<Headers>,
+		headers: Option<HeaderMap>,
 	) -> Result<Response, Response>
 	where
 		T: Serialize,
 	{
-		self.build(Method::Delete, route, body, headers)
+		self.build(Method::DELETE, route, body, headers)
 	}
 
 	fn build<T>(
@@ -81,39 +87,32 @@ impl FakeReactor {
 		method: Method,
 		route: &str,
 		body: Option<T>,
-		mut headers: Option<Headers>,
+		mut headers: Option<HeaderMap>,
 	) -> Result<Response, Response>
 	where
 		T: Serialize,
 	{
 		let body = match body {
-			Some(b) => Some(to_vec(&b).unwrap().into()),
-			None => Some(Body::default()),
+			Some(b) => to_vec(&b).unwrap().into(),
+			None => Body::default(),
 		};
 
 		if headers.is_none() {
-			headers = Some(Headers::default());
+			headers = Some(HeaderMap::new());
 		}
 
 		let headers = headers.unwrap();
-		let mut reactor = Core::new().expect("Could not start event loop");
+		let mut reactor = Runtime::new().expect("Could not start event loop");
 
-		let req = Request {
-			method: method.clone(),
-			uri: Uri::from_str(route).unwrap(),
-			version: HttpVersion::Http11,
-			headers,
-			body,
-			remote: None,
-			anyMap: AnyMap::new(),
-			handle: Some(reactor.handle()),
-		};
+		let mut request = Builder::new()
+			.method(method.clone())
+			.uri(route)
+			.body(body)
+			.unwrap();
+		*request.headers_mut() = headers;
+		let req: Request = request.into();
 
-		let matched = self.routes
-			.matchRoute(req.path(), &method)
-			.expect(&format!("No Handler registered for Method::{}", method));
-
-		return reactor.run(ArcService::call(matched.handler, req, Response::new()));
+		return reactor.block_on(self.service.call(req, Response::new()));
 	}
 }
 
@@ -122,13 +121,11 @@ mod tests {
 	use super::*;
 	use core::{Request, Response};
 	use futures::{future, Future, Stream};
-	use hyper::StatusCode;
 	use proto::FutureResponse;
 	use routing::*;
 
 	fn AsyncService(_req: Request, res: Response) -> FutureResponse {
-		let res = res.with_status(StatusCode::Ok)
-			.with_body("Hello World".as_bytes());
+		let res = res.with_body("Hello World".as_bytes());
 
 		Box::new(future::ok(res))
 	}
@@ -137,7 +134,7 @@ mod tests {
 	fn it_matches_the_correct_route_and_returns_the_correct_body() {
 		let routes = Router::new().get("/hello", AsyncService);
 
-		let fakereactor = FakeReactor { routes };
+		let fakereactor = FakeReactor::new(routes);
 
 		// Assert it returns Ok.
 		let result = fakereactor

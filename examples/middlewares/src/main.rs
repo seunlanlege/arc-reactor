@@ -1,6 +1,6 @@
 #![feature(proc_macro, generators, proc_macro_non_items)]
 extern crate arc_reactor;
-
+extern crate tokio;
 use arc_reactor::{
 	contrib::BodyParser,
 	core::{ArcReactor, Request},
@@ -22,10 +22,12 @@ fn get_main_routes() -> Router {
 }
 
 fn main() {
-	ArcReactor::new()
+	let server = ArcReactor::default()
 		.routes(get_main_routes())
-		.initiate()
-		.unwrap()
+		.start()
+		.unwrap();
+		
+	tokio::run(server);
 }
 
 /// Route handlers must return Result<Response, Response>

@@ -1,32 +1,24 @@
-use core::{res, JsonError, QueryParseError, Request, Response};
+use core::{JsonError, QueryParseError, Request, Response};
 use hyper::{
 	self,
-	header::{ContentLength, ContentType},
-	StatusCode,
+	header::{HeaderValue, CONTENT_TYPE},
+	Body,
 };
+use mime;
 use serde::ser::Serialize;
 use serde_json::to_vec;
-
-/// Converts a u16 value into equivalent status code of type ```StatusCode```.
-///
-/// # Errors
-/// This will return a bad request if the provided argument is not within the
-/// range 100...599..
-fn toStatusCode(number: u16) -> StatusCode {
-	match StatusCode::try_from(number) {
-		Ok(status) => status,
-		Err(_) => StatusCode::BadRequest,
-	}
-}
 
 impl<T: Serialize> From<(u16, T)> for Response {
 	fn from(tuple: (u16, T)) -> Response {
 		let body = to_vec(&tuple.1).unwrap();
-		res()
-			.with_header(ContentLength(body.len() as u64))
-			.with_header(ContentType::json())
-			.with_status(toStatusCode(tuple.0))
-			.with_body(body)
+
+		let mut res = Response::new();
+		res.headers_mut().insert(
+			CONTENT_TYPE,
+			HeaderValue::from_str(mime::APPLICATION_JSON.as_ref()).unwrap(),
+		);
+
+		res.with_status(tuple.0).with_body(body)
 	}
 }
 
@@ -34,25 +26,27 @@ impl<T: Serialize> From<(u16, T)> for Response {
 impl<T: Serialize> From<T> for Response {
 	default fn from(json: T) -> Response {
 		let body = to_vec(&json).unwrap();
-		res()
-			.with_header(ContentLength(body.len() as u64))
-			.with_header(ContentType::json())
-			.with_status(toStatusCode(200))
-			.with_body(body)
+		let mut res = Response::new();
+		res.headers_mut().insert(
+			CONTENT_TYPE,
+			HeaderValue::from_str(mime::APPLICATION_JSON.as_ref()).unwrap(),
+		);
+		res.with_body(body)
 	}
 }
 
-impl From<Response> for hyper::Response {
-	fn from(res: Response) -> hyper::Response {
-		res.inner
+impl From<Response> for hyper::Response<Body> {
+	fn from(res: Response) -> hyper::Response<Body> {
+		let Response { parts, body } = res;
+		hyper::Response::from_parts(parts, body)
 	}
 }
 
-impl From<hyper::Request> for Request {
-	fn from(req: hyper::Request) -> Request {
-		let (method, uri, version, headers, body) = req.deconstruct();
+impl From<hyper::Request<Body>> for Request {
+	fn from(req: hyper::Request<Body>) -> Request {
+		let (parts, body) = req.into_parts();
 
-		let request = Request::new(method, uri, version, headers, body);
+		let request = Request::new(parts, body);
 
 		request
 	}
@@ -62,26 +56,30 @@ impl From<JsonError> for Response {
 	fn from(error: JsonError) -> Response {
 		match error {
 			JsonError::None => {
+				error!("No json body");
 				let json = json!({
 					"error": "Json was empty",
 				});
 				let body = to_vec(&json).unwrap();
-
-				res()
-					.with_header(ContentLength(body.len() as u64))
-					.with_header(ContentType::json())
-					.with_body(body)
+				let mut res = Response::new();
+				res.headers_mut().insert(
+					CONTENT_TYPE,
+					HeaderValue::from_str(mime::APPLICATION_JSON.as_ref()).unwrap(),
+				);
+				res.badRequest().with_body(body)
 			}
 			JsonError::Err(e) => {
+				error!("serde deserialization error: {}", e);
 				let json = json!({
 					"error": format!("{}", e),
 				});
 				let body = to_vec(&json).unwrap();
-
-				res()
-					.with_header(ContentLength(body.len() as u64))
-					.with_header(ContentType::json())
-					.with_body(body)
+				let mut res = Response::new();
+				res.headers_mut().insert(
+					CONTENT_TYPE,
+					HeaderValue::from_str(mime::APPLICATION_JSON.as_ref()).unwrap(),
+				);
+				res.badRequest().with_body(body)
 			}
 		}
 	}
@@ -91,27 +89,31 @@ impl From<QueryParseError> for Response {
 	fn from(error: QueryParseError) -> Response {
 		match error {
 			QueryParseError::None => {
+				error!("No query string");
 				let json = json!({
 					"error": "query data was empty",
 				});
 				let body = to_vec(&json).unwrap();
-
-				res()
-					.with_header(ContentLength(body.len() as u64))
-					.with_header(ContentType::json())
-					.with_body(body)
+				let mut res = Response::new();
+				res.headers_mut().insert(
+					CONTENT_TYPE,
+					HeaderValue::from_str(mime::APPLICATION_JSON.as_ref()).unwrap(),
+				);
+				res.badRequest().with_body(body)
 			}
 
 			QueryParseError::Err(err) => {
+				error!("Error deserializing query: {}", err);
 				let json = json!({
 					"error": format!("{}", err),
 				});
 				let body = to_vec(&json).unwrap();
-
-				res()
-					.with_header(ContentLength(body.len() as u64))
-					.with_header(ContentType::json())
-					.with_body(body)
+				let mut res = Response::new();
+				res.headers_mut().insert(
+					CONTENT_TYPE,
+					HeaderValue::from_str(mime::APPLICATION_JSON.as_ref()).unwrap(),
+				);
+				res.badRequest().with_body(body)
 			}
 		}
 	}
