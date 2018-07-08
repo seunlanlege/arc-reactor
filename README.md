@@ -4,7 +4,7 @@
 <br/><br/>
 An **Asynchronous**, **Extensible**, **Micro** web framework for Rust.
 
-![Crates.io](https://img.shields.io/crates/d/arc-reactor.svg)
+![Crates.io](https://img.shields.io/crates/d/arc-reactor.svg) [![Released API docs](https://docs.rs/arc-reactor/badge.svg)](https://docs.rs/arc-reactor)
 
 ## Features
 
