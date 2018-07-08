@@ -1,5 +1,5 @@
 use core::{file, Request, Response};
-use futures::{prelude::*, future};
+use futures::{future, prelude::*};
 use hyper::{
 	header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
 	Method,

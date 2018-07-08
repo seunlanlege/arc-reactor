@@ -56,7 +56,6 @@ impl MiddleWare<Request> for MultiPart {
 			};
 		}
 
-
 		let content_type = req.headers().get(CONTENT_TYPE).and_then(|v| {
 			let hv = v.clone();
 			hv.to_str().ok().and_then(|v| Some(v.to_string()))

@@ -14,14 +14,17 @@ use tokio_tls::TlsAcceptorExt;
 ///
 /// #Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// extern crate arc_reactor;
 /// extern crate tokio;
-/// use arc_reactor::ArcReactor;
+/// use arc_reactor::core::ArcReactor;
 ///
 /// fn main() {
-/// 	let server = ArcReactor::default().port(1234).start().expect("couldn't start server");
-///		tokio::run(server);
+/// 	let server = ArcReactor::default()
+/// 		.port(1234)
+/// 		.start()
+/// 		.expect("couldn't start server");
+/// 	tokio::run(server);
 /// }
 /// ```
 pub struct ArcReactor {
@@ -107,7 +110,7 @@ impl ArcReactor {
 	/// Calling this function will panic if: no routes are supplied, or it
 	/// cannot start the main event loop.
 
-	pub fn start(self) -> Result<impl Future<Item = (), Error = io::Error> + Send, io::Error> {
+	pub fn start(self) -> Result<impl Future<Item = (), Error = ()> + Send, io::Error> {
 		let ArcReactor {
 			port,
 			arc_handler,
@@ -122,36 +125,39 @@ impl ArcReactor {
 
 		let http = Http::new();
 
-		let conn_stream_future = listener.incoming().for_each(move |socket| {
-			let service = arc_handler.clone();
-			let remote_ip = socket.peer_addr().ok();
-			// user has configured a tls acceptor
-			if let Some(ref acceptor) = acceptor {
-				let http_clone = http.clone();
-				let connection_future = acceptor
-					.accept_async(socket)
-					.map_err(|err| error!("TLS Handshake Error: {}", err))
-					.and_then(move |socket| {
-						// handshake successful
-						http_clone
-							.serve_connection(socket, RootService { service, remote_ip })
-							.map_err(|err| error!("serve_connection Error: {}", err))
-							.and_then(|_| Ok(()))
-					});
-					
-				tokio::spawn(connection_future);
-			} else {
-				// default to http
-				let connection_future = http
-					.serve_connection(socket, RootService { service, remote_ip })
-					.map_err(|err| error!("serve_connection Error: {}", err))
-					.and_then(|_| Ok(()));
+		let conn_stream_future = listener
+			.incoming()
+			.map_err(|err| error!("error accepting connection: {}", err))
+			.for_each(move |socket| {
+				let service = arc_handler.clone();
+				let remote_ip = socket.peer_addr().ok();
+				// user has configured a tls acceptor
+				if let Some(ref acceptor) = acceptor {
+					let http_clone = http.clone();
+					let connection_future = acceptor
+						.accept_async(socket)
+						.map_err(|err| error!("TLS Handshake Error: {}", err))
+						.and_then(move |socket| {
+							// handshake successful
+							http_clone
+								.serve_connection(socket, RootService { service, remote_ip })
+								.map_err(|err| error!("serve_connection Error: {}", err))
+								.and_then(|_| Ok(()))
+						});
 
-				tokio::spawn(connection_future);
-			}
+					tokio::spawn(connection_future);
+				} else {
+					// default to http
+					let connection_future = http
+						.serve_connection(socket, RootService { service, remote_ip })
+						.map_err(|err| error!("serve_connection Error: {}", err))
+						.and_then(|_| Ok(()));
 
-			Ok(())
-		});
+					tokio::spawn(connection_future);
+				}
+
+				Ok(())
+			});
 
 		Ok(conn_stream_future)
 	}

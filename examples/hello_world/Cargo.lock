@@ -8,7 +8,7 @@ dependencies = [
 
 [[package]]
 name = "arc-reactor"
-version = "0.1.8"
+version = "0.2.0"
 dependencies = [
  "bytes 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -17,6 +17,7 @@ dependencies = [
  "hyper 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperx 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "impl-service 0.1.4",
+ "log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess 2.0.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "native-tls 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -213,6 +214,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "futures-await"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "futures 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-await-async-macro 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-await-await-macro 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "futures-await-async-macro"
 version = "0.1.4"
 dependencies = [
@@ -220,6 +231,21 @@ dependencies = [
  "quote 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 0.14.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "futures-await-async-macro"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "proc-macro2 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 0.14.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "futures-await-await-macro"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "futures-await-await-macro"
@@ -701,7 +727,9 @@ dependencies = [
 name = "simple"
 version = "0.1.0"
 dependencies = [
- "arc-reactor 0.1.8",
+ "arc-reactor 0.2.0",
+ "futures-await 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1025,6 +1053,9 @@ dependencies = [
 "checksum fuchsia-zircon 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2e9763c69ebaae630ba35f74888db465e49e259ba1bc0eda7d06f4a067615d82"
 "checksum fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 "checksum futures 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)" = "1a70b146671de62ec8c8ed572219ca5d594d9b06c0b364d5e67b722fc559b48c"
+"checksum futures-await 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d76972f0c250aadc9c3e521023e769b097f838a2d9a71e5139c4fdf0c7657463"
+"checksum futures-await-async-macro 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "fdd257a06a5fd1f31adcbddb8068678b2ae534fb6eb282df010ae41db59ddf84"
+"checksum futures-await-await-macro 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f3b8bd34e4f4d1bf0e3fe3f22ad22475429f594221472216e34b942f912ec4a4"
 "checksum futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "ab90cde24b3319636588d0c35fe03b1333857621051837ed769faefb4c2162e4"
 "checksum h2 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "6229ac66d3392dd83288fe04defd4b353354b15bbe07820d53dda063a736afcc"
 "checksum http 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "4fbced8864b04c030eebcb7d0dc3a81ba5231ac559f5116a29a8ba83ecee22cd"

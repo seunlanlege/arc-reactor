@@ -168,7 +168,10 @@ pub fn parse(
 									file = match await!(file::write(file.unwrap(), parts)) {
 										Ok(f) => Some(f),
 										Err(err) => {
-											error!("[MultiPart Parser] Error writing to file: {}", err);
+											error!(
+												"[MultiPart Parser] Error writing to file: {}",
+												err
+											);
 											return Err(ParseError::Io(err));
 										}
 									};

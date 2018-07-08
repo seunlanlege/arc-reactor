@@ -113,6 +113,10 @@ impl ArcService for ArcHandler {
 			return Box::new(responsefuture);
 		}
 
-		return self.handler.clone().expect("No service Supplied").call(req, res);
+		return self
+			.handler
+			.clone()
+			.expect("No service Supplied")
+			.call(req, res);
 	}
 }

@@ -35,50 +35,50 @@
 //!
 //! ## Demo
 //!
-//! ```rust,ignore
-//! #![feature(proc_macro, generators, box_syntax)] // <== need to add this.
+//! ```rust, no_run
+//! #![feature(proc_macro, generators, proc_macro_non_items)] // <== need to add this.
 //! extern crate arc_reactor;
+//! extern crate futures_await as futures;
 //! extern crate tokio;
 //! #[macro_use]
 //! extern crate serde_json;
-//! use arc_reactor::{prelude::*, ArcReactor, Router, StatusCode};
+//! 
+//! use arc_reactor::{prelude::*, core::ArcReactor, routing::Router};
 //!
-//! 
 //! fn main() {
-//!   let server = ArcReactor::new()
-//!      .routes(rootRoutes())
-//!      .port(3000)
-//!      .start()
-//!      .expect("couldn't start server");
-//! 
+//! 	let server = ArcReactor::default()
+//! 		.routes(rootRoutes())
+//! 		.port(3000)
+//! 		.start()
+//! 		.expect("couldn't start server");
+//!
 //! 	tokio::run(server)
 //! }
 //!
 //! fn rootRoutes() -> Router {
 //! 	Router::new().get("/", IndexRoute)
-//! 	}
+//! }
 //!
 //! #[service]
 //! fn IndexRoute(_req: Request, mut res: Response) {
 //! 	let isAuth = await!(fakeFuture()).unwrap();
 //! 	if isAuth {
 //! 		let payload = json!({
-//!       "data": "hello world"
-//!     });
+//!       		"data": "hello world"
+//!     	});
 //!
 //! 		return Ok(payload.into()); // convert json to json response.
-//! 		}
-//!
-//! 	res.set_status(StatusCode::Unauthorized);
-//! 	Err(res)
 //! 	}
+//!
+//! 	res.set_status(400);
+//! 	Err(res)
+//! }
 //!
 //! fn fakeFuture() -> impl Future<Item = bool, Error = ()> {
 //! 	futures::future::ok(true)
-//! 	}
+//! }
 //! ```
 //!
-
 #![cfg_attr(
 	feature = "unstable",
 	feature(proc_macro, generators, specialization, proc_macro_non_items, test)
@@ -87,30 +87,30 @@
 #![allow(non_snake_case)]
 #[macro_use]
 extern crate log;
-pub extern crate http;
+extern crate http;
 #[cfg(feature = "unstable")]
 #[macro_use]
 #[macro_export]
-pub extern crate futures_await as futures;
+extern crate futures_await as futures;
 #[cfg(not(feature = "unstable"))]
 #[macro_use]
-pub extern crate futures;
-pub extern crate hyper;
+extern crate futures;
+extern crate hyper;
 #[cfg(feature = "unstable")]
-pub extern crate impl_service;
-pub extern crate native_tls;
-pub extern crate percent_encoding;
-pub extern crate serde_qs;
-pub extern crate tokio;
-pub extern crate tokio_tls;
-pub extern crate serde;
+extern crate impl_service;
+extern crate native_tls;
+extern crate percent_encoding;
+extern crate serde;
+extern crate serde_qs;
+extern crate tokio;
+extern crate tokio_tls;
 #[macro_use]
-pub extern crate serde_json;
-pub extern crate bytes;
-pub extern crate mime;
-pub extern crate mime_guess;
-pub extern crate regex;
-pub extern crate hyperx;
+extern crate serde_json;
+extern crate bytes;
+extern crate hyperx;
+extern crate mime;
+extern crate mime_guess;
+extern crate regex;
 
 #[macro_use]
 pub mod proto;
@@ -123,9 +123,9 @@ pub use hyper::{header, StatusCode};
 
 pub mod prelude {
 	pub use core::{Request, Response};
+	pub use futures::prelude::*;
 	#[cfg(feature = "unstable")]
 	pub use futures::prelude::{async_block, await};
-	pub use futures::{self, prelude::*};
 	#[cfg(feature = "unstable")]
 	pub use impl_service::{middleware, service};
 	pub use proto::{ArcHandler, ArcService, FutureResponse, MiddleWare, MiddleWareFuture};

@@ -1,18 +1,16 @@
+pub mod recognizer;
 mod routegroup;
 mod router;
 mod util;
-pub mod recognizer;
 
-pub use self::routegroup::*;
-pub use self::router::*;
 pub(crate) use self::util::*;
+pub use self::{routegroup::*, router::*};
 
 #[cfg(test)]
 #[cfg(feature = "unstable")]
 mod tests {
 	use core::{Request, Response};
-	use futures::prelude::async_block;
-	use futures::Future;
+	use futures::{prelude::async_block, Future};
 	use hyper::{Method, StatusCode};
 	use impl_service::*;
 	use proto::ArcService;
@@ -21,7 +19,8 @@ mod tests {
 
 	#[service]
 	fn AsyncService(_req: Request, res: Response) {
-		let res = res.with_status(StatusCode::Ok)
+		let res = res
+			.with_status(StatusCode::Ok)
 			.with_body("Hello World".as_bytes());
 		Result::Ok(res)
 	}

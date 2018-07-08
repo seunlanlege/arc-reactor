@@ -15,7 +15,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{self, from_slice};
 use serde_qs::{self, from_str};
 #[cfg(feature = "unstable")]
-use std::{collections::HashMap};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 
 /// The Request Struct, This is passed to Middlewares and route handlers.
@@ -33,10 +33,19 @@ pub struct Request {
 /// `From<JsonError>` is implemented for Response
 /// so you can use the `?` to unwrap or return an early response
 ///
-/// ```rust, ignore
+/// ```rust, no_run
 /// #![feature(proc_macro, generators, specialization, proc_macro_non_items)]
 /// extern crate arc_reactor;
+/// extern crate futures_await as futures;
+/// extern crate serde;
+/// #[macro_use]
+/// extern crate serde_derive;
 /// use arc_reactor::prelude::*;
+/// 
+/// #[derive(Serialize, Deserialize)]
+/// struct User {
+/// 	name: String
+/// }
 ///
 /// #[service]
 /// fn UserService(req: Request, res: Response) {
@@ -44,6 +53,7 @@ pub struct Request {
 /// 	// will return an error response with the
 /// 	// json '{ "error": "Json was empty" }' if JsonError::None
 /// 	// or '{ "error": "{serde error}" }' if it failed to deserialize.
+/// 	Ok(res)
 /// }
 /// ```
 ///
@@ -72,7 +82,7 @@ pub enum JsonError {
 /// 	// will return an error response with the
 /// 	// json '{ "error": "query data was empty" }' if QueryParseError::None
 /// 	// or '{ "error": "{parse error}" }' if it failed to deserialize.
-/// 	}
+/// }
 /// ```
 ///
 #[derive(Debug)]
@@ -85,35 +95,12 @@ pub enum QueryParseError {
 
 impl Request {
 	pub(crate) fn new(parts: Parts, body: Body) -> Self {
-		Self { parts, body, remote: None }
+		Self {
+			parts,
+			body,
+			remote: None,
+		}
 	}
-
-	/// get a handle to the underlying event loop executing this request.
-	/// useful for spawning additional work/futures on the event loop.
-	///
-	/// # Examples
-	/// ```rust, ignore
-	/// extern crate arc_reactor;
-	/// use arc_reactor::prelude::*;
-	///
-	/// #[service]
-	/// pub fn UsefulService(req: Request, res: Response) {
-	/// 	let handle = req.reactor_handle();
-	///
-	/// 	let future = async_block! {
-	/// 	println!("I'm doing some asynchronous work!");
-	/// 	Ok(()) // async_block must return a type-def of Result
-	/// 	// and the event loop requires a future of type `Future<Item = (), Error = ()>`
-	/// 		};
-	///
-	/// 	handle.spawn(future);
-	/// 	return Ok(res);
-	/// 	}
-	/// ```
-	///
-	// pub fn reactor_handle(&self) -> Handle {
-	// 	self.handle.clone().unwrap()
-	// }
 
 	/// Returns a reference to the request's Version
 	#[inline]
@@ -171,7 +158,6 @@ impl Request {
 	///
 	/// extern crate arc_reactor;
 	/// use arc_reactor::prelude::*;
-	/// 
 	///
 	/// #[derive(Serialize, Deserialize)]
 	/// struct AccessToken {

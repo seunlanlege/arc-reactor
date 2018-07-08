@@ -409,7 +409,11 @@ impl ArcService for Router {
 			return ArcService::call(&*routeMatch.handler, request, res);
 		} else {
 			if let Some(ref notFound) = self.notFound {
-				info!("No service registered for route {} and method {}", req.path(), req.method());
+				info!(
+					"No service registered for route {} and method {}",
+					req.path(),
+					req.method()
+				);
 				return notFound.call(req, res);
 			}
 			let responseFuture = Ok(Response::new().with_status(404)).into_future();

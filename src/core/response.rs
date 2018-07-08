@@ -56,7 +56,6 @@ impl Response {
 	/// # Example
 	///
 	/// ```rust, ignore
-	///
 	/// pub fn get_profile(req: Request, res: Response) {
 	/// 	// performed task on request
 	///
@@ -117,8 +116,8 @@ impl Response {
 	}
 
 	/// Respond with a file.
-	/// this method will set the appropriate Content-type and Content-Length headers
-	/// unfortunately, this doesn't support byte ranges, yet.
+	/// this method will set the appropriate Content-type and Content-Length
+	/// headers unfortunately, this doesn't support byte ranges, yet.
 	/// The file is streamed asynchronously from the filesystem to the client
 	/// with the Content-Encoding: chunked.
 	pub fn with_file<P>(mut self, pathbuf: P) -> impl Future<Item = Response, Error = Response>

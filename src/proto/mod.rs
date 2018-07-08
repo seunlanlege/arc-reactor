@@ -1,7 +1,5 @@
-mod service;
-mod middleware;
 mod convert;
+mod middleware;
+mod service;
 
-pub use self::middleware::*;
-pub use self::service::*;
-pub use self::convert::*;
+pub use self::{convert::*, middleware::*, service::*};
