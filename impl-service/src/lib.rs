@@ -1,4 +1,4 @@
-#![feature(proc_macro, box_syntax)]
+// #![feature(proc_macro, box_syntax, proc_macro_span, proc_macro_raw_ident)]
 #![allow(unused_extern_crates)]
 #![allow(non_snake_case)]
 #![recursion_limit = "128"]
@@ -8,20 +8,16 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 
-use quote::{ToTokens, quote_spanned};
-use proc_macro2::Span;
 use proc_macro::TokenStream;
+use proc_macro2::Span;
+use quote::ToTokens;
 use syn::*;
 
 #[proc_macro_attribute]
 pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
-	let item = syn::parse(function)
-		.expect("Well, that didn't work. Must be a syntax error.");
+	let item = syn::parse(function).expect("Well, that didn't work. Must be a syntax error.");
 	let ItemFn {
-		ident,
-		block,
-		decl,
-		..
+		ident, block, decl, ..
 	} = match item {
 		Item::Fn(item) => item,
 		_ => panic!("#[service]: Whoops!, try again. This time, with a function."),
@@ -34,7 +30,7 @@ pub fn service(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 	let output = quote_spanned! {span=>
 		#[derive(Clone, Debug)]
 		pub struct #ident;
-		
+
 		impl ArcService for #ident {
 			fn call(&self, #inputs) -> Box<Future<Item = Response, Error = Response> + Send> {
 				Box::new(async_block! (#(#block)*))
@@ -53,18 +49,13 @@ pub fn middleware(attribute: TokenStream, function: TokenStream) -> TokenStream 
 		panic!("#[Middleware] attribute must be one of 'Request' or 'Response'")
 	}
 	let attribute = Ident::new(attribute, Span::call_site());
-	let item = syn::parse(function)
-		.expect("Well, that didn't work. Must be a syntax error");
+	let item = syn::parse(function).expect("Well, that didn't work. Must be a syntax error");
 	let ItemFn {
-		ident,
-		block,
-		decl,
-		..
+		ident, block, decl, ..
 	} = match item {
 		Item::Fn(item) => item,
 		_ => panic!("#[middleware]: Whoops!, try again. This time, with a function."),
 	};
-
 
 	let block = block.stmts.iter();
 	let inputs = decl.inputs.into_token_stream();

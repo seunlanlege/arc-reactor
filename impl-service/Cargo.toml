@@ -6,8 +6,8 @@ license-file ="../LICENSE"
 description = "Proc Macro fo deriving the ArcService trait"
 
 [dependencies]
-quote = { version = "0.6" }
-proc-macro2 = { version = "0.4", features = ["nightly"] }
+quote = { version = "0.6.4" }
+proc-macro2 = { version = "0.4.9", features = ["nightly"] }
 
 
 [lib]
