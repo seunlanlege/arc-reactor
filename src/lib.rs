@@ -42,7 +42,7 @@
 //! extern crate tokio;
 //! #[macro_use]
 //! extern crate serde_json;
-//! 
+//!
 //! use arc_reactor::{prelude::*, core::ArcReactor, routing::Router};
 //!
 //! fn main() {
@@ -81,7 +81,13 @@
 //!
 #![cfg_attr(
 	feature = "unstable",
-	feature(proc_macro, generators, specialization, proc_macro_non_items, test)
+	feature(
+		generators,
+		specialization,
+		proc_macro_non_items,
+		test,
+		use_extern_macros
+	)
 )]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]

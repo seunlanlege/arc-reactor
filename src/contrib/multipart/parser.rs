@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use core::file;
-use futures::prelude::*;
+use futures::prelude::{await, async};
 use hyper::{self, Body};
 use hyperx::header::{ContentDisposition, DispositionParam, DispositionType, Header};
 use mime::Mime;
