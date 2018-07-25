@@ -33,8 +33,13 @@ impl Service for RootService {
 				Ok(response) => {
 					match response {
 						Ok(mut res) | Err(mut res) => {
-							res.headers_mut()
-								.insert(SERVER, HeaderValue::from_static("Arc-Reactor/0.1.5"));
+							res.headers_mut().insert(
+								SERVER,
+								HeaderValue::from_static(concat!(
+									"Arc-Reactor/{}",
+									env!("CARGO_PKG_VERSION")
+								)),
+							);
 							Ok(res.into())
 						}
 					}
