@@ -1,6 +1,9 @@
 mod parser;
 use core::Request;
-use futures::{future, prelude::*};
+use futures::{
+	future,
+	prelude::{async_block, await},
+};
 use header::{CONTENT_LENGTH, CONTENT_TYPE};
 use hyperx::header::{ContentType, Header};
 use mime::Mime;
