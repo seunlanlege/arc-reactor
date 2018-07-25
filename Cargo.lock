@@ -8,7 +8,7 @@ dependencies = [
 
 [[package]]
 name = "arc-reactor"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "bytes 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -16,7 +16,7 @@ dependencies = [
  "http 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperx 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "impl-service 0.1.4",
+ "impl-service 0.1.5",
  "log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess 2.0.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -309,7 +309,7 @@ dependencies = [
 
 [[package]]
 name = "impl-service"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "proc-macro2 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
