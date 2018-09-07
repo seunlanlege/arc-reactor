@@ -1,6 +1,6 @@
 [package]
 name = "arc-reactor"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["seunlanlege <seunlanlege@gmail.com>"]
 license ="MIT"
 repository = "https://github.com/seunlanlege/arc-reactor"
@@ -11,7 +11,7 @@ keywords = ["web", "framework", "asynchronous", "futures", "http"]
 categories = ["web-programming::http-server", "web-programming"]
 
 [dependencies]
-impl-service = { path = "impl-service", version="0.1.5", optional=true }
+impl-service = { path = "impl-service", version="0.1.6", optional=true }
 serde_qs = "0.4"
 hyper = "0.12"
 serde_json = "1.0"

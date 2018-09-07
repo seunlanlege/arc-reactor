@@ -86,7 +86,6 @@
 		specialization,
 		proc_macro_non_items,
 		test,
-		use_extern_macros
 	)
 )]
 #![allow(non_camel_case_types)]
