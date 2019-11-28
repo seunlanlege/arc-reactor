@@ -1,0 +1,23 @@
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Install toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        default: true
+    - name: Cargo Login
+      uses: actions-rs/cargo@v1
+      with: 
+        command: login
+        args: -- ${{ secrets.CARGO_TOKEN }}
+    - name: Cargo publish
+      uses: seunlanlege/cargo-auto-publish@1
+      with:
+        toml: Cargo.toml
