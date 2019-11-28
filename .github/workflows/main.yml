@@ -19,6 +19,6 @@ jobs:
         args: -- ${{ secrets.CARGO_TOKEN }}
     - uses: actions/checkout@v1
     - name: Cargo publish
-      uses: ./.github/actions/cargo-auto-publish
+      uses: seunlanlege/cargo-auto-publish@1
       with:
-        toml: Cargo.toml
+        toml: ./Cargo.toml
