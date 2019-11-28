@@ -18,6 +18,6 @@ jobs:
         command: login
         args: -- ${{ secrets.CARGO_TOKEN }}
     - name: Cargo publish
-      uses: seunlanlege/cargo-auto-publish@1
+      uses: seunlanlege/cargo-auto-publish@1.1
       with:
         toml: Cargo.toml
