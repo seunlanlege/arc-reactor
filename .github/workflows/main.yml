@@ -17,8 +17,8 @@ jobs:
       with: 
         command: login
         args: -- ${{ secrets.CARGO_TOKEN }}
-    - name: Cargo publish
     - uses: actions/checkout@v1
+    - name: Cargo publish
       uses: ./.github/actions/cargo-auto-publish
       with:
         toml: Cargo.toml
