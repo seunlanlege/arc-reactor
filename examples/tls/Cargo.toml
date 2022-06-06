@@ -5,4 +5,4 @@ authors = ["Seun LanLege <seunlanlege@gmail.com>"]
 
 [dependencies]
 arc-reactor = { path="../../", version="*" }
-tokio="0.1"
+tokio="1.8"
